@@ -1,0 +1,12 @@
+{
+  "name": "jeewhatsappd",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "description": "JeeWhatsApp daemon — Baileys WhatsApp client",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.15",
+    "pino": "^9.0.0",
+    "qrcode": "^1.5.4"
+  }
+}

@@ -1,0 +1,19 @@
+# Claude Code
+CLAUDE.md
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# Dépendances Node.js — installées par install_dep.sh
+resources/jeewhatsappd/node_modules/
+
+# Fichiers générés à l'exécution
+resources/jeewhatsappd/package-lock.json
+
+# Credentials Baileys (générés à l'exécution, sensibles)
+resources/jeewhatsappd/auth/
+
+# Artefacts locaux
+jeewhatsapp/
