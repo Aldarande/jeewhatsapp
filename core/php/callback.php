@@ -17,9 +17,9 @@ if (!is_array($data)) {
   die(json_encode(['error' => 'Invalid JSON']));
 }
 
-// Répondre immédiatement au daemon pour libérer la connexion HTTP.
-// L'interaction nécessite interactQuery::tryToReply() + un second appel HTTP
-// vers le daemon, ce qui peut dépasser le timeout de 5s du daemon.
+// Répondre immédiatement au daemon pour libérer la connexion HTTP avant le traitement.
+// Sans ça, l'interaction (interactQuery::tryToReply + sendToDaemon) dépasserait le
+// timeout de 5 s configuré côté daemon, entraînant une erreur "Envoi échoué".
 $response = json_encode(['status' => 'ok']);
 http_response_code(200);
 header('Content-Type: application/json');
@@ -32,7 +32,8 @@ ignore_user_abort(true);
 
 // Traitement après libération de la connexion HTTP
 try {
+  $data['instance_id'] = (int)($data['instance_id'] ?? 0);
   jeewhatsapp::callback($data);
 } catch (Exception $e) {
-  log::add('jeewhatsapp', 'error', 'callback.php — Erreur callback : ' . $e->getMessage());
+  log::add('jeewhatsapp', 'error', 'callback.php l.' . __LINE__ . ' — Erreur callback : ' . $e->getMessage());
 }

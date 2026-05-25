@@ -1,4 +1,10 @@
 <?php
+/* This file is part of Jeedom.
+ * Plugin JeeWhatsApp - Aldarande
+ * Licence AGPL v3 — https://www.gnu.org/licenses/agpl-3.0.html
+ */
+require_once dirname(__FILE__) . '/../../../../core/php/core.inc.php';
+include_file('core', 'authentification', 'php');
 if (!isConnect('admin')) {
 	throw new Exception('{{401 - Accès non autorisé}}');
 }
@@ -275,15 +281,14 @@ sendVarToJS('eqType', 'jeewhatsapp');
 							</span>
 						</div>
 
-						<!-- Zone QR code (canvas + jsQR) -->
+						<!-- Zone QR code — le daemon génère une data URL PNG via QRCode.toDataURL() -->
 						<div id="wa_qr_zone" style="display:none;margin:20px auto;">
 							<p class="text-muted">
 								{{Scannez ce QR code avec WhatsApp sur votre téléphone}}<br>
 								<small>{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}</small>
 							</p>
-							<canvas id="wa_qr_canvas"
+							<img id="wa_qr_img" src=""
 								style="width:220px;height:220px;border:4px solid #25D366;border-radius:12px;margin:10px auto;display:block;">
-							</canvas>
 							<p class="text-muted"><small>{{Le QR code expire après 30 secondes — il se rafraîchit automatiquement}}</small></p>
 						</div>
 
@@ -396,6 +401,8 @@ $('#bt_donJeeWhatsApp').on('click', function () {
 });
 
 // ── Mise à jour du dot dès l'ouverture d'un équipement ─────────────────────
+// Jeedom affiche la div .eqLogic en changeant son style.display — pas d'événement natif.
+// On observe l'attribut style pour détecter ce moment et charger le statut QR initial.
 (function () {
   var target = document.querySelector('.col-xs-12.eqLogic');
   if (!target) { return; }
@@ -410,6 +417,7 @@ $('#bt_donJeeWhatsApp').on('click', function () {
 })();
 
 // ── Onglet QR code — chargement au clic ────────────────────────────────────
+// Le polling (8 s) s'arrête dès qu'on quitte l'onglet pour ne pas surcharger le daemon
 $('a[href="#qrtab"]').on('shown.bs.tab', function () {
   refreshQRStatus();
   if (_waQRInterval) { clearInterval(_waQRInterval); }

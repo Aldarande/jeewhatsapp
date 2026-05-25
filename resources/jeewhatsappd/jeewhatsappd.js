@@ -126,19 +126,22 @@ function extractText(m) {
 // État par instance
 // ---------------------------------------------------------------------------
 
-const sockets        = {};   // id → sock
-const groupJids      = {};   // id → JID du groupe WhatsApp canal (@g.us)
-const instanceCfg    = {};   // id → { prefix, group_name }
+const sockets         = {};  // id → sock
+const groupJids       = {};  // id → JID du groupe WhatsApp canal (@g.us)
+const instanceCfg     = {};  // id → { prefix, group_name }
+const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted)
 
 // ---------------------------------------------------------------------------
 // Recherche d'un groupe par nom
 // ---------------------------------------------------------------------------
 
 async function findGroupByName(sock, name) {
+  const target = String(name || '').trim();
   try {
     const groups = await sock.groupFetchAllParticipating();
     for (const [jid, meta] of Object.entries(groups)) {
-      if (meta.subject === name) { return jid; }
+      // Trim sur subject : un espace invisible casserait le matching exact
+      if ((meta.subject || '').trim() === target) { return jid; }
     }
   } catch (e) {
     logMsg('warning', 'findGroupByName — erreur : ' + e.message);
@@ -204,21 +207,31 @@ async function connectInstance(instance) {
       if (fs.existsSync(qf)) { fs.unlinkSync(qf); }
       logMsg('info', '[' + id + '] ✓ Connecté à WhatsApp');
 
-      // Rechercher le groupe canal
-      logMsg('info', '[' + id + '] Recherche du groupe canal "' + group_name + '"…');
-      const jid = await findGroupByName(sock, group_name);
-      if (jid) {
-        groupJids[id] = jid;
-        fs.writeFileSync(gjf, jid);
-        logMsg('info', '[' + id + '] ✓ Groupe "' + group_name + '" → ' + jid);
-      } else {
-        logMsg('warning', '[' + id + '] Groupe "' + group_name + '" introuvable — créez-le ou vérifiez le nom dans les paramètres');
-      }
+      // Rechercher le groupe canal — retardé de 2 s pour laisser à Baileys
+      // le temps de synchroniser la liste des groupes après l'open
+      setTimeout(async () => {
+        logMsg('info', '[' + id + '] Recherche du groupe canal "' + group_name + '"…');
+        let jid = await findGroupByName(sock, group_name);
+        if (!jid) {
+          // Retry unique 3 s plus tard si rien trouvé (sync incomplète)
+          await new Promise(r => setTimeout(r, 3000));
+          jid = await findGroupByName(sock, group_name);
+        }
+        if (jid) {
+          groupJids[id] = jid;
+          try { fs.writeFileSync(gjf, jid); } catch (_) {}
+          logMsg('info', '[' + id + '] ✓ Groupe "' + group_name + '" → ' + jid);
+        } else {
+          logMsg('warning', '[' + id + '] Groupe "' + group_name + '" introuvable — créez-le ou vérifiez le nom dans les paramètres');
+        }
+      }, 2000);
     }
 
     if (connection === 'close') {
       const code      = lastDisconnect?.error?.output?.statusCode;
       const loggedOut = code === DisconnectReason.loggedOut;
+      // Cleanup des listeners pour éviter MaxListenersExceededWarning à chaque reconnexion
+      try { sock.ev.removeAllListeners(); } catch (_) {}
       delete sockets[id];
 
       if (loggedOut) {
@@ -241,6 +254,7 @@ async function connectInstance(instance) {
 
   // ── Réception des messages du groupe canal ─────────────────────────────
   sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    // type 'append' = historique de synchronisation au démarrage, on l'ignore
     if (type !== 'notify') { return; }
 
     for (const msg of messages) {
@@ -284,6 +298,9 @@ async function connectInstance(instance) {
       const participantJid = msg.key.participant || remoteJid;
       const sender         = participantJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
       const senderName     = msg.pushName || sender;
+
+      // Mémorise le dernier message reçu — utilisé par action 'replyLast' (quoted)
+      lastIncomingMsg[id] = msg;
 
       logMsg('info', '[' + id + '] Message de ' + sender + ' (groupe) : ' + text.substring(0, 60));
       await sendCallback(id, {
@@ -367,8 +384,10 @@ async function handleAction({ action, instance_id, phone, message, mention }) {
           throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
         }
       } else if (String(phone).includes('@')) {
+        // JID complet fourni directement (ex : 33612345678@s.whatsapp.net ou 120363…@g.us)
         jid = String(phone).trim();
       } else {
+        // Normalisation : supprime les non-chiffres et convertit le format français 06/07 → 336/337
         const digits = String(phone).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
         if (!digits) { throw new Error('Numéro de téléphone invalide (' + phone + ') — format attendu : indicatif + numéro, ex : 33612345678'); }
         jid = digits + '@s.whatsapp.net';
@@ -377,9 +396,11 @@ async function handleAction({ action, instance_id, phone, message, mention }) {
       // Mention optionnelle — @numéro en tête de message
       const msgPayload = { text: message };
       if (mention) {
+        // Même normalisation que pour le destinataire : 06… → 336…
         const mentionDigits = String(mention).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
         if (mentionDigits) {
           const mentionJid    = mentionDigits + '@s.whatsapp.net';
+          // Préfixe @numéro dans le texte + champ mentions pour que WhatsApp génère la notification
           msgPayload.text     = '@' + mentionDigits + ' ' + message;
           msgPayload.mentions = [mentionJid];
           logMsg('info', '[' + id + '] Mention de ' + mentionJid);
@@ -392,6 +413,28 @@ async function handleAction({ action, instance_id, phone, message, mention }) {
       );
       await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
       return { sent: true };
+    }
+
+    // ── Réponse "quoted" au dernier message reçu dans le groupe canal ──────
+    case 'replyLast': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const jid = groupJids[id];
+      if (!jid) {
+        throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
+      }
+      const quoted = lastIncomingMsg[id];
+      if (!quoted) {
+        // Fallback : envoi simple si pas de message à citer
+        logMsg('warning', '[' + id + '] replyLast — aucun message à citer, envoi simple');
+        const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
+        await Promise.race([sock.sendMessage(jid, { text: message }), t]);
+        return { sent: true, quoted: false };
+      }
+      logMsg('info', '[' + id + '] ↩ Reply (quoted) → ' + jid + ' : ' + String(message).substring(0, 60));
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
+      await Promise.race([sock.sendMessage(jid, { text: message }, { quoted }), t]);
+      return { sent: true, quoted: true };
     }
 
     // ── Recherche du groupe canal par nom ──────────────────────────────────

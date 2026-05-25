@@ -67,6 +67,6 @@ if [ ! -d "$DAEMON_DIR/node_modules/qrcode" ]; then
 fi
 
 log "Installation terminée avec succès"
-log "Baileys : $(node -e "import('@whiskeysockets/baileys/package.json', {assert:{type:'json'}}).then(m=>console.log(m.default.version))" 2>/dev/null || echo 'installé')"
+log "Baileys : $(node -e "import('@whiskeysockets/baileys/package.json', {with:{type:'json'}}).then(m=>console.log(m.default.version))" 2>/dev/null || echo 'installé')"
 echo 100 > "$PROGRESS_FILE"
 rm -f "$PROGRESS_FILE"

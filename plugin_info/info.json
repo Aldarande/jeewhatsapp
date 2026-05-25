@@ -4,13 +4,14 @@
   "description": "Plugin d'intégration WhatsApp via Baileys (self-hosted) — envoi et réception de messages bidirectionnel",
   "licence": "AGPL v3",
   "author": "Aldarande",
-  "require": "4.4",
+  "require": "4.4.0",
   "category": "communication",
   "hasDependency": true,
   "hasOwnDeamon": true,
   "maxDependancyInstallTime": 60,
   "pluginVersion": "0.1",
-  "documentation": "plugins/jeewhatsapp/docs/fr_FR/index.html",
+  "documentation": "https://aldarande.github.io/jeewhatsapp/#language#/index.html",
+  "changelog": "https://aldarande.github.io/jeewhatsapp/#language#/index.html#changelog",
   "language": [
     "fr_FR"
   ],

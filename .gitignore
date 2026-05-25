@@ -17,3 +17,6 @@ resources/jeewhatsappd/auth/
 
 # Artefacts locaux
 jeewhatsapp/
+
+# Logs
+*.log

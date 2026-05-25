@@ -1,4 +1,8 @@
 <?php
+/* This file is part of Jeedom.
+ * Plugin JeeWhatsApp - Aldarande
+ * Licence AGPL v3 — https://www.gnu.org/licenses/agpl-3.0.html
+ */
 
 class jeewhatsapp extends eqLogic {
 
@@ -47,13 +51,19 @@ class jeewhatsapp extends eqLogic {
     $pid_file = jeedom::getTmpFolder(__CLASS__) . '/daemon.pid';
     if (file_exists($pid_file)) {
       $pid = intval(trim(file_get_contents($pid_file)));
-      if ($pid > 0 && posix_kill($pid, 0)) {
-        $return['state'] = 'ok';
+      $alive = false;
+      if ($pid > 0) {
+        if (function_exists('posix_kill')) {
+          $alive = @posix_kill($pid, 0);
+        } else {
+          $alive = @file_exists("/proc/$pid");
+        }
       }
+      if ($alive) { $return['state'] = 'ok'; }
     }
     if (self::dependancy_info()['state'] !== 'ok') {
       $return['launchable']         = 'nok';
-      $return['launchable_message'] = '{{Dépendances non installées}}';
+      $return['launchable_message'] = __('Dépendances non installées', __FILE__);
     }
     return $return;
   }
@@ -62,9 +72,11 @@ class jeewhatsapp extends eqLogic {
     self::deamon_stop();
     $daemon_info = self::deamon_info();
     if ($daemon_info['launchable'] !== 'ok') {
-      throw new Exception('{{Impossible de lancer le daemon}} : ' . $daemon_info['launchable_message']);
+      throw new Exception(__('Impossible de lancer le daemon', __FILE__) . ' : ' . $daemon_info['launchable_message']);
     }
 
+    // prefix et group_name sont passés ici pour que le daemon puisse les utiliser
+    // dès le démarrage sans avoir à rappeler le PHP (aucune API Jeedom exposée au daemon)
     $instances = [];
     foreach (eqLogic::byType(__CLASS__) as $eqLogic) {
       if (!$eqLogic->getIsEnable()) { continue; }
@@ -103,7 +115,7 @@ class jeewhatsapp extends eqLogic {
       if (self::deamon_info()['state'] === 'ok') { break; }
     }
     if (self::deamon_info()['state'] !== 'ok') {
-      throw new Exception('{{Impossible de démarrer le daemon après ' . $timeout . ' secondes}}');
+      throw new Exception(__('Impossible de démarrer le daemon après ', __FILE__) . $timeout . __(' secondes', __FILE__));
     }
   }
 
@@ -122,7 +134,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public static function callback($_data) {
-    $eqLogic = eqLogic::byId($_data['instance_id'] ?? 0);
+    $eqLogic = eqLogic::byId((int)($_data['instance_id'] ?? 0));
     if (!is_object($eqLogic) || $eqLogic->getEqType_name() !== __CLASS__) { return; }
     $eqLogic->updateFromMessage($_data);
   }
@@ -132,20 +144,21 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function updateFromMessage($_data) {
+    // checkAndUpdateCmd met à jour la valeur et déclenche les scénarios/interactions associés
     $this->checkAndUpdateCmd('last_message',     $_data['message']      ?? '');
     $this->checkAndUpdateCmd('last_sender',      $_data['sender']       ?? '');
     $this->checkAndUpdateCmd('last_sender_name', $_data['sender_name']  ?? '');
     $this->checkAndUpdateCmd('last_received_at', $_data['received_at']  ?? date('Y-m-d H:i:s'));
 
     if ($this->getConfiguration('interactions_enabled', 0) != 1) {
-      log::add('jeewhatsapp', 'debug', 'Interactions désactivées — équipement #' . $this->getId());
+      log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — Interactions désactivées — équipement #' . $this->getId());
       return;
     }
     $message = $_data['message'] ?? '';
     $sender  = $_data['sender']  ?? '';
     if ($message === '' || $sender === '') { return; }
 
-    log::add('jeewhatsapp', 'debug', 'Interaction — de ' . $sender . ' : ' . $message);
+    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — Interaction de ' . $sender . ' : ' . $message);
 
     $reply = interactQuery::tryToReply($message, [
       'plugin'     => 'jeewhatsapp',
@@ -154,16 +167,16 @@ class jeewhatsapp extends eqLogic {
     ]);
 
     if (!is_array($reply) || !isset($reply['reply']) || trim($reply['reply']) === '') {
-      log::add('jeewhatsapp', 'debug', 'Interaction — aucune réponse pour : ' . $message);
+      log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — aucune réponse pour : ' . $message);
       return;
     }
 
-    log::add('jeewhatsapp', 'info', 'Interaction — réponse dans le groupe : ' . $reply['reply']);
+    log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::updateFromMessage() — réponse dans le groupe : ' . $reply['reply']);
 
     try {
       // En mode groupe, la réponse va dans le groupe canal (pas au sender direct)
       $this->sendMessage($reply['reply']);
-      log::add('jeewhatsapp', 'info', 'Interaction — message transmis au daemon');
+      log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::updateFromMessage() — message transmis au daemon');
     } catch (Exception $e) {
       log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__ . ' — Erreur envoi réponse interaction : ' . $e->getMessage());
     }
@@ -173,11 +186,12 @@ class jeewhatsapp extends eqLogic {
   // Envoi d'un message via le daemon
   // $_phone = null  → groupe canal configuré
   // $_phone = '...' → destinataire direct (override)
+  // $_skipPrefix    → true pour les tests (pas de préfixe 🏠)
   // -------------------------------------------------------------------------
 
-  public function sendMessage($_message, $_phone = null, $_mention = null) {
+  public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false) {
     $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
-    $message = $prefix !== '' ? $prefix . $_message : $_message;
+    $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
     $params = [
       'instance_id' => $this->getId(),
@@ -191,6 +205,22 @@ class jeewhatsapp extends eqLogic {
     }
 
     $result = $this->sendToDaemon('send', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
+  // Réponse "quoted" au dernier message reçu dans le groupe canal
+  // -------------------------------------------------------------------------
+
+  public function replyToLast($_message) {
+    $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
+    $message = $prefix !== '' ? $prefix . $_message : $_message;
+
+    $result = $this->sendToDaemon('replyLast', [
+      'instance_id' => $this->getId(),
+      'message'     => $message,
+    ]);
     $this->incrementSentCounters();
     return $result;
   }
@@ -213,26 +243,25 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
-  // Compteurs d'envoi — réinitialisés au début de chaque heure
+  // Compteurs d'envoi — stockés en cache (TTL 1h), reset à chaque heure
   // -------------------------------------------------------------------------
 
   public function incrementSentCounters() {
-    $now          = time();
-    $hour_start   = mktime(date('G', $now), 0, 0, date('n', $now), date('j', $now), date('Y', $now));
+    $now        = time();
+    $hour_start = mktime(date('G', $now), 0, 0, date('n', $now), date('j', $now), date('Y', $now));
+    $key        = 'jeewhatsapp::sent::' . $this->getId() . '::hour';
 
-    $counters = $this->getConfiguration('sent_counters', []);
-    if (!is_array($counters)) { $counters = []; }
+    $stored = cache::byKey($key)->getValue(['count' => 0, 'period_start' => 0]);
+    if (!is_array($stored)) { $stored = ['count' => 0, 'period_start' => 0]; }
 
-    $stored = $counters['hour'] ?? ['count' => 0, 'period_start' => 0];
-    if ($stored['period_start'] < $hour_start) {
-      $counters['hour'] = ['count' => 1, 'period_start' => $hour_start];
+    if (($stored['period_start'] ?? 0) < $hour_start) {
+      $counters = ['count' => 1, 'period_start' => $hour_start];
     } else {
-      $counters['hour'] = ['count' => $stored['count'] + 1, 'period_start' => $stored['period_start']];
+      $counters = ['count' => ($stored['count'] ?? 0) + 1, 'period_start' => $stored['period_start']];
     }
 
-    $this->setConfiguration('sent_counters', $counters);
-    $this->save();
-    $this->checkAndUpdateCmd('sent_hour', $counters['hour']['count']);
+    cache::set($key, $counters, 3700);
+    $this->checkAndUpdateCmd('sent_hour', $counters['count']);
   }
 
   // -------------------------------------------------------------------------
@@ -267,19 +296,21 @@ class jeewhatsapp extends eqLogic {
   private function sendToDaemon($_action, $_params = []) {
     $url     = 'http://127.0.0.1:' . self::getPort() . '/action';
     $payload = json_encode(array_merge(['action' => $_action], $_params));
-    log::add('jeewhatsapp', 'debug', 'sendToDaemon — ' . $_action . ' → ' . $payload);
+    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — ' . $_action . ' → ' . $payload);
+    // ignore_errors permet de lire le corps même sur HTTP 4xx/5xx (erreurs renvoyées par le daemon)
     $opts = ['http' => [
-      'method'  => 'POST',
-      'header'  => 'Content-Type: application/json',
-      'content' => $payload,
-      'timeout' => 15,
+      'method'        => 'POST',
+      'header'        => 'Content-Type: application/json',
+      'content'       => $payload,
+      'timeout'       => 15,
       'ignore_errors' => true,
     ]];
+    // @ supprime le warning PHP si la connexion échoue (remplacé par l'exception ci-dessous)
     $raw = @file_get_contents($url, false, stream_context_create($opts));
     if ($raw === false) {
-      throw new Exception('{{Daemon non joignable sur le port ' . self::getPort() . ' — vérifiez qu\'il est démarré}}');
+      throw new Exception(__('Daemon non joignable sur le port ', __FILE__) . self::getPort() . __(' — vérifiez qu\'il est démarré', __FILE__));
     }
-    log::add('jeewhatsapp', 'debug', 'sendToDaemon — réponse daemon : ' . $raw);
+    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — réponse daemon : ' . $raw);
     $decoded = json_decode($raw, true);
     if (isset($decoded['error'])) {
       throw new Exception($decoded['error']);
@@ -292,6 +323,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function postSave() {
+    // Création idempotente : chaque commande n'est créée que si elle est absente
     $info_cmds = [
       ['logicalId' => 'last_message',     'name' => 'Dernier message',         'subType' => 'string'],
       ['logicalId' => 'last_sender',      'name' => 'Expéditeur',              'subType' => 'string'],
@@ -334,6 +366,7 @@ class jeewhatsapp extends eqLogic {
       $send->setName('Envoyer un message');
       $send->setIsVisible(1);
       $send->setOrder($order++);
+      $send->save();
     }
     // Le champ "Titre" sert d'override optionnel (numéro direct ou JID de groupe)
     if ($send->getDisplay('title_placeholder') !== 'Destinataire (optionnel — vide = groupe canal)') {
@@ -341,7 +374,7 @@ class jeewhatsapp extends eqLogic {
       $send->save();
     }
 
-    // Commande action : Répondre dans le groupe canal
+    // Commande action : Répondre (quoted) au dernier message reçu dans le groupe canal
     $reply = $this->getCmd('action', 'reply');
     if (!is_object($reply)) {
       $reply = new jeewhatsappCmd();
@@ -378,8 +411,8 @@ class jeewhatsappCmd extends cmd {
 
       case 'reply':
         $message = $_options['message'] ?? '';
-        // Répond dans le groupe canal
-        $eqLogic->sendMessage($message);
+        // Réponse "quoted" au dernier message reçu dans le groupe canal
+        $eqLogic->replyToLast($message);
         break;
     }
   }

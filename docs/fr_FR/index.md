@@ -315,9 +315,11 @@ Groupe WhatsApp "jeewhatsapp"
        │              └─ cmd.event() → [last_message, last_sender, …]
        │
        └─ /action (HTTP local 127.0.0.1:55148)
-            ├─ send    → sock.sendMessage(groupJid, { text: préfixe + message })
-            ├─ findGroup → sock.groupFetchAllParticipating()
-            └─ createGroup → sock.groupCreate(name, [])
+            ├─ send        → sock.sendMessage(jid, { text: préfixe + message })
+            ├─ findGroup   → sock.groupFetchAllParticipating()
+            ├─ createGroup → sock.groupCreate(name, [])
+            ├─ getQR       → lit auth/{id}/qr.txt
+            └─ getStatus   → lit auth/{id}/status.txt
 ```
 
 ### Composants
