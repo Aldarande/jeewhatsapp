@@ -90,13 +90,17 @@ class jeewhatsapp extends eqLogic {
     $jeedom_port = config::byKey('port', 'network', 80);
     $jeedom_comp = config::byKey('urlcomplement', 'network', '');
     $api_key     = jeedom::getApiKey(__CLASS__);
+    // SECURITY (F-001/F-006): callback sans apikey en query string — l'API key transite
+    // via variable d'environnement JEEDOM_APIKEY et header X-API-Key (CWE-214, CWE-598)
     $callback    = 'http://127.0.0.1:' . $jeedom_port . $jeedom_comp
-                 . '/plugins/jeewhatsapp/core/php/callback.php?apikey=' . urlencode($api_key);
+                 . '/plugins/jeewhatsapp/core/php/callback.php';
 
     $pid_file = jeedom::getTmpFolder(__CLASS__) . '/daemon.pid';
     $log_file = log::getPathToLog(__CLASS__);
 
-    $cmd  = 'node ' . escapeshellarg(dirname(__FILE__) . '/../../resources/jeewhatsappd/jeewhatsappd.js');
+    // SECURITY (F-001): API key passée via env var, jamais en argument CLI visible dans ps aux
+    $cmd  = 'JEEDOM_APIKEY=' . escapeshellarg($api_key) . ' ';
+    $cmd .= 'node ' . escapeshellarg(dirname(__FILE__) . '/../../resources/jeewhatsappd/jeewhatsappd.js');
     $cmd .= ' --instances '  . escapeshellarg(json_encode($instances));
     $cmd .= ' --port '       . self::getPort();
     $cmd .= ' --callback '   . escapeshellarg($callback);

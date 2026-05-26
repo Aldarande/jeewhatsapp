@@ -39,6 +39,10 @@ const CALLBACK_URL = args['callback'];
 const PID_FILE     = args['pid-file'];
 const LOG_FILE     = args['log-file'] || '';
 const DEBUG        = args['debug'] === 'true' || args['debug'] === '1';
+// SECURITY (F-001): API key lue depuis l'environnement, jamais en argument CLI
+const API_KEY      = process.env.JEEDOM_APIKEY || '';
+// On efface immédiatement la variable du process pour éviter qu'un dump éventuel ne la révèle
+delete process.env.JEEDOM_APIKEY;
 
 let instances = [];
 try {
@@ -90,14 +94,28 @@ function shutdown() {
 
 // ---------------------------------------------------------------------------
 // Répertoires auth (un sous-dossier par équipement Jeedom)
+// SECURITY: credentials Baileys sensibles — permissions strictes 0700 (CWE-732)
 // ---------------------------------------------------------------------------
 
+// umask 0o077 pour que tout fichier créé soit 0600 par défaut
+process.umask(0o077);
+
 const AUTH_BASE = path.join(__dirname, 'auth');
-if (!fs.existsSync(AUTH_BASE)) { fs.mkdirSync(AUTH_BASE, { recursive: true }); }
+if (!fs.existsSync(AUTH_BASE)) { fs.mkdirSync(AUTH_BASE, { recursive: true, mode: 0o700 }); }
+try { fs.chmodSync(AUTH_BASE, 0o700); } catch (_) {}
 
 function authDir(id) {
+  // SECURITY: instance_id doit être strictement numérique pour éviter path traversal (CWE-22)
+  if (!/^\d+$/.test(String(id))) {
+    throw new Error('jeewhatsappd.js::authDir() — instance_id invalide : ' + id);
+  }
   const dir = path.join(AUTH_BASE, String(id));
-  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
+  const resolved = path.resolve(dir);
+  if (!resolved.startsWith(path.resolve(AUTH_BASE) + path.sep)) {
+    throw new Error('jeewhatsappd.js::authDir() — path traversal détecté pour id=' + id);
+  }
+  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); }
+  try { fs.chmodSync(dir, 0o700); } catch (_) {}
   return dir;
 }
 function qrFilePath(id)       { return path.join(authDir(id), 'qr.txt'); }
@@ -327,7 +345,12 @@ function sendCallback(instanceId, data) {
       port:     u.port || 80,
       path:     u.pathname + u.search,
       method:   'POST',
-      headers:  { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
+      headers:  {
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+        // SECURITY (F-001/F-006): API key en header au lieu de query string (évite logs Apache)
+        'X-API-Key':      API_KEY,
+      },
     };
     const req = http.request(options, (res) => { res.resume(); debug('Callback HTTP ' + res.statusCode); resolve(); });
     req.on('error', (e) => { logMsg('error', 'Callback Jeedom : ' + e.message); resolve(); });

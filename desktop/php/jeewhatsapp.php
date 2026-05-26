@@ -113,12 +113,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			</li>
 			<li role="presentation" class="active">
 				<a href="#eqlogictab" role="tab" data-toggle="tab">
-					<i class="fas fa-tachometer-alt"></i> {{Equipement}}
-				</a>
-			</li>
-			<li role="presentation">
-				<a href="#qrtab" role="tab" data-toggle="tab" id="tab_qr_link">
-					<i class="fab fa-whatsapp"></i> {{Connexion WhatsApp}}<span id="tab_qr_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:#999;margin-left:7px;vertical-align:middle;border:1px solid rgba(0,0,0,0.15);transition:background-color 0.4s;"></span>
+					<i class="fas fa-tachometer-alt"></i> {{Equipement}}<span id="tab_qr_status_dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:#999;margin-left:7px;vertical-align:middle;border:1px solid rgba(0,0,0,0.15);transition:background-color 0.4s;"></span>
 				</a>
 			</li>
 			<li role="presentation">
@@ -188,6 +183,47 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									</label>
 								</div>
 							</div>
+
+							<!-- ── Connexion WhatsApp ──────────────────────────────── -->
+							<legend style="margin-top:10px;"><i class="fab fa-whatsapp" style="color:#25D366;"></i> {{Connexion}}</legend>
+
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Statut}}</label>
+								<div class="col-sm-7">
+									<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+										<span id="wa_status_badge" class="label label-default" style="font-size:0.9em;padding:6px 14px;">
+											<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
+										</span>
+										<button class="btn btn-xs btn-default" id="btn_refresh_qr" type="button">
+											<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
+										</button>
+									</div>
+									<div id="wa_connected_zone" style="display:none;margin-top:6px;">
+										<i class="fas fa-check-circle" style="color:#25D366;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
+										<span style="color:#25D366;font-weight:600;">{{Connecté à WhatsApp ✓}}</span>
+									</div>
+									<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
+										<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
+										<span style="color:#d9534f;">{{Session expirée — redémarrez le daemon}}</span>
+									</div>
+								</div>
+							</div>
+
+							<div class="form-group" id="wa_qr_zone" style="display:none;">
+								<label class="col-sm-4 control-label">{{QR Code}}</label>
+								<div class="col-sm-7">
+									<p class="text-muted" style="font-size:0.83em;margin-bottom:7px;">
+										<i class="fas fa-mobile-alt"></i>
+										{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}
+									</p>
+									<img id="wa_qr_img" src=""
+										style="width:180px;height:180px;border:3px solid #25D366;border-radius:10px;display:block;">
+									<p class="help-block" style="font-size:0.8em;margin-top:5px;">
+										{{QR code valide 30 s — se rafraîchit automatiquement}}
+									</p>
+								</div>
+							</div>
+
 						</div>
 
 						<div class="col-lg-6">
@@ -257,62 +293,10 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
-							<div class="alert alert-info" style="margin-top:15px;">
-								<i class="fas fa-info-circle"></i>
-								{{Après avoir sauvegardé, allez dans l'onglet}}
-								<strong>{{Connexion WhatsApp}}</strong>
-								{{pour scanner le QR code avec votre téléphone.}}
-							</div>
 						</div>
 					</fieldset>
 				</form>
 			</div><!-- /#eqlogictab -->
-
-			<!-- ── Onglet QR Code / Connexion ────────────────────────────── -->
-			<div role="tabpanel" class="tab-pane" id="qrtab">
-				<br>
-				<div class="row">
-					<div class="col-md-6 col-md-offset-3 text-center">
-
-						<!-- Statut de connexion -->
-						<div id="wa_status_box" style="margin-bottom:20px;">
-							<span id="wa_status_badge" class="label label-default" style="font-size:1em;padding:8px 18px;">
-								<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
-							</span>
-						</div>
-
-						<!-- Zone QR code — le daemon génère une data URL PNG via QRCode.toDataURL() -->
-						<div id="wa_qr_zone" style="display:none;margin:20px auto;">
-							<p class="text-muted">
-								{{Scannez ce QR code avec WhatsApp sur votre téléphone}}<br>
-								<small>{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}</small>
-							</p>
-							<img id="wa_qr_img" src=""
-								style="width:220px;height:220px;border:4px solid #25D366;border-radius:12px;margin:10px auto;display:block;">
-							<p class="text-muted"><small>{{Le QR code expire après 30 secondes — il se rafraîchit automatiquement}}</small></p>
-						</div>
-
-						<!-- Message connecté -->
-						<div id="wa_connected_zone" style="display:none;margin:20px 0;">
-							<i class="fas fa-check-circle" style="font-size:4em;color:#25D366;"></i>
-							<p style="margin-top:10px;font-size:1.2em;font-weight:bold;color:#25D366;">{{Connecté à WhatsApp ✓}}</p>
-						</div>
-
-						<!-- Message déconnecté -->
-						<div id="wa_disconnected_zone" style="display:none;margin:20px 0;">
-							<i class="fas fa-times-circle" style="font-size:4em;color:#d9534f;"></i>
-							<p style="margin-top:10px;font-size:1.1em;color:#d9534f;">{{Session expirée ou déconnectée}}</p>
-							<p class="text-muted">{{Redémarrez le daemon pour générer un nouveau QR code.}}</p>
-						</div>
-
-						<!-- Bouton rafraîchir -->
-						<button class="btn btn-default" id="btn_refresh_qr" style="margin-top:10px;">
-							<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
-						</button>
-
-					</div>
-				</div>
-			</div><!-- /#qrtab -->
 
 			<!-- ── Onglet Commandes ───────────────────────────────────────── -->
 			<div role="tabpanel" class="tab-pane" id="commandtab">
@@ -344,47 +328,65 @@ sendVarToJS('eqType', 'jeewhatsapp');
 
 			<!-- ── Onglet Test ────────────────────────────────────────────── -->
 			<div role="tabpanel" class="tab-pane" id="testtab">
-				<br>
-				<fieldset>
-					<legend>{{Envoyer un message de test dans le groupe canal}}</legend>
+				<div style="max-width:640px;margin:24px auto;">
 
-					<div class="alert alert-info">
-						<i class="fas fa-info-circle"></i>
-						{{Le message sera envoyé dans le groupe canal. Laissez "Destinataire" vide pour utiliser le groupe.}}
+					<!-- En-tête card -->
+					<div style="background:#25D366;color:#fff;padding:13px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:10px;">
+						<i class="fab fa-whatsapp" style="font-size:1.5em;"></i>
+						<span style="font-size:1.05em;font-weight:600;">{{Envoyer un message de test}}</span>
 					</div>
 
-					<div class="form-group">
-						<label class="col-sm-3 control-label">{{Destinataire}} <small class="text-muted">{{(optionnel)}}</small></label>
-						<div class="col-sm-6">
-							<input type="text" id="test_phone" class="form-control" placeholder="{{Vide = groupe canal — ou numéro ex : 33612345678}}">
+					<div style="border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;padding:22px 24px;background:#fff;">
+
+						<!-- Destinataire -->
+						<div class="form-group" style="margin-bottom:14px;">
+							<label style="font-weight:600;margin-bottom:5px;display:block;">
+								<i class="fas fa-share" style="color:#25D366;margin-right:6px;"></i>
+								{{Destinataire}}
+								<span class="text-muted" style="font-weight:normal;font-size:0.88em;margin-left:4px;">{{— vide = groupe canal}}</span>
+							</label>
+							<input type="text" id="test_phone" class="form-control"
+								placeholder="{{Laisser vide pour le groupe canal — ou numéro direct ex : 33612345678}}">
 						</div>
-					</div>
-					<div class="form-group">
-						<label class="col-sm-3 control-label">{{Message}}</label>
-						<div class="col-sm-6">
-							<input type="text" id="test_message" class="form-control" value="Test depuis JeeWhatsApp 🚀">
-						</div>
-					</div>
 
-					<div class="form-group">
-						<label class="col-sm-3 control-label">{{Mentionner}} <small class="text-muted">{{(optionnel)}}</small></label>
-						<div class="col-sm-6">
-							<input type="text" id="test_mention" class="form-control" placeholder="{{Numéro à mentionner (@...) — ex : 33612345678}}">
-							<span class="help-block">
-								<small>{{Test : déclenche-t-il une notification sur le numéro mentionné ?}}</small>
-							</span>
+						<!-- Message -->
+						<div class="form-group" style="margin-bottom:14px;">
+							<label style="font-weight:600;margin-bottom:5px;display:block;">
+								<i class="fas fa-comment-dots" style="color:#25D366;margin-right:6px;"></i>
+								{{Message}} <span class="text-danger" title="{{Champ obligatoire}}">*</span>
+							</label>
+							<input type="text" id="test_message" class="form-control"
+								value="Test depuis JeeWhatsApp 🚀">
 						</div>
-					</div>
 
-					<div class="form-group">
-						<div class="col-sm-offset-3 col-sm-6">
-							<button class="btn btn-primary" id="btn_test_send">
+						<!-- Séparateur optionnel -->
+						<div style="border-top:1px solid #f0f0f0;margin:18px 0 16px;"></div>
+
+						<!-- Mention -->
+						<div class="form-group" style="margin-bottom:20px;">
+							<label style="font-weight:600;margin-bottom:5px;display:block;">
+								<i class="fas fa-at" style="color:#25D366;margin-right:6px;"></i>
+								{{Mention}}
+								<span class="text-muted" style="font-weight:normal;font-size:0.88em;margin-left:4px;">{{— optionnel}}</span>
+							</label>
+							<input type="text" id="test_mention" class="form-control"
+								placeholder="{{Numéro à mentionner — ex : 33612345678}}">
+							<p class="help-block" style="margin-top:5px;font-size:0.85em;color:#888;">
+								<i class="fas fa-info-circle"></i>
+								{{Notifie le membre mentionné — ne fonctionne que si Jeedom utilise un compte dédié (pas votre compte personnel)}}
+							</p>
+						</div>
+
+						<!-- Bouton + résultat inline -->
+						<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+							<button class="btn btn-success" id="btn_test_send" style="min-width:170px;font-size:1em;padding:8px 18px;">
 								<i class="fas fa-paper-plane"></i> {{Envoyer le test}}
 							</button>
-							<span id="test_result" class="help-block"></span>
+							<span id="test_result" style="font-size:0.95em;"></span>
 						</div>
-					</div>
-				</fieldset>
+
+					</div><!-- /card body -->
+				</div><!-- /max-width -->
 			</div><!-- /#testtab -->
 
 		</div><!-- /.tab-content -->
@@ -400,33 +402,30 @@ $('#bt_donJeeWhatsApp').on('click', function () {
   $('#modal_donJeeWhatsApp').modal('show');
 });
 
-// ── Mise à jour du dot dès l'ouverture d'un équipement ─────────────────────
+// ── Polling statut connexion — démarre quand l'équipement s'ouvre, s'arrête quand caché ────
 // Jeedom affiche la div .eqLogic en changeant son style.display — pas d'événement natif.
-// On observe l'attribut style pour détecter ce moment et charger le statut QR initial.
+// On observe l'attribut style pour détecter l'ouverture / fermeture de l'équipement.
 (function () {
   var target = document.querySelector('.col-xs-12.eqLogic');
   if (!target) { return; }
   new MutationObserver(function (mutations) {
     for (var m of mutations) {
-      if (m.type === 'attributes' && target.style.display !== 'none') {
-        var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
-        if (eqLogic_id) { refreshQRStatus(); }
+      if (m.type !== 'attributes') { continue; }
+      if (target.style.display !== 'none') {
+        // Jeedom populates form fields after changing display — wait before reading eqLogic_id
+        setTimeout(function () {
+          var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+          if (!eqLogic_id) { return; }
+          refreshQRStatus();
+          if (_waQRInterval) { clearInterval(_waQRInterval); }
+          _waQRInterval = setInterval(refreshQRStatus, 8000);
+        }, 300);
+      } else {
+        if (_waQRInterval) { clearInterval(_waQRInterval); _waQRInterval = null; }
       }
     }
   }).observe(target, { attributes: true, attributeFilter: ['style'] });
 })();
-
-// ── Onglet QR code — chargement au clic ────────────────────────────────────
-// Le polling (8 s) s'arrête dès qu'on quitte l'onglet pour ne pas surcharger le daemon
-$('a[href="#qrtab"]').on('shown.bs.tab', function () {
-  refreshQRStatus();
-  if (_waQRInterval) { clearInterval(_waQRInterval); }
-  _waQRInterval = setInterval(refreshQRStatus, 8000);
-});
-
-$('a[href!="#qrtab"]').on('shown.bs.tab', function () {
-  if (_waQRInterval) { clearInterval(_waQRInterval); _waQRInterval = null; }
-});
 
 $('#btn_refresh_qr').on('click', function () { refreshQRStatus(); });
 
@@ -465,7 +464,11 @@ function applyStatus(r) {
     $('#wa_disconnected_zone').show();
     showStatus('danger', '{{Déconnecté}}');
   } else {
-    showStatus('info', '{{' + (r ? r.status : 'connecting') + '…}}');
+    var statusMap = {
+      'connecting':   '{{Connexion en cours…}}',
+      'reconnecting': '{{Reconnexion en cours…}}',
+    };
+    showStatus('info', statusMap[r && r.status] || '{{Connexion en cours…}}');
   }
 }
 
