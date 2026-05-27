@@ -214,6 +214,57 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Pool de messages de soutien — sélection aléatoire selon catégorie/occasion
+  // Source : core/config/donation_messages.json
+  //
+  // $_filter = null            → tirage parmi messages sans occasion (général)
+  // $_filter = 'sunday'        → tirage parmi messages d'occasion = sunday
+  // $_filter = 'christmas'     → idem
+  // $_filter = 'birthday'      → idem
+  // $_filter = 'any'           → tirage parmi tous les messages (pool complet)
+  // $_filter = ['short','humor'] → tirage parmi catégories listées
+  // -------------------------------------------------------------------------
+
+  public static function getDonationMessage($_filter = null) {
+    $path = dirname(__FILE__) . '/../config/donation_messages.json';
+    if (!file_exists($path)) {
+      throw new Exception(__('Pool de messages introuvable', __FILE__) . ' : ' . $path);
+    }
+    $data = json_decode(file_get_contents($path), true);
+    if (!is_array($data) || !isset($data['messages'])) {
+      throw new Exception(__('Pool de messages invalide (JSON corrompu)', __FILE__));
+    }
+
+    $pool = $data['messages'];
+
+    // Filtrage
+    if ($_filter === 'any') {
+      // pas de filtre — pool complet
+    } elseif (is_array($_filter)) {
+      $pool = array_filter($pool, function ($m) use ($_filter) {
+        return in_array($m['category'] ?? null, $_filter, true);
+      });
+    } elseif ($_filter !== null && $_filter !== '') {
+      // Filtre par occasion exacte
+      $pool = array_filter($pool, function ($m) use ($_filter) {
+        return ($m['occasion'] ?? null) === $_filter;
+      });
+    } else {
+      // Défaut : exclut les messages liés à une occasion spécifique
+      $pool = array_filter($pool, function ($m) {
+        return ($m['occasion'] ?? null) === null;
+      });
+    }
+
+    $pool = array_values($pool);
+    if (empty($pool)) {
+      throw new Exception(__('Aucun message dans le pool pour ce filtre', __FILE__));
+    }
+
+    return $pool[array_rand($pool)];
+  }
+
+  // -------------------------------------------------------------------------
   // Envoi d'un média (image, vidéo, audio, document) — chemin local serveur
   // $_path    = chemin absolu du fichier (lisible par www-data)
   // $_caption = légende optionnelle (image/vidéo/document uniquement)

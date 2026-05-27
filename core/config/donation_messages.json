@@ -1,0 +1,83 @@
+{
+  "_meta": {
+    "description": "Pool de messages de don/soutien envoyés spontanément par le plugin",
+    "version": 1,
+    "author": "Aldarande",
+    "ko-fi": "https://ko-fi.com/aldarande",
+    "github_sponsors": "https://github.com/sponsors/Aldarande"
+  },
+  "messages": [
+    {
+      "id": "M01",
+      "category": "short",
+      "occasion": null,
+      "text": "🤖 JeeWhatsApp ronronne pour toi depuis quelque temps déjà.\nSi ce plugin te facilite la vie, un café 👉 https://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M02",
+      "category": "short",
+      "occasion": null,
+      "text": "👋 Petit rappel discret : JeeWhatsApp est 100% gratuit.\nMais une baguette 🥖 ou un café ☕ ferait grand plaisir ! https://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M03",
+      "category": "short",
+      "occasion": null,
+      "text": "⚡ Ce message a été envoyé par un plugin qui n'a coûté que ton temps d'install.\nSi l'auteur mérite un café : https://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M04",
+      "category": "short",
+      "occasion": null,
+      "text": "🏠 Jeedom + WhatsApp = ❤️ — fait avec amour, sans pub, sans télémétrie.\nUn coup de pouce : https://ko-fi.com/aldarande 🙏"
+    },
+    {
+      "id": "M06",
+      "category": "medium",
+      "occasion": null,
+      "text": "🤖 *Petit message du plugin JeeWhatsApp*\n\nJe suis open-source, sans abonnement, sans collecte de données.\nMon créateur (Aldarande) y a passé des soirées et des week-ends.\n\nSi je te rends service, offre-lui un café ☕ ou une baguette 🥖 :\n👉 https://ko-fi.com/aldarande\n👉 https://github.com/sponsors/Aldarande"
+    },
+    {
+      "id": "M07",
+      "category": "medium",
+      "occasion": null,
+      "text": "🔔 *Coucou depuis ton Jeedom*\n\nÇa fait un moment que JeeWhatsApp tourne sans broncher chez toi.\nPas de pub, pas de tracking, pas de cloud tiers — juste du code libre.\n\nSi tu veux remercier l'auteur, le plus simple c'est :\n☕ Un café : https://ko-fi.com/aldarande\n🥖 Une baguette : https://ko-fi.com/aldarande (même endroit, même bonheur)"
+    },
+    {
+      "id": "M08",
+      "category": "medium",
+      "occasion": null,
+      "text": "✨ *Rappel sympa*\n\nJeeWhatsApp t'a envoyé pas mal de notifications ce mois-ci, sans broncher.\nEt il continuera, gratuitement, parce que c'est sa nature.\n\nMais si tu trouves que ça vaut bien un café ☕ pour son auteur :\nhttps://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M10",
+      "category": "humor",
+      "occasion": null,
+      "text": "🔋 *Statut JeeWhatsApp*\n- Uptime : ✓\n- Bugs corrigés : ✓\n- Café offert à l'auteur : ✗\n\nOn corrige le dernier point ? 👉 https://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M12",
+      "category": "formal",
+      "occasion": null,
+      "text": "🤖 *JeeWhatsApp — Plugin Jeedom open-source (AGPL v3)*\n\nDéveloppé bénévolement par Aldarande. Aucun service tiers, aucun coût.\n\nSi ce plugin t'est utile, tu peux soutenir le développement :\n• Ko-fi : https://ko-fi.com/aldarande\n• GitHub Sponsors : https://github.com/sponsors/Aldarande\n• Une étoile sur GitHub aussi, c'est gratuit et ça motive ⭐"
+    },
+    {
+      "id": "M13",
+      "category": "occasion",
+      "occasion": "christmas",
+      "text": "🎄 Joyeuses fêtes ! C'est ton plugin JeeWhatsApp qui parle.\nCadeau possible (et apprécié) pour l'auteur : https://ko-fi.com/aldarande ☕"
+    },
+    {
+      "id": "M14",
+      "category": "occasion",
+      "occasion": "birthday",
+      "text": "🎂 JeeWhatsApp fête bientôt son anniversaire.\nLe meilleur cadeau ? Un café pour son créateur 👉 https://ko-fi.com/aldarande"
+    },
+    {
+      "id": "M15",
+      "category": "occasion",
+      "occasion": "sunday",
+      "text": "☀️ Bon dimanche !\nTon Jeedom continue de tourner pendant que tu te reposes.\nPenser à l'auteur de JeeWhatsApp avec un ☕ : https://ko-fi.com/aldarande"
+    }
+  ]
+}
