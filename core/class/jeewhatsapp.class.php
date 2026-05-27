@@ -214,6 +214,46 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Envoi d'un média (image, vidéo, audio, document) — chemin local serveur
+  // $_path    = chemin absolu du fichier (lisible par www-data)
+  // $_caption = légende optionnelle (image/vidéo/document uniquement)
+  // $_phone   = destinataire optionnel (null = groupe canal)
+  // -------------------------------------------------------------------------
+
+  public function sendMediaFile($_path, $_caption = '', $_phone = null) {
+    if (!is_string($_path) || trim($_path) === '') {
+      throw new Exception(__('Chemin du fichier vide', __FILE__));
+    }
+    $path = trim($_path);
+    if (!file_exists($path)) {
+      throw new Exception(__('Fichier introuvable', __FILE__) . ' : ' . $path);
+    }
+    if (!is_readable($path)) {
+      throw new Exception(__('Fichier non lisible', __FILE__) . ' : ' . $path);
+    }
+
+    // Préfixe Jeedom appliqué uniquement si une caption non vide est fournie
+    $caption = '';
+    if ($_caption !== null && trim($_caption) !== '') {
+      $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
+      $caption = $prefix !== '' ? $prefix . $_caption : $_caption;
+    }
+
+    $params = [
+      'instance_id' => $this->getId(),
+      'media_path'  => $path,
+      'message'     => $caption,
+    ];
+    if ($_phone !== null && $_phone !== '') {
+      $params['phone'] = $_phone;
+    }
+
+    $result = $this->sendToDaemon('sendMedia', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
   // Réponse "quoted" au dernier message reçu dans le groupe canal
   // -------------------------------------------------------------------------
 
@@ -391,6 +431,29 @@ class jeewhatsapp extends eqLogic {
       $reply->setOrder($order++);
       $reply->save();
     }
+
+    // Commande action : Envoyer un média (image/vidéo/audio/document)
+    // Convention : title = chemin absolu du fichier, message = caption optionnelle
+    $media = $this->getCmd('action', 'send_media');
+    if (!is_object($media)) {
+      $media = new jeewhatsappCmd();
+      $media->setEqLogic_id($this->getId());
+      $media->setLogicalId('send_media');
+      $media->setType('action');
+      $media->setSubType('message');
+      $media->setName('Envoyer un média');
+      $media->setIsVisible(1);
+      $media->setOrder($order++);
+      $media->save();
+    }
+    if ($media->getDisplay('title_placeholder') !== 'Chemin absolu du fichier (image/vidéo/audio/document)') {
+      $media->setDisplay('title_placeholder', 'Chemin absolu du fichier (image/vidéo/audio/document)');
+      $media->save();
+    }
+    if ($media->getDisplay('message_placeholder') !== 'Légende optionnelle (ignorée pour audio)') {
+      $media->setDisplay('message_placeholder', 'Légende optionnelle (ignorée pour audio)');
+      $media->save();
+    }
   }
 }
 
@@ -417,6 +480,16 @@ class jeewhatsappCmd extends cmd {
         $message = $_options['message'] ?? '';
         // Réponse "quoted" au dernier message reçu dans le groupe canal
         $eqLogic->replyToLast($message);
+        break;
+
+      case 'send_media':
+        // title = chemin absolu du fichier ; message = légende optionnelle
+        $path    = (isset($_options['title'])) ? trim($_options['title']) : '';
+        $caption = $_options['message'] ?? '';
+        if ($path === '') {
+          throw new Exception(__('Chemin du fichier (champ Titre) obligatoire', __FILE__));
+        }
+        $eqLogic->sendMediaFile($path, $caption);
         break;
     }
   }

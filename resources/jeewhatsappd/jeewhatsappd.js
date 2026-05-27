@@ -390,7 +390,88 @@ http.createServer(async (req, res) => {
   logMsg('info', 'Daemon démarré — port ' + PORT + ', ' + instances.length + ' instance(s)');
 });
 
-async function handleAction({ action, instance_id, phone, message, mention }) {
+// ---------------------------------------------------------------------------
+// Détection du type de média via extension de fichier
+// ---------------------------------------------------------------------------
+
+const MEDIA_EXT = {
+  // Images
+  jpg: { kind: 'image',    mime: 'image/jpeg' },
+  jpeg:{ kind: 'image',    mime: 'image/jpeg' },
+  png: { kind: 'image',    mime: 'image/png'  },
+  gif: { kind: 'image',    mime: 'image/gif'  },
+  webp:{ kind: 'image',    mime: 'image/webp' },
+  bmp: { kind: 'image',    mime: 'image/bmp'  },
+  // Vidéos
+  mp4: { kind: 'video',    mime: 'video/mp4'  },
+  mov: { kind: 'video',    mime: 'video/quicktime' },
+  webm:{ kind: 'video',    mime: 'video/webm' },
+  '3gp':{ kind: 'video',   mime: 'video/3gpp' },
+  // Audio (.ogg/.opus = note vocale, .mp3/.m4a = audio normal)
+  ogg: { kind: 'audio',    mime: 'audio/ogg; codecs=opus', ptt: true },
+  opus:{ kind: 'audio',    mime: 'audio/ogg; codecs=opus', ptt: true },
+  mp3: { kind: 'audio',    mime: 'audio/mpeg' },
+  m4a: { kind: 'audio',    mime: 'audio/mp4'  },
+  aac: { kind: 'audio',    mime: 'audio/aac'  },
+  wav: { kind: 'audio',    mime: 'audio/wav'  },
+  // Documents
+  pdf: { kind: 'document', mime: 'application/pdf' },
+  doc: { kind: 'document', mime: 'application/msword' },
+  docx:{ kind: 'document', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
+  xls: { kind: 'document', mime: 'application/vnd.ms-excel' },
+  xlsx:{ kind: 'document', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+  ppt: { kind: 'document', mime: 'application/vnd.ms-powerpoint' },
+  pptx:{ kind: 'document', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
+  txt: { kind: 'document', mime: 'text/plain' },
+  csv: { kind: 'document', mime: 'text/csv'  },
+  zip: { kind: 'document', mime: 'application/zip' },
+};
+
+const MEDIA_MAX_SIZE = 100 * 1024 * 1024; // 100 MB — limite WhatsApp vidéo
+
+function detectMedia(filePath) {
+  const ext = path.extname(filePath).slice(1).toLowerCase();
+  const info = MEDIA_EXT[ext];
+  if (!info) {
+    throw new Error('Type de fichier non supporté (.' + ext + ') — ' +
+      'extensions autorisées : ' + Object.keys(MEDIA_EXT).join(', '));
+  }
+  return info;
+}
+
+function buildMediaPayload(filePath, caption) {
+  const info     = detectMedia(filePath);
+  const buffer   = fs.readFileSync(filePath);
+  const fileName = path.basename(filePath);
+  const payload  = {};
+
+  switch (info.kind) {
+    case 'image':
+      payload.image   = buffer;
+      if (caption) { payload.caption = caption; }
+      break;
+    case 'video':
+      payload.video   = buffer;
+      payload.mimetype= info.mime;
+      if (caption) { payload.caption = caption; }
+      break;
+    case 'audio':
+      payload.audio    = buffer;
+      payload.mimetype = info.mime;
+      payload.ptt      = !!info.ptt;
+      // Audio n'accepte pas de caption — la légende sera envoyée séparément
+      break;
+    case 'document':
+      payload.document = buffer;
+      payload.mimetype = info.mime;
+      payload.fileName = fileName;
+      if (caption) { payload.caption = caption; }
+      break;
+  }
+  return { payload, kind: info.kind };
+}
+
+async function handleAction({ action, instance_id, phone, message, mention, media_path }) {
   const id = String(instance_id);
 
   switch (action) {
@@ -436,6 +517,66 @@ async function handleAction({ action, instance_id, phone, message, mention }) {
       );
       await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
       return { sent: true };
+    }
+
+    // ── Envoi d'un média (image/vidéo/audio/document) ──────────────────────
+    case 'sendMedia': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+
+      // SECURITY : path est obligatoire, doit pointer vers un fichier existant et lisible
+      if (!media_path || typeof media_path !== 'string') {
+        throw new Error('Paramètre media_path obligatoire (chemin absolu du fichier)');
+      }
+      if (!path.isAbsolute(media_path)) {
+        throw new Error('media_path doit être un chemin absolu : ' + media_path);
+      }
+      if (!fs.existsSync(media_path)) {
+        throw new Error('Fichier introuvable : ' + media_path);
+      }
+      const stat = fs.statSync(media_path);
+      if (!stat.isFile()) {
+        throw new Error('Le chemin n\'est pas un fichier : ' + media_path);
+      }
+      if (stat.size === 0) {
+        throw new Error('Fichier vide : ' + media_path);
+      }
+      if (stat.size > MEDIA_MAX_SIZE) {
+        throw new Error('Fichier trop volumineux (' + Math.round(stat.size / 1024 / 1024) + 'MB) — max 100MB');
+      }
+
+      // Destinataire (même logique que 'send')
+      let jid;
+      if (!phone || phone === '' || phone === 'group') {
+        jid = groupJids[id];
+        if (!jid) {
+          throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
+        }
+      } else if (String(phone).includes('@')) {
+        jid = String(phone).trim();
+      } else {
+        const digits = String(phone).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
+        if (!digits) { throw new Error('Numéro de téléphone invalide (' + phone + ')'); }
+        jid = digits + '@s.whatsapp.net';
+      }
+
+      const { payload, kind } = buildMediaPayload(media_path, message || '');
+
+      logMsg('info', '[' + id + '] → ' + jid + ' : [' + kind + '] ' + path.basename(media_path)
+        + ' (' + Math.round(stat.size / 1024) + 'KB)' + (message ? ' caption="' + String(message).substring(0, 40) + '"' : ''));
+
+      // Timeout 60s pour les médias (upload plus long que texte)
+      const sendTimeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Envoi média échoué — délai dépassé (60s) pour ' + jid)), 60000)
+      );
+      await Promise.race([sock.sendMessage(jid, payload), sendTimeout]);
+
+      // Audio : pas de caption native — envoyer un message texte séparé si fourni
+      if (kind === 'audio' && message && String(message).trim() !== '') {
+        await sock.sendMessage(jid, { text: message });
+      }
+
+      return { sent: true, kind, file: path.basename(media_path), bytes: stat.size };
     }
 
     // ── Réponse "quoted" au dernier message reçu dans le groupe canal ──────
