@@ -214,6 +214,87 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Cron horaire : envoi mensuel d'un message de soutien aléatoire
+  // Déclenché par cron Jeedom toutes les heures (cf install.php).
+  // - Lit la prochaine date planifiée par eqLogic (cache)
+  // - Si jamais planifié → planifie un jour aléatoire du mois courant ou suivant
+  // - Si l'heure est arrivée → envoie + replanifie pour le mois suivant
+  // -------------------------------------------------------------------------
+
+  public static function cronDonation() {
+    foreach (eqLogic::byType(__CLASS__) as $eqLogic) {
+      if (!$eqLogic->getIsEnable()) { continue; }
+      if ($eqLogic->getConfiguration('donation_enabled', 0) != 1) { continue; }
+
+      $cacheKey = 'jeewhatsapp::donation::next::' . $eqLogic->getId();
+      $cached   = cache::byKey($cacheKey);
+      $next_ts  = (int) $cached->getValue(0);
+      $now      = time();
+
+      // Première planification (cache vide ou expiré)
+      if ($next_ts <= 0) {
+        $next_ts = self::scheduleNextDonation();
+        cache::set($cacheKey, $next_ts, 86400 * 65); // TTL 65j (couvre 2 mois)
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::cronDonation() l.' . __LINE__
+          . ' — Première planification donation pour eqLogic #' . $eqLogic->getId()
+          . ' à ' . date('Y-m-d H:i', $next_ts));
+        continue;
+      }
+
+      // Heure d'envoi atteinte
+      if ($now >= $next_ts) {
+        try {
+          $msg = self::getDonationMessage();
+          $eqLogic->sendMessage($msg['text']);
+          log::add('jeewhatsapp', 'info',
+            'jeewhatsapp.class.php::cronDonation() l.' . __LINE__
+            . ' — Donation ' . $msg['id'] . ' envoyée pour eqLogic #' . $eqLogic->getId());
+        } catch (Exception $e) {
+          log::add('jeewhatsapp', 'error',
+            'jeewhatsapp.class.php::cronDonation() l.' . __LINE__
+            . ' — Erreur envoi donation eqLogic #' . $eqLogic->getId() . ' : ' . $e->getMessage());
+        }
+        // Replanifier le mois suivant quoi qu'il arrive (évite spam si erreur)
+        $next_ts = self::scheduleNextDonation(true);
+        cache::set($cacheKey, $next_ts, 86400 * 65);
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::cronDonation() l.' . __LINE__
+          . ' — Prochaine donation eqLogic #' . $eqLogic->getId()
+          . ' planifiée à ' . date('Y-m-d H:i', $next_ts));
+      }
+    }
+  }
+
+  // Planifie un jour/heure aléatoire entre 10h et 19h
+  // $_forceNextMonth = true → force le mois suivant (utilisé après envoi)
+  private static function scheduleNextDonation($_forceNextMonth = false) {
+    $now = time();
+    if ($_forceNextMonth) {
+      $base  = strtotime('+1 month', $now);
+      $year  = (int) date('Y', $base);
+      $month = (int) date('n', $base);
+    } else {
+      $year  = (int) date('Y', $now);
+      $month = (int) date('n', $now);
+    }
+    $daysInMonth = (int) date('t', mktime(0, 0, 0, $month, 1, $year));
+
+    // PHP 7+ : random_int est cryptographiquement sûr
+    $day    = random_int(1, $daysInMonth);
+    $hour   = random_int(10, 19);
+    $minute = random_int(0, 59);
+    $ts     = mktime($hour, $minute, 0, $month, $day, $year);
+
+    // Si la date tirée est déjà passée (cas où on planifie pour le mois courant
+    // mais on est déjà au 25 du mois), bascule au mois suivant
+    if (!$_forceNextMonth && $ts <= $now + 3600) {
+      return self::scheduleNextDonation(true);
+    }
+    return $ts;
+  }
+
+  // -------------------------------------------------------------------------
   // Pool de messages de soutien — sélection aléatoire selon catégorie/occasion
   // Source : core/config/donation_messages.json
   //

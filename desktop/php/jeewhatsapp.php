@@ -293,6 +293,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Message de soutien mensuel -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Message de soutien}}</label>
+								<div class="col-sm-7">
+									<label class="checkbox-inline">
+										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="donation_enabled" value="1"> {{Envoyer 1 message par mois}}
+									</label>
+									<span class="help-block">
+										<small>{{Une fois par mois, à un jour et une heure aléatoires (entre 10h et 19h), un rappel discret de soutien est envoyé dans le groupe canal. Tirage parmi un pool de 12 messages préparés par l'auteur. Désactivé par défaut.}}</small>
+									</span>
+								</div>
+							</div>
+
 						</div>
 					</fieldset>
 				</form>
