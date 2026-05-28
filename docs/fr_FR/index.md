@@ -177,6 +177,10 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Dernière réaction | `last_reaction` | string | non | Emoji de la dernière réaction reçue dans le groupe (vide = réaction retirée) |
 | Réaction — expéditeur | `last_reaction_from` | string | non | Numéro de l'auteur de la dernière réaction |
 | Réaction — date | `last_reaction_at` | string | non | Horodatage de la dernière réaction |
+| Dernier média — chemin | `last_attachment_path` | string | non | Chemin absolu serveur du dernier média reçu (image/vidéo/audio/document/sticker) |
+| Dernier média — type | `last_attachment_type` | string | non | `image` / `video` / `audio` / `document` / `sticker` |
+| Dernier média — mime | `last_attachment_mime` | string | non | Type MIME du dernier média reçu (`image/jpeg`, `audio/ogg; codecs=opus`, ...) |
+| Dernier média — taille | `last_attachment_size` | numeric | non | Taille en octets du dernier média reçu |
 
 ### Commandes ACTION
 
@@ -325,6 +329,23 @@ Le message arrive dans le groupe canal avec le préfixe Jeedom.
 - Si `[Mon WhatsApp][Dernière réaction]` = `❤️` → allumer ambiance romantique
 - Si `[Mon WhatsApp][Dernière réaction]` = `🎉` → allumer ambiance fête
 - Si `[Mon WhatsApp][Dernière réaction]` = `🌙` → mode nuit
+
+### Traiter une photo de compteur envoyée par WhatsApp
+
+**Déclencheur :** `[Mon WhatsApp][Dernier média — type]` change
+
+**Conditions :** si `[...][Dernier média — type]` = `image`
+
+**Actions :**
+- Copier `[...][Dernier média — chemin]` vers `/var/www/html/data/compteurs/`
+- (avancé) Appeler un script OCR sur l'image, extraire la valeur, mettre à jour un virtuel
+
+> **📥 Réception médias (v0.2)**
+> Les images, vidéos, notes vocales, documents et stickers reçus dans le groupe canal
+> sont automatiquement téléchargés dans `data/jeewhatsapp/incoming/{eqId}/{YYYY-MM-DD}/{uuid}.ext`.
+> Les fichiers sont conservés **30 jours** puis supprimés par cron (`cronCleanupIncoming` à 03:15).
+> Le chemin est exposé via les 4 cmds info `last_attachment_*` — vos scénarios peuvent
+> les copier ailleurs, les analyser (OCR, vision), ou les transférer.
 
 ---
 

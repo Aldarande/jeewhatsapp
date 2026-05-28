@@ -51,6 +51,19 @@ function jeewhatsapp_install() {
     $cronStatus->setTimeout(2);
     $cronStatus->save();
   }
+
+  // Cron daily 03:15 : nettoyage des médias entrants > 30 jours (v0.2)
+  $cronClean = cron::byClassAndFunction('jeewhatsapp', 'cronCleanupIncoming');
+  if (!is_object($cronClean)) {
+    $cronClean = new cron();
+    $cronClean->setClass('jeewhatsapp');
+    $cronClean->setFunction('cronCleanupIncoming');
+    $cronClean->setEnable(1);
+    $cronClean->setDeamon(0);
+    $cronClean->setSchedule('15 3 * * *');
+    $cronClean->setTimeout(5);
+    $cronClean->save();
+  }
 }
 
 function jeewhatsapp_update() {
@@ -65,7 +78,7 @@ function jeewhatsapp_remove() {
     log::add('jeewhatsapp', 'warning', 'install.php::jeewhatsapp_remove() — Arrêt daemon : ' . $e->getMessage());
   }
   // Suppression des crons
-  foreach (['cronDonation', 'cronResetMessagesToday', 'cronRefreshStatus'] as $fn) {
+  foreach (['cronDonation', 'cronResetMessagesToday', 'cronRefreshStatus', 'cronCleanupIncoming'] as $fn) {
     $cron = cron::byClassAndFunction('jeewhatsapp', $fn);
     if (is_object($cron)) { $cron->remove(); }
   }

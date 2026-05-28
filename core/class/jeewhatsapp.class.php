@@ -148,10 +148,14 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function updateFromMessage($_data) {
-    // Aiguillage par type d'événement (introduit en v0.2 avec les réactions)
+    // Aiguillage par type d'événement (introduit en v0.2 avec les réactions et médias)
     $eventType = $_data['event_type'] ?? 'message';
     if ($eventType === 'reaction') {
       $this->updateFromReaction($_data);
+      return;
+    }
+    if ($eventType === 'attachment') {
+      $this->updateFromAttachment($_data);
       return;
     }
 
@@ -543,6 +547,68 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Réception d'un média (image, vidéo, audio, document, sticker) — v0.2
+  // Le daemon a déjà téléchargé le fichier dans data/jeewhatsapp/incoming/{eqId}/{date}/
+  // On expose chemin + type + mime via 4 cmds info. Mise à jour also de
+  // last_message avec la caption (si présente) pour rester cohérent avec les
+  // scénarios existants qui surveillent last_message.
+  // -------------------------------------------------------------------------
+
+  public function updateFromAttachment($_data) {
+    $kind  = (string) ($_data['attachment_kind'] ?? '');
+    $mime  = (string) ($_data['attachment_mime'] ?? '');
+    $path  = (string) ($_data['attachment_path'] ?? '');
+    $size  = (int)    ($_data['attachment_size'] ?? 0);
+    $cap   = (string) ($_data['caption'] ?? '');
+    $from  = (string) ($_data['sender'] ?? '');
+    $name  = (string) ($_data['sender_name'] ?? '');
+    $at    = $_data['received_at'] ?? date('Y-m-d H:i:s');
+
+    $this->checkAndUpdateCmd('last_attachment_path', $path);
+    $this->checkAndUpdateCmd('last_attachment_type', $kind);
+    $this->checkAndUpdateCmd('last_attachment_mime', $mime);
+    $this->checkAndUpdateCmd('last_attachment_size', $size);
+    // Pour cohérence avec les scénarios existants : last_message contient la
+    // caption (vide si pas de légende), last_sender/_name/_received_at sont MAJ
+    $this->checkAndUpdateCmd('last_message',     $cap !== '' ? $cap : '[' . $kind . ']');
+    $this->checkAndUpdateCmd('last_sender',      $from);
+    $this->checkAndUpdateCmd('last_sender_name', $name);
+    $this->checkAndUpdateCmd('last_received_at', $at);
+    $this->incrementMessagesTodayCounter();
+
+    log::add('jeewhatsapp', 'info',
+      'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
+      . ' — Média ' . $kind . ' (' . $mime . ', ' . round($size / 1024) . 'KB) reçu de '
+      . $from . ' → ' . $path);
+  }
+
+  // Cron daily : supprime les médias entrants > 30 jours dans data/jeewhatsapp/incoming/
+  // Évite l'accumulation infinie. Le seuil 30j est en dur (modifiable plus tard).
+  public static function cronCleanupIncoming() {
+    $base = __DIR__ . '/../../../../data/jeewhatsapp/incoming';
+    if (!is_dir($base)) { return; }
+    $maxAge  = 30 * 86400;
+    $now     = time();
+    $deleted = 0;
+    foreach (glob($base . '/*', GLOB_ONLYDIR) ?: [] as $eqDir) {
+      foreach (glob($eqDir . '/*', GLOB_ONLYDIR) ?: [] as $dateDir) {
+        $dirAge = $now - filemtime($dateDir);
+        if ($dirAge <= $maxAge) { continue; }
+        // Dossier daté > 30j : supprimer tous les fichiers puis le dossier
+        foreach (glob($dateDir . '/*') ?: [] as $f) {
+          if (is_file($f) && @unlink($f)) { $deleted++; }
+        }
+        @rmdir($dateDir);
+      }
+    }
+    if ($deleted > 0) {
+      log::add('jeewhatsapp', 'info',
+        'jeewhatsapp.class.php::cronCleanupIncoming() l.' . __LINE__
+        . ' — ' . $deleted . ' média(s) entrants supprimés (> 30j)');
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Envoi d'une réaction emoji sur le dernier message reçu (v0.2)
   // -------------------------------------------------------------------------
 
@@ -710,6 +776,10 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_reaction',      'name' => 'Dernière réaction',       'subType' => 'string'],
       ['logicalId' => 'last_reaction_from', 'name' => 'Réaction — expéditeur',   'subType' => 'string'],
       ['logicalId' => 'last_reaction_at',   'name' => 'Réaction — date',         'subType' => 'string'],
+      ['logicalId' => 'last_attachment_path', 'name' => 'Dernier média — chemin', 'subType' => 'string'],
+      ['logicalId' => 'last_attachment_type', 'name' => 'Dernier média — type',   'subType' => 'string'],
+      ['logicalId' => 'last_attachment_mime', 'name' => 'Dernier média — mime',   'subType' => 'string'],
+      ['logicalId' => 'last_attachment_size', 'name' => 'Dernier média — taille', 'subType' => 'numeric'],
     ];
 
     $order = 0;

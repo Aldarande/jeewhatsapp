@@ -34,7 +34,7 @@ Objectif : ouvrir la réception, ajouter les briques manquantes pour traiter ce 
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
-| 1 | **Réception médias** (téléchargement local) ⭐ | 🟡 | `downloadMediaMessage()` Baileys → `data/jeewhatsapp/incoming/{eqId}/{date}/{uuid}.ext`. Nouvelles cmds info : `last_attachment_path`, `last_attachment_type`, `last_attachment_url`. Auto-nettoyage > 30 j. |
+| 1 | ✅ **Réception médias** (téléchargement local) ⭐ | 🟡 | `downloadMediaMessage()` → `data/jeewhatsapp/incoming/{eqId}/{date}/`, 4 cmds info `last_attachment_*`, cron daily cleanup 30j. |
 | 2 | ✅ **Réactions emoji** (envoi + reception) ⭐ | 🟡 | Cmd action `react_last`, 3 cmds info `last_reaction*`, dispatcher event_type. |
 | 3 | ✅ **Cmd action `send_location`** | 🟢 | Lat/long + nom optionnel, format Titre `lat\|long\|nom`. |
 | 4 | ✅ **Cmd action `send_contact`** (vCard) | 🟢 | Numéro + nom, conversion 0X → 33X auto. |

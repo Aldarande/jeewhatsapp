@@ -10,7 +10,9 @@ import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
   isJidGroup,
+  downloadMediaMessage,
 } from '@whiskeysockets/baileys';
+import crypto from 'crypto';
 import pino          from 'pino';
 import QRCode        from 'qrcode';
 import http          from 'http';
@@ -103,6 +105,45 @@ process.umask(0o077);
 const AUTH_BASE = path.join(__dirname, 'auth');
 if (!fs.existsSync(AUTH_BASE)) { fs.mkdirSync(AUTH_BASE, { recursive: true, mode: 0o700 }); }
 try { fs.chmodSync(AUTH_BASE, 0o700); } catch (_) {}
+
+// Stockage des médias reçus — dossier data/jeewhatsapp/incoming/{eqId}/{YYYY-MM-DD}/
+// Placé dans data/ pour ne pas être nettoyé lors d'une réinstallation du plugin
+// et pour rester accessible depuis les scénarios Jeedom (lecture, copie, etc.).
+const INCOMING_BASE = path.resolve(__dirname, '../../../../data/jeewhatsapp/incoming');
+
+function incomingDir(eqId) {
+  if (!/^\d+$/.test(String(eqId))) {
+    throw new Error('jeewhatsappd.js::incomingDir() — eqId invalide : ' + eqId);
+  }
+  const date = new Date().toISOString().substring(0, 10);
+  const dir  = path.join(INCOMING_BASE, String(eqId), date);
+  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true }); }
+  return dir;
+}
+
+// Mapping inverse mime → extension pour nommer les fichiers téléchargés
+const MIME_TO_EXT = {
+  'image/jpeg':  'jpg',
+  'image/png':   'png',
+  'image/gif':   'gif',
+  'image/webp':  'webp',
+  'video/mp4':   'mp4',
+  'video/quicktime': 'mov',
+  'video/3gpp':  '3gp',
+  'audio/mp4':   'm4a',
+  'audio/mpeg':  'mp3',
+  'audio/aac':   'aac',
+  'audio/wav':   'wav',
+  'audio/ogg':   'ogg',
+  'audio/ogg; codecs=opus': 'opus',
+  'application/pdf': 'pdf',
+};
+
+function extFromMime(mime) {
+  if (!mime) return 'bin';
+  const m = mime.toLowerCase().split(';')[0].trim();
+  return MIME_TO_EXT[m] || MIME_TO_EXT[mime.toLowerCase()] || 'bin';
+}
 
 function authDir(id) {
   // SECURITY: instance_id doit être strictement numérique pour éviter path traversal (CWE-22)
@@ -314,6 +355,49 @@ async function connectInstance(instance) {
       const sender         = participantJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
       const senderName     = msg.pushName || sender;
       const ts             = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+      // ── Détection des médias entrants (v0.2) ──────────────────────────────
+      // Téléchargement local + callback avec event_type='attachment'
+      // Types Baileys : imageMessage, videoMessage, audioMessage, documentMessage, stickerMessage
+      const mediaKind = msg.message.imageMessage    ? 'image'
+                      : msg.message.videoMessage    ? 'video'
+                      : msg.message.audioMessage    ? 'audio'
+                      : msg.message.documentMessage ? 'document'
+                      : msg.message.stickerMessage  ? 'sticker'
+                      : null;
+      if (mediaKind) {
+        try {
+          const buffer = await downloadMediaMessage(msg, 'buffer', {}, { logger: baileysLogger });
+          if (!buffer || buffer.length === 0) {
+            logMsg('warning', '[' + id + '] Média ' + mediaKind + ' vide (download failed)');
+            continue;
+          }
+          const meta = msg.message[mediaKind + 'Message'] || {};
+          const mime = meta.mimetype || '';
+          const ext  = extFromMime(mime);
+          const dir  = incomingDir(id);
+          const uuid = crypto.randomBytes(6).toString('hex');
+          const file = path.join(dir, uuid + '.' + ext);
+          fs.writeFileSync(file, buffer);
+          const caption = meta.caption || extractText(msg.message) || '';
+          logMsg('info', '[' + id + '] 📥 ' + mediaKind + ' reçu de ' + sender
+                       + ' (' + Math.round(buffer.length / 1024) + 'KB) → ' + file);
+          await sendCallback(id, {
+            event_type:      'attachment',
+            attachment_kind: mediaKind,
+            attachment_mime: mime,
+            attachment_path: file,
+            attachment_size: buffer.length,
+            caption,
+            sender,
+            sender_name: senderName,
+            received_at: ts,
+          });
+        } catch (e) {
+          logMsg('error', '[' + id + '] Erreur téléchargement ' + mediaKind + ' : ' + e.message);
+        }
+        continue;
+      }
 
       // ── Détection des réactions emoji (v0.2) ──────────────────────────────
       // Une réaction est un message dont le contenu est reactionMessage.

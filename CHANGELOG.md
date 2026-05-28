@@ -44,6 +44,16 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 - Refactor `updateFromMessage()` : dispatcher par `event_type` (`'message'` par défaut,
   `'reaction'` pour les nouvelles réactions). Pattern extensible pour v0.3+ (poll votes,
   edit/revoke notifications, etc.).
+- **Réception médias** ⭐ (v0.2 ROADMAP #1) — image/vidéo/audio/document/sticker reçus
+  dans le groupe canal sont téléchargés automatiquement :
+  - Daemon : `downloadMediaMessage()` de Baileys, sauvegarde dans
+    `data/jeewhatsapp/incoming/{eqId}/{YYYY-MM-DD}/{uuid}.ext`
+  - Mapping mime → extension propre (jpg/png/webp/mp4/m4a/mp3/ogg/opus/pdf...)
+  - Callback `event_type: 'attachment'` avec path/mime/size/caption
+  - 4 nouvelles cmds info : `last_attachment_path`, `last_attachment_type`,
+    `last_attachment_mime`, `last_attachment_size`
+  - Caption (si présente) MAJ aussi `last_message` pour cohérence scénarios existants
+  - Cron daily `cronCleanupIncoming` (03:15) : suppression des fichiers > 30 jours
 
 ### Changed
 
