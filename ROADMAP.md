@@ -38,8 +38,8 @@ Objectif : ouvrir la réception, ajouter les briques manquantes pour traiter ce 
 | 2 | **Réactions emoji** (envoi + reception) ⭐ | 🟡 | Cmd action `react_last` (emoji = title). Cmd info `last_reaction` + `last_reaction_from`. Très utilisé pour l'ack rapide. |
 | 3 | ✅ **Cmd action `send_location`** | 🟢 | Lat/long + nom optionnel, format Titre `lat\|long\|nom`. |
 | 4 | ✅ **Cmd action `send_contact`** (vCard) | 🟢 | Numéro + nom, conversion 0X → 33X auto. |
-| 5 | **Whitelist d'expéditeurs** 🛡️ | 🟡 | Configuration eqLogic : liste de numéros autorisés à déclencher les interactions Jeedom. Refuse silencieusement les autres. |
-| 6 | **Filtre par mot-clé** sur interactions | 🟢 | Préfixe obligatoire (ex: `!` ou `@jeedom`) avant déclenchement interactions. Évite le bruit. |
+| 5 | ✅ **Whitelist d'expéditeurs** 🛡️ | 🟡 | Numéros autorisés (config eqLogic), refus silencieux, helper `normalizePhone()`. |
+| 6 | ✅ **Filtre par mot-clé** sur interactions | 🟢 | Préfixe configurable, retiré du message avant interactQuery. |
 | 7 | ✅ **Cmd info `messages_today`** | 🟢 | Compteur reçus aujourd'hui (reset cron 00:02). |
 | 8 | ✅ **Cmd info `connected_since`** | 🟢 | Date dernière connexion (refresh cron 5 min). |
 

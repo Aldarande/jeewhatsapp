@@ -223,6 +223,35 @@ Lorsque l'option **Interactions Jeedom** est activée, chaque message reçu dans
 est transmis au moteur d'interactions Jeedom. Si une interaction correspond, la réponse est
 automatiquement envoyée **dans le groupe canal**.
 
+### Filtre par mot-clé déclencheur (v0.2)
+
+Champ **« Mot-clé déclencheur »** dans la configuration équipement. Si renseigné, seuls les messages
+**commençant** par ce mot-clé (insensible à la casse) déclenchent les interactions. Le mot-clé est
+**retiré** du message avant transmission au moteur d'interactions Jeedom — permet d'avoir des
+formulations naturelles côté Jeedom tout en évitant le bruit dans le groupe.
+
+| Configuration | Message reçu | Comportement |
+|---|---|---|
+| keyword vide | `allume salon` | → interactQuery cherche `allume salon` |
+| keyword = `!jeedom` | `bonjour la famille` | → ignoré (debug log) |
+| keyword = `!jeedom` | `!jeedom allume salon` | → interactQuery cherche `allume salon` |
+| keyword = `@jeedom` | `@JEEDOM statut` | → interactQuery cherche `statut` (casse ignorée) |
+
+### Whitelist d'expéditeurs (v0.2 — sécurité)
+
+Champ **« Whitelist expéditeurs »** : si renseigné, seuls les numéros listés peuvent déclencher
+des interactions Jeedom. Les autres membres du groupe sont **silencieusement ignorés** (log debug).
+
+**Format accepté** : 1 numéro par ligne ou séparés par virgule, dans n'importe quel format :
+- `0612345678` (français court)
+- `33612345678` (international)
+- `+33 6 12 34 56 78` (avec espaces et +)
+
+Tous les formats sont normalisés au format international avant comparaison.
+
+> **🛡️ Sécurité** : la whitelist protège contre un membre malveillant qui s'inviterait au groupe et tenterait
+> d'envoyer des commandes Jeedom. Combinée au filtre mot-clé, elle offre une double couche de protection.
+
 Exemples d'interactions configurables dans Jeedom :
 
 | Message reçu | Réponse automatique |

@@ -165,6 +165,39 @@ class jeewhatsapp extends eqLogic {
     $sender  = $_data['sender']  ?? '';
     if ($message === '' || $sender === '') { return; }
 
+    // Whitelist d'expéditeurs : si configurée, seuls les numéros listés peuvent
+    // déclencher des interactions. Refus silencieux (log debug) sinon.
+    // Format : 1 numéro par ligne ou séparés par virgule. Tous les non-chiffres
+    // sont supprimés avant comparaison (06 12 34 56 78 == 33612345678 après normalisation FR).
+    if (!self::isSenderAllowed($this, $sender)) {
+      log::add('jeewhatsapp', 'debug',
+        'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__
+        . ' — Interaction refusée (sender ' . $sender . ' hors whitelist)');
+      return;
+    }
+
+    // Filtre par mot-clé : si configuré, le message doit commencer par le keyword
+    // (insensible à la casse, espace de séparation toléré). Le keyword est retiré
+    // du message avant transmission à interactQuery pour permettre des phrases naturelles.
+    // Ex : keyword="!jeedom" → message "!jeedom allume salon" devient "allume salon".
+    $keyword = trim((string) $this->getConfiguration('interaction_keyword', ''));
+    if ($keyword !== '') {
+      if (stripos(ltrim($message), $keyword) !== 0) {
+        log::add('jeewhatsapp', 'debug',
+          'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__
+          . ' — Interaction ignorée (manque keyword "' . $keyword . '") : ' . $message);
+        return;
+      }
+      // Retire le keyword + espace optionnel pour passer à interactQuery uniquement la commande utile
+      $message = trim(substr(ltrim($message), strlen($keyword)));
+      if ($message === '') {
+        log::add('jeewhatsapp', 'debug',
+          'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__
+          . ' — Keyword seul reçu, rien à traiter');
+        return;
+      }
+    }
+
     log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — Interaction de ' . $sender . ' : ' . $message);
 
     $reply = interactQuery::tryToReply($message, [
@@ -482,6 +515,37 @@ class jeewhatsapp extends eqLogic {
 
     cache::set($key, $counters, 3700);
     $this->checkAndUpdateCmd('sent_hour', $counters['count']);
+  }
+
+  // -------------------------------------------------------------------------
+  // Whitelist : vérifie si un sender est autorisé à déclencher des interactions
+  // - Whitelist vide → tout le monde est autorisé (comportement legacy v0.1)
+  // - Sinon normalisation (chiffres uniquement) + conversion FR 0X → 33X côté
+  //   stockage et côté sender pour matcher peu importe le format saisi
+  // -------------------------------------------------------------------------
+
+  public static function isSenderAllowed($_eqLogic, $_sender) {
+    $raw = trim((string) $_eqLogic->getConfiguration('interaction_whitelist', ''));
+    if ($raw === '') { return true; } // pas de whitelist = tout passe
+    $normalized = self::normalizePhone($_sender);
+    if ($normalized === '') { return false; }
+    // Sépare par virgule OU saut de ligne (textarea ou csv)
+    $entries = preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
+    foreach ($entries as $entry) {
+      $n = self::normalizePhone($entry);
+      if ($n !== '' && $n === $normalized) { return true; }
+    }
+    return false;
+  }
+
+  // Normalise un numéro WhatsApp : ne garde que les chiffres, convertit 0[67]XXXXXXXX → 336/337XXXXXXXX
+  public static function normalizePhone($_phone) {
+    $digits = preg_replace('/\D/', '', (string) $_phone);
+    if ($digits === null) { return ''; }
+    if (preg_match('/^0([67]\d{8})$/', $digits, $m)) {
+      $digits = '33' . $m[1];
+    }
+    return $digits;
   }
 
   // -------------------------------------------------------------------------

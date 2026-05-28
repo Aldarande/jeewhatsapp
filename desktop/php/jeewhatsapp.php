@@ -280,6 +280,32 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Filtre mot-clé (v0.2) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Mot-clé déclencheur}}</label>
+								<div class="col-sm-7">
+									<input type="text" class="eqLogicAttr form-control"
+										   data-l1key="configuration" data-l2key="interaction_keyword"
+										   placeholder="ex: !jeedom (vide = tout message)">
+									<span class="help-block">
+										<small>{{Si renseigné, seuls les messages commençant par ce mot-clé déclenchent les interactions. Le mot-clé est ensuite retiré du message avant traitement. Insensible à la casse.}}</small>
+									</span>
+								</div>
+							</div>
+
+							<!-- Whitelist expéditeurs (v0.2, sécurité) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Whitelist expéditeurs}}</label>
+								<div class="col-sm-7">
+									<textarea class="eqLogicAttr form-control" rows="3"
+										   data-l1key="configuration" data-l2key="interaction_whitelist"
+										   placeholder="33612345678&#10;0698765432&#10;(vide = tout le monde)"></textarea>
+									<span class="help-block">
+										<small>{{Si renseignée, seuls les numéros listés peuvent déclencher des interactions Jeedom. Un numéro par ligne (ou séparés par virgule). Formats acceptés : 0612345678, 33612345678, +33 6 12 34 56 78 — tous normalisés au format international.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Préfixe Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>

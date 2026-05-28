@@ -23,6 +23,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   rafraîchie via cron toutes les 5 min (`*/5 * * * *`). (v0.2 ROADMAP #8)
 - 2 nouveaux crons Jeedom : `cronResetMessagesToday`, `cronRefreshStatus`. Création
   idempotente dans `jeewhatsapp_install()`, nettoyés à la désinstallation.
+- **Filtre mot-clé déclencheur** — config eqLogic `interaction_keyword`. Si renseigné,
+  seuls les messages commençant par ce mot-clé (case-insensitive) déclenchent les
+  interactions. Le mot-clé est ensuite retiré du message avant traitement. Permet
+  des formulations naturelles côté Jeedom sans pollution du groupe. (v0.2 ROADMAP #6)
+- **Whitelist d'expéditeurs** 🛡️ — config eqLogic `interaction_whitelist` (textarea).
+  Si renseignée, seuls les numéros listés peuvent déclencher des interactions Jeedom.
+  Refus silencieux (log debug) des autres. Normalisation auto FR 0X → 33X +
+  acceptation de tous formats (avec espaces, +, etc.). Helper public statique
+  `jeewhatsapp::normalizePhone($phone)`. (v0.2 ROADMAP #5)
 
 ### Changed
 
