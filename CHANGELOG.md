@@ -32,6 +32,18 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   Refus silencieux (log debug) des autres. Normalisation auto FR 0X → 33X +
   acceptation de tous formats (avec espaces, +, etc.). Helper public statique
   `jeewhatsapp::normalizePhone($phone)`. (v0.2 ROADMAP #5)
+- **Réactions emoji** — envoi et réception bidirectionnels (v0.2 ROADMAP #2) :
+  - Cmd action `react_last` (subType=message) — message=emoji, réagit au dernier
+    message reçu via `sock.sendMessage(jid, { react: { text: emoji, key: lastMsg.key } })`
+  - Daemon détecte les `msg.message.reactionMessage` entrants et émet un callback
+    avec `event_type: 'reaction'`
+  - PHP : `updateFromReaction()` met à jour 3 nouvelles cmds info :
+    `last_reaction`, `last_reaction_from`, `last_reaction_at`
+  - Possibilité de déclencher des scénarios sur changement de `last_reaction`
+    (ex: ❤️ → ambiance romantique, 🎉 → ambiance fête)
+- Refactor `updateFromMessage()` : dispatcher par `event_type` (`'message'` par défaut,
+  `'reaction'` pour les nouvelles réactions). Pattern extensible pour v0.3+ (poll votes,
+  edit/revoke notifications, etc.).
 
 ### Changed
 

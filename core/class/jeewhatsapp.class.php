@@ -148,6 +148,13 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function updateFromMessage($_data) {
+    // Aiguillage par type d'événement (introduit en v0.2 avec les réactions)
+    $eventType = $_data['event_type'] ?? 'message';
+    if ($eventType === 'reaction') {
+      $this->updateFromReaction($_data);
+      return;
+    }
+
     // checkAndUpdateCmd met à jour la valeur et déclenche les scénarios/interactions associés
     $this->checkAndUpdateCmd('last_message',     $_data['message']      ?? '');
     $this->checkAndUpdateCmd('last_sender',      $_data['sender']       ?? '');
@@ -518,6 +525,39 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Mise à jour des cmds info sur réception d'une réaction emoji (v0.2)
+  // Une réaction ne déclenche jamais d'interactQuery — seulement les cmds info
+  // last_reaction et last_reaction_from + checkAndUpdateCmd qui peut déclencher
+  // un scénario "valeur change" si besoin (ex: ❤️ → allume ambiance).
+  // -------------------------------------------------------------------------
+
+  public function updateFromReaction($_data) {
+    $emoji = (string) ($_data['reaction'] ?? '');
+    $from  = (string) ($_data['sender']   ?? '');
+    $this->checkAndUpdateCmd('last_reaction',      $emoji);
+    $this->checkAndUpdateCmd('last_reaction_from', $from);
+    $this->checkAndUpdateCmd('last_reaction_at',   $_data['received_at'] ?? date('Y-m-d H:i:s'));
+    log::add('jeewhatsapp', 'info',
+      'jeewhatsapp.class.php::updateFromReaction() l.' . __LINE__
+      . ' — Réaction ' . ($emoji !== '' ? $emoji : '(retirée)') . ' de ' . $from);
+  }
+
+  // -------------------------------------------------------------------------
+  // Envoi d'une réaction emoji sur le dernier message reçu (v0.2)
+  // -------------------------------------------------------------------------
+
+  public function reactToLast($_emoji) {
+    $emoji = trim((string) $_emoji);
+    if ($emoji === '') {
+      throw new Exception(__('Emoji obligatoire (ex: ❤️ 👍 🎉)', __FILE__));
+    }
+    return $this->sendToDaemon('reactLast', [
+      'instance_id' => $this->getId(),
+      'message'     => $emoji,
+    ]);
+  }
+
+  // -------------------------------------------------------------------------
   // Whitelist : vérifie si un sender est autorisé à déclencher des interactions
   // - Whitelist vide → tout le monde est autorisé (comportement legacy v0.1)
   // - Sinon normalisation (chiffres uniquement) + conversion FR 0X → 33X côté
@@ -667,6 +707,9 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'sent_hour',        'name' => 'Envoyés (heure en cours)', 'subType' => 'numeric', 'isHistorized' => 1],
       ['logicalId' => 'messages_today',   'name' => 'Reçus aujourd\'hui',       'subType' => 'numeric', 'isHistorized' => 1],
       ['logicalId' => 'connected_since',  'name' => 'Connecté depuis',          'subType' => 'string'],
+      ['logicalId' => 'last_reaction',      'name' => 'Dernière réaction',       'subType' => 'string'],
+      ['logicalId' => 'last_reaction_from', 'name' => 'Réaction — expéditeur',   'subType' => 'string'],
+      ['logicalId' => 'last_reaction_at',   'name' => 'Réaction — date',         'subType' => 'string'],
     ];
 
     $order = 0;
@@ -793,6 +836,29 @@ class jeewhatsapp extends eqLogic {
       $contact->setDisplay('message_placeholder', 'Nom affiché (optionnel)');
       $contact->save();
     }
+
+    // Commande action : Réagir avec un emoji au dernier message (v0.2)
+    // Convention : message = emoji (❤️ 👍 🎉 ...), title inutilisé
+    $react = $this->getCmd('action', 'react_last');
+    if (!is_object($react)) {
+      $react = new jeewhatsappCmd();
+      $react->setEqLogic_id($this->getId());
+      $react->setLogicalId('react_last');
+      $react->setType('action');
+      $react->setSubType('message');
+      $react->setName('Réagir au dernier message');
+      $react->setIsVisible(1);
+      $react->setOrder($order++);
+      $react->save();
+    }
+    if ($react->getDisplay('title_placeholder') !== 'Inutilisé') {
+      $react->setDisplay('title_placeholder', 'Inutilisé');
+      $react->save();
+    }
+    if ($react->getDisplay('message_placeholder') !== 'Emoji (ex: ❤️ 👍 🎉 — chaîne vide pour retirer la réaction)') {
+      $react->setDisplay('message_placeholder', 'Emoji (ex: ❤️ 👍 🎉 — chaîne vide pour retirer la réaction)');
+      $react->save();
+    }
   }
 }
 
@@ -850,6 +916,12 @@ class jeewhatsappCmd extends cmd {
           throw new Exception(__('Numéro du contact (champ Titre) obligatoire', __FILE__));
         }
         $eqLogic->sendContactCard($cphone, $cname);
+        break;
+
+      case 'react_last':
+        // message = emoji ; title inutilisé
+        $emoji = $_options['message'] ?? '';
+        $eqLogic->reactToLast($emoji);
         break;
     }
   }

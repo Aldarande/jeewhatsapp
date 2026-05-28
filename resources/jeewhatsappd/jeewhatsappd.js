@@ -309,18 +309,38 @@ async function connectInstance(instance) {
         continue;
       }
 
+      // Dans un groupe, msg.key.participant = JID de l'expéditeur
+      const participantJid = msg.key.participant || remoteJid;
+      const sender         = participantJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+      const senderName     = msg.pushName || sender;
+      const ts             = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+      // ── Détection des réactions emoji (v0.2) ──────────────────────────────
+      // Une réaction est un message dont le contenu est reactionMessage.
+      // On envoie un payload de type 'reaction' au callback Jeedom — la classe
+      // PHP distingue via le champ 'event_type' pour mettre à jour les cmds info
+      // last_reaction et last_reaction_from sans toucher à last_message.
+      if (msg.message.reactionMessage) {
+        const r = msg.message.reactionMessage;
+        const emoji = r.text || '';
+        logMsg('info', '[' + id + '] Réaction ' + (emoji || '(vide=suppression)') + ' de ' + sender);
+        await sendCallback(id, {
+          event_type:  'reaction',
+          reaction:    emoji,
+          sender,
+          sender_name: senderName,
+          received_at: ts,
+        });
+        continue;
+      }
+
       const text = extractText(msg.message);
       if (!text) {
         debug('[' + id + '] Ignoré (pas de texte) — types : ' + Object.keys(msg.message).join(', '));
         continue;
       }
 
-      // Dans un groupe, msg.key.participant = JID de l'expéditeur
-      const participantJid = msg.key.participant || remoteJid;
-      const sender         = participantJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
-      const senderName     = msg.pushName || sender;
-
-      // Mémorise le dernier message reçu — utilisé par action 'replyLast' (quoted)
+      // Mémorise le dernier message reçu — utilisé par actions 'replyLast' et 'reactLast'
       lastIncomingMsg[id] = msg;
 
       logMsg('info', '[' + id + '] Message de ' + sender + ' (groupe) : ' + text.substring(0, 60));
@@ -328,7 +348,7 @@ async function connectInstance(instance) {
         message:     text,
         sender,
         sender_name: senderName,
-        received_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        received_at: ts,
       });
     }
   });
@@ -649,6 +669,24 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       }
 
       return { sent: true, kind, file: path.basename(media_path), bytes: stat.size };
+    }
+
+    // ── Réaction emoji sur le dernier message reçu (v0.2) ──────────────────
+    case 'reactLast': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const target = lastIncomingMsg[id];
+      if (!target) { throw new Error('Aucun message à réagir — attendez d\'avoir reçu un message dans le groupe canal'); }
+      const emoji = String(message || '').trim();
+      if (emoji === '') { throw new Error('Emoji obligatoire (champ message, ex: ❤️ 👍 🎉)'); }
+      const jid = target.key.remoteJid;
+      logMsg('info', '[' + id + '] ↪ React ' + emoji + ' → ' + jid);
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi réaction — délai dépassé')), 10000));
+      await Promise.race([
+        sock.sendMessage(jid, { react: { text: emoji, key: target.key } }),
+        t,
+      ]);
+      return { sent: true, emoji, target: target.key.id };
     }
 
     // ── Réponse "quoted" au dernier message reçu dans le groupe canal ──────

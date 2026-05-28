@@ -174,6 +174,9 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Envoyés (heure en cours) | `sent_hour` | numeric | oui | Compteur d'envois durant l'heure courante (reset toutes les heures) |
 | Reçus aujourd'hui | `messages_today` | numeric | oui | Compteur de messages reçus depuis minuit (reset cron daily 00:02) |
 | Connecté depuis | `connected_since` | string | non | Date/heure de la dernière connexion WhatsApp Web (refresh cron 5 min) |
+| Dernière réaction | `last_reaction` | string | non | Emoji de la dernière réaction reçue dans le groupe (vide = réaction retirée) |
+| Réaction — expéditeur | `last_reaction_from` | string | non | Numéro de l'auteur de la dernière réaction |
+| Réaction — date | `last_reaction_at` | string | non | Horodatage de la dernière réaction |
 
 ### Commandes ACTION
 
@@ -184,6 +187,7 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Envoyer un média | `send_media` | message | Envoie un fichier (image, vidéo, audio, document). Champ **Titre** = chemin absolu, **Message** = légende optionnelle. |
 | Envoyer une localisation | `send_location` | message | Envoie une position GPS. Champ **Titre** = `lat\|long` ou `lat\|long\|nom`. |
 | Envoyer un contact | `send_contact` | message | Envoie une carte vCard. Champ **Titre** = numéro, **Message** = nom affiché (optionnel). |
+| Réagir au dernier message | `react_last` | message | Envoie une réaction emoji sur le dernier message reçu. Champ **Message** = emoji (❤️ 👍 🎉 …) ou vide pour retirer la réaction. |
 
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  
@@ -305,6 +309,22 @@ Le message arrive dans le groupe canal avec le préfixe Jeedom.
 
 **Actions :**
 - `[Mon WhatsApp][Envoyer un contact]` → Titre : `33112345678`, Message : `Dr Dupont — cabinet`
+
+### Confirmer la réception d'une commande avec une réaction ❤️
+
+**Déclencheur :** Un membre du groupe envoie le mot "thanks"
+
+**Actions :**
+- `[Mon WhatsApp][Réagir au dernier message]` → Message : `❤️`
+
+### Allumer une ambiance suivant la réaction reçue
+
+**Déclencheur :** `[Mon WhatsApp][Dernière réaction]` change
+
+**Conditions :**
+- Si `[Mon WhatsApp][Dernière réaction]` = `❤️` → allumer ambiance romantique
+- Si `[Mon WhatsApp][Dernière réaction]` = `🎉` → allumer ambiance fête
+- Si `[Mon WhatsApp][Dernière réaction]` = `🌙` → mode nuit
 
 ---
 
