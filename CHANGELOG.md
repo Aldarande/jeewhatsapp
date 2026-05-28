@@ -9,6 +9,14 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **`send_location`** — commande action pour envoyer une position GPS dans le groupe canal.
+  Format du Titre : `lat|long` ou `lat|long|nom`. Validation lat ∈ [-90,90], long ∈ [-180,180].
+  (v0.2 ROADMAP #3)
+- **`send_contact`** — commande action pour envoyer une carte vCard. Titre = numéro,
+  Message = nom affiché. Format français 0X automatiquement converti en 33X. (v0.2 ROADMAP #4)
+- Refactor daemon : helper `resolveJid(id, phone)` mutualisé entre `send`, `sendMedia`,
+  `sendLocation`, `sendContact`. Simplifie l'ajout des prochaines actions d'envoi.
+
 ### Changed
 
 ### Fixed

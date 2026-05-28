@@ -36,8 +36,8 @@ Objectif : ouvrir la réception, ajouter les briques manquantes pour traiter ce 
 |---|---|---|---|
 | 1 | **Réception médias** (téléchargement local) ⭐ | 🟡 | `downloadMediaMessage()` Baileys → `data/jeewhatsapp/incoming/{eqId}/{date}/{uuid}.ext`. Nouvelles cmds info : `last_attachment_path`, `last_attachment_type`, `last_attachment_url`. Auto-nettoyage > 30 j. |
 | 2 | **Réactions emoji** (envoi + reception) ⭐ | 🟡 | Cmd action `react_last` (emoji = title). Cmd info `last_reaction` + `last_reaction_from`. Très utilisé pour l'ack rapide. |
-| 3 | **Cmd action `send_location`** | 🟢 | Lat/long via deux params, optionnel nom du lieu. Utile pour notifs sécurité/maison. |
-| 4 | **Cmd action `send_contact`** (vCard) | 🟢 | Envoyer une carte de contact. |
+| 3 | ✅ **Cmd action `send_location`** | 🟢 | Lat/long + nom optionnel, format Titre `lat\|long\|nom`. |
+| 4 | ✅ **Cmd action `send_contact`** (vCard) | 🟢 | Numéro + nom, conversion 0X → 33X auto. |
 | 5 | **Whitelist d'expéditeurs** 🛡️ | 🟡 | Configuration eqLogic : liste de numéros autorisés à déclencher les interactions Jeedom. Refuse silencieusement les autres. |
 | 6 | **Filtre par mot-clé** sur interactions | 🟢 | Préfixe obligatoire (ex: `!` ou `@jeedom`) avant déclenchement interactions. Évite le bruit. |
 | 7 | **Cmd info `messages_today`** | 🟢 | Compteur de messages reçus aujourd'hui (reset minuit). |

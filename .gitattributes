@@ -1,0 +1,22 @@
+# Force LF line endings for shell scripts, JS, PHP and config files
+# (necessary because the plugin runs in a Linux container — CRLF breaks bash)
+*.sh        text eol=lf
+*.js        text eol=lf
+*.php       text eol=lf
+*.json      text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Markdown can stay native
+*.md        text
+
+# Binary safety
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.pdf       binary
+*.mp4       binary
+*.mp3       binary
+*.ogg       binary

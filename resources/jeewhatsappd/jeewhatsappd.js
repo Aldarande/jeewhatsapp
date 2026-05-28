@@ -471,7 +471,26 @@ function buildMediaPayload(filePath, caption) {
   return { payload, kind: info.kind };
 }
 
-async function handleAction({ action, instance_id, phone, message, mention, media_path }) {
+// Résolution du JID destinataire — facteur commun à toutes les actions d'envoi
+function resolveJid(id, phone) {
+  if (!phone || phone === '' || phone === 'group') {
+    const jid = groupJids[id];
+    if (!jid) {
+      throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
+    }
+    return jid;
+  }
+  if (String(phone).includes('@')) {
+    return String(phone).trim();
+  }
+  const digits = String(phone).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
+  if (!digits) { throw new Error('Numéro de téléphone invalide (' + phone + ')'); }
+  return digits + '@s.whatsapp.net';
+}
+
+async function handleAction({ action, instance_id, phone, message, mention, media_path,
+                              latitude, longitude, location_name,
+                              contact_phone, contact_name }) {
   const id = String(instance_id);
 
   switch (action) {
@@ -517,6 +536,56 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       );
       await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
       return { sent: true };
+    }
+
+    // ── Envoi d'une position GPS ───────────────────────────────────────────
+    case 'sendLocation': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const lat  = parseFloat(latitude);
+      const lng  = parseFloat(longitude);
+      if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        throw new Error('latitude/longitude invalides (reçu lat=' + latitude + ', long=' + longitude + ')');
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        throw new Error('Coordonnées GPS hors plage (lat ∈ [-90,90], long ∈ [-180,180])');
+      }
+      const jid = resolveJid(id, phone);
+      const loc = { degreesLatitude: lat, degreesLongitude: lng };
+      if (location_name && String(location_name).trim() !== '') {
+        loc.name = String(location_name).trim();
+      }
+      logMsg('info', '[' + id + '] → ' + jid + ' : 📍 ' + lat + ',' + lng + (loc.name ? ' (' + loc.name + ')' : ''));
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi location — délai dépassé')), 10000));
+      await Promise.race([sock.sendMessage(jid, { location: loc }), t]);
+      return { sent: true, latitude: lat, longitude: lng, name: loc.name || null };
+    }
+
+    // ── Envoi d'une carte de contact (vCard) ───────────────────────────────
+    case 'sendContact': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      if (!contact_phone || String(contact_phone).trim() === '') {
+        throw new Error('contact_phone obligatoire');
+      }
+      const cName  = (contact_name && String(contact_name).trim() !== '')
+                     ? String(contact_name).trim() : String(contact_phone);
+      const cDigits= String(contact_phone).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
+      if (!cDigits) { throw new Error('contact_phone invalide : ' + contact_phone); }
+      const vcard =
+        'BEGIN:VCARD\n' +
+        'VERSION:3.0\n' +
+        'FN:' + cName + '\n' +
+        'TEL;type=CELL;type=VOICE;waid=' + cDigits + ':+' + cDigits + '\n' +
+        'END:VCARD';
+      const jid = resolveJid(id, phone);
+      logMsg('info', '[' + id + '] → ' + jid + ' : 👤 contact ' + cName + ' (' + cDigits + ')');
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi contact — délai dépassé')), 10000));
+      await Promise.race([
+        sock.sendMessage(jid, { contacts: { displayName: cName, contacts: [{ vcard }] } }),
+        t,
+      ]);
+      return { sent: true, name: cName, phone: cDigits };
     }
 
     // ── Envoi d'un média (image/vidéo/audio/document) ──────────────────────

@@ -346,6 +346,47 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Envoi d'une position GPS (lat, long, nom optionnel)
+  // -------------------------------------------------------------------------
+
+  public function sendLocation($_latitude, $_longitude, $_name = '', $_phone = null) {
+    $lat = (float) $_latitude;
+    $lng = (float) $_longitude;
+    if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+      throw new Exception(__('Coordonnées GPS invalides (lat ∈ [-90,90], long ∈ [-180,180])', __FILE__));
+    }
+    $params = [
+      'instance_id'   => $this->getId(),
+      'latitude'      => $lat,
+      'longitude'     => $lng,
+      'location_name' => trim((string) $_name),
+    ];
+    if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    $result = $this->sendToDaemon('sendLocation', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
+  // Envoi d'une carte de contact vCard
+  // -------------------------------------------------------------------------
+
+  public function sendContactCard($_contactPhone, $_contactName = '', $_phone = null) {
+    if (!is_string($_contactPhone) || trim($_contactPhone) === '') {
+      throw new Exception(__('Numéro de contact obligatoire', __FILE__));
+    }
+    $params = [
+      'instance_id'   => $this->getId(),
+      'contact_phone' => trim($_contactPhone),
+      'contact_name'  => trim((string) $_contactName),
+    ];
+    if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    $result = $this->sendToDaemon('sendContact', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
   // Envoi d'un média (image, vidéo, audio, document) — chemin local serveur
   // $_path    = chemin absolu du fichier (lisible par www-data)
   // $_caption = légende optionnelle (image/vidéo/document uniquement)
@@ -586,6 +627,52 @@ class jeewhatsapp extends eqLogic {
       $media->setDisplay('message_placeholder', 'Légende optionnelle (ignorée pour audio)');
       $media->save();
     }
+
+    // Commande action : Envoyer une localisation GPS (v0.2)
+    // Convention : title = "lat|long" ou "lat|long|nom", message = inutilisé
+    $loc = $this->getCmd('action', 'send_location');
+    if (!is_object($loc)) {
+      $loc = new jeewhatsappCmd();
+      $loc->setEqLogic_id($this->getId());
+      $loc->setLogicalId('send_location');
+      $loc->setType('action');
+      $loc->setSubType('message');
+      $loc->setName('Envoyer une localisation');
+      $loc->setIsVisible(1);
+      $loc->setOrder($order++);
+      $loc->save();
+    }
+    if ($loc->getDisplay('title_placeholder') !== 'lat|long ou lat|long|nom (ex: 48.8566|2.3522|Tour Eiffel)') {
+      $loc->setDisplay('title_placeholder', 'lat|long ou lat|long|nom (ex: 48.8566|2.3522|Tour Eiffel)');
+      $loc->save();
+    }
+    if ($loc->getDisplay('message_placeholder') !== 'Inutilisé (ignoré)') {
+      $loc->setDisplay('message_placeholder', 'Inutilisé (ignoré)');
+      $loc->save();
+    }
+
+    // Commande action : Envoyer une carte de contact (vCard) (v0.2)
+    // Convention : title = numéro du contact, message = nom affiché (optionnel)
+    $contact = $this->getCmd('action', 'send_contact');
+    if (!is_object($contact)) {
+      $contact = new jeewhatsappCmd();
+      $contact->setEqLogic_id($this->getId());
+      $contact->setLogicalId('send_contact');
+      $contact->setType('action');
+      $contact->setSubType('message');
+      $contact->setName('Envoyer un contact');
+      $contact->setIsVisible(1);
+      $contact->setOrder($order++);
+      $contact->save();
+    }
+    if ($contact->getDisplay('title_placeholder') !== 'Numéro du contact (ex: 33612345678)') {
+      $contact->setDisplay('title_placeholder', 'Numéro du contact (ex: 33612345678)');
+      $contact->save();
+    }
+    if ($contact->getDisplay('message_placeholder') !== 'Nom affiché (optionnel)') {
+      $contact->setDisplay('message_placeholder', 'Nom affiché (optionnel)');
+      $contact->save();
+    }
   }
 }
 
@@ -622,6 +709,27 @@ class jeewhatsappCmd extends cmd {
           throw new Exception(__('Chemin du fichier (champ Titre) obligatoire', __FILE__));
         }
         $eqLogic->sendMediaFile($path, $caption);
+        break;
+
+      case 'send_location':
+        // title = "lat|long" ou "lat|long|nom"
+        $raw = (isset($_options['title'])) ? trim($_options['title']) : '';
+        $parts = array_map('trim', explode('|', $raw, 3));
+        if (count($parts) < 2 || $parts[0] === '' || $parts[1] === '') {
+          throw new Exception(__('Format attendu : lat|long ou lat|long|nom', __FILE__));
+        }
+        $name = isset($parts[2]) ? $parts[2] : '';
+        $eqLogic->sendLocation((float)$parts[0], (float)$parts[1], $name);
+        break;
+
+      case 'send_contact':
+        // title = numéro ; message = nom affiché optionnel
+        $cphone = (isset($_options['title'])) ? trim($_options['title']) : '';
+        $cname  = $_options['message'] ?? '';
+        if ($cphone === '') {
+          throw new Exception(__('Numéro du contact (champ Titre) obligatoire', __FILE__));
+        }
+        $eqLogic->sendContactCard($cphone, $cname);
         break;
     }
   }

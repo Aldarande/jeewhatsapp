@@ -178,7 +178,10 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Nom | logicalId | Sous-type | Description |
 |---|---|---|---|
 | Envoyer un message | `send_message` | message | Envoie un message dans le groupe canal. Champ **Titre** = destinataire optionnel (vide = groupe canal, sinon numéro direct). |
-| Répondre | `reply` | message | Envoie le message dans le groupe canal (réponse visible de tous les membres). |
+| Répondre | `reply` | message | Réponse "quoted" au dernier message reçu dans le groupe (citation visible). |
+| Envoyer un média | `send_media` | message | Envoie un fichier (image, vidéo, audio, document). Champ **Titre** = chemin absolu, **Message** = légende optionnelle. |
+| Envoyer une localisation | `send_location` | message | Envoie une position GPS. Champ **Titre** = `lat\|long` ou `lat\|long\|nom`. |
+| Envoyer un contact | `send_contact` | message | Envoie une carte vCard. Champ **Titre** = numéro, **Message** = nom affiché (optionnel). |
 
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  
@@ -195,6 +198,20 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 > Tous les messages envoyés par Jeedom sont automatiquement préfixés (ex : `🏠 `).
 > Les membres du groupe peuvent ainsi distinguer les alertes Jeedom de leurs propres messages.
 > Le daemon ignore les messages `fromMe` dans le groupe, évitant que Jeedom traite ses propres envois.
+
+> **📍 Envoyer une localisation (`send_location`)**  
+> Format du champ **Titre** : `lat|long` ou `lat|long|nom` (séparateur `|`).  
+> Exemples :
+> - `48.8566|2.3522` → Tour Eiffel sans label
+> - `48.8566|2.3522|Tour Eiffel` → avec nom du lieu
+> - `45.7640|4.8357|Place Bellecour, Lyon` → avec adresse
+>
+> Validation : lat ∈ [-90, 90], long ∈ [-180, 180]. Le champ **Message** est ignoré.
+
+> **👤 Envoyer un contact (`send_contact`)**  
+> Format du champ **Titre** : numéro international sans `+` ni espaces (ex : `33612345678`).  
+> Format français accepté : `0612345678` (converti automatiquement en `33612345678`).  
+> Champ **Message** = nom affiché de la vCard (optionnel, sinon le numéro est utilisé).
 
 ---
 
@@ -243,6 +260,20 @@ Le message arrive dans le groupe canal avec le préfixe Jeedom.
 
 **Actions :**
 - `[Mon WhatsApp][Envoyer un message]` → Message : `☀️ Bonjour ! Température salon : [Salon][Température]°C`
+
+### Partager une localisation 📍
+
+**Déclencheur :** Bouton virtuel "Partager ma maison"
+
+**Actions :**
+- `[Mon WhatsApp][Envoyer une localisation]` → Titre : `48.8566|2.3522|Maison`
+
+### Envoyer la carte de contact du médecin
+
+**Déclencheur :** Mot-clé "docteur" reçu dans le groupe
+
+**Actions :**
+- `[Mon WhatsApp][Envoyer un contact]` → Titre : `33112345678`, Message : `Dr Dupont — cabinet`
 
 ---
 
