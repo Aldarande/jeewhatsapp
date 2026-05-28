@@ -165,13 +165,15 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 
 ### Commandes INFO (lecture)
 
-| Nom | logicalId | Type | Description |
-|---|---|---|---|
-| Dernier message | `last_message` | string | Texte du dernier message reçu dans le groupe canal |
-| Expéditeur | `last_sender` | string | Numéro du membre du groupe qui a envoyé le message |
-| Nom expéditeur | `last_sender_name` | string | Nom WhatsApp de l'expéditeur |
-| Reçu le | `last_received_at` | string | Horodatage du dernier message |
-| Envoyés (heure) | `sent_hour` | numeric | Nombre de messages envoyés sur l'heure en cours |
+| Nom | logicalId | Sous-type | Historisé | Description |
+|---|---|---|---|---|
+| Dernier message | `last_message` | string | non | Texte du dernier message reçu dans le groupe canal |
+| Expéditeur | `last_sender` | string | non | Numéro de l'expéditeur du dernier message |
+| Nom expéditeur | `last_sender_name` | string | non | Pseudo WhatsApp de l'expéditeur |
+| Reçu le | `last_received_at` | string | non | Horodatage du dernier message reçu |
+| Envoyés (heure en cours) | `sent_hour` | numeric | oui | Compteur d'envois durant l'heure courante (reset toutes les heures) |
+| Reçus aujourd'hui | `messages_today` | numeric | oui | Compteur de messages reçus depuis minuit (reset cron daily 00:02) |
+| Connecté depuis | `connected_since` | string | non | Date/heure de la dernière connexion WhatsApp Web (refresh cron 5 min) |
 
 ### Commandes ACTION
 

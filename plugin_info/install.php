@@ -25,6 +25,32 @@ function jeewhatsapp_install() {
     $cron->setTimeout(2);
     $cron->save();
   }
+
+  // Cron daily 00:02 : reset compteur messages_today (v0.2)
+  $cronReset = cron::byClassAndFunction('jeewhatsapp', 'cronResetMessagesToday');
+  if (!is_object($cronReset)) {
+    $cronReset = new cron();
+    $cronReset->setClass('jeewhatsapp');
+    $cronReset->setFunction('cronResetMessagesToday');
+    $cronReset->setEnable(1);
+    $cronReset->setDeamon(0);
+    $cronReset->setSchedule('2 0 * * *');
+    $cronReset->setTimeout(2);
+    $cronReset->save();
+  }
+
+  // Cron toutes les 5 min : rafraîchit connected_since via getStatus (v0.2)
+  $cronStatus = cron::byClassAndFunction('jeewhatsapp', 'cronRefreshStatus');
+  if (!is_object($cronStatus)) {
+    $cronStatus = new cron();
+    $cronStatus->setClass('jeewhatsapp');
+    $cronStatus->setFunction('cronRefreshStatus');
+    $cronStatus->setEnable(1);
+    $cronStatus->setDeamon(0);
+    $cronStatus->setSchedule('*/5 * * * *');
+    $cronStatus->setTimeout(2);
+    $cronStatus->save();
+  }
 }
 
 function jeewhatsapp_update() {
@@ -38,10 +64,10 @@ function jeewhatsapp_remove() {
   } catch (Exception $e) {
     log::add('jeewhatsapp', 'warning', 'install.php::jeewhatsapp_remove() — Arrêt daemon : ' . $e->getMessage());
   }
-  // Suppression du cron donation
-  $cron = cron::byClassAndFunction('jeewhatsapp', 'cronDonation');
-  if (is_object($cron)) {
-    $cron->remove();
+  // Suppression des crons
+  foreach (['cronDonation', 'cronResetMessagesToday', 'cronRefreshStatus'] as $fn) {
+    $cron = cron::byClassAndFunction('jeewhatsapp', $fn);
+    if (is_object($cron)) { $cron->remove(); }
   }
   // Suppression du dossier d'authentification (sessions WhatsApp)
   $authDir = dirname(__FILE__) . '/../resources/jeewhatsappd/auth';

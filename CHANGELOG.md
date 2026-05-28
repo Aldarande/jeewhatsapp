@@ -16,6 +16,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   Message = nom affiché. Format français 0X automatiquement converti en 33X. (v0.2 ROADMAP #4)
 - Refactor daemon : helper `resolveJid(id, phone)` mutualisé entre `send`, `sendMedia`,
   `sendLocation`, `sendContact`. Simplifie l'ajout des prochaines actions d'envoi.
+- **`messages_today`** — cmd info numeric historisée. Compteur de messages reçus depuis
+  minuit. Reset automatique via cron daily (`2 0 * * *`). (v0.2 ROADMAP #7)
+- **`connected_since`** — cmd info string indiquant la date/heure de la dernière connexion
+  WhatsApp établie. Mise à jour par le daemon dans `auth/{id}/connected_since.txt` et
+  rafraîchie via cron toutes les 5 min (`*/5 * * * *`). (v0.2 ROADMAP #8)
+- 2 nouveaux crons Jeedom : `cronResetMessagesToday`, `cronRefreshStatus`. Création
+  idempotente dans `jeewhatsapp_install()`, nettoyés à la désinstallation.
 
 ### Changed
 

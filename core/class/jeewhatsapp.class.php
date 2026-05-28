@@ -154,6 +154,9 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_sender_name', $_data['sender_name']  ?? '');
     $this->checkAndUpdateCmd('last_received_at', $_data['received_at']  ?? date('Y-m-d H:i:s'));
 
+    // Compteur messages reçus aujourd'hui (cache TTL jusqu'à minuit)
+    $this->incrementMessagesTodayCounter();
+
     if ($this->getConfiguration('interactions_enabled', 0) != 1) {
       log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — Interactions désactivées — équipement #' . $this->getId());
       return;
@@ -482,6 +485,48 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Compteur de messages reçus aujourd'hui (cache jusqu'à minuit local)
+  // -------------------------------------------------------------------------
+
+  public function incrementMessagesTodayCounter() {
+    $key       = 'jeewhatsapp::msg_today::' . $this->getId();
+    $stored    = (int) cache::byKey($key)->getValue(0);
+    $now       = time();
+    $tomorrow0 = strtotime('tomorrow 00:00:00');
+    $ttl       = max(60, $tomorrow0 - $now);
+    $new       = $stored + 1;
+    cache::set($key, $new, $ttl);
+    $this->checkAndUpdateCmd('messages_today', $new);
+    return $new;
+  }
+
+  // Cron daily (cf install.php) : reset à 00:00 même si aucun message reçu pendant 24h.
+  // Utile pour rafraîchir la commande info à 0 chaque minuit.
+  public static function cronResetMessagesToday() {
+    foreach (eqLogic::byType(__CLASS__) as $eqLogic) {
+      if (!$eqLogic->getIsEnable()) { continue; }
+      $key = 'jeewhatsapp::msg_today::' . $eqLogic->getId();
+      cache::set($key, 0, 86400);
+      $eqLogic->checkAndUpdateCmd('messages_today', 0);
+    }
+    log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::cronResetMessagesToday() l.' . __LINE__ . ' — Compteurs messages_today remis à zéro');
+  }
+
+  // Cron 5 min : interroge le daemon pour rafraîchir la cmd info connected_since.
+  // getConnectionStatus() met aussi à jour la cmd automatiquement.
+  public static function cronRefreshStatus() {
+    foreach (eqLogic::byType(__CLASS__) as $eqLogic) {
+      if (!$eqLogic->getIsEnable()) { continue; }
+      try {
+        $eqLogic->getConnectionStatus();
+      } catch (Exception $e) {
+        // Daemon down ou autre : on ignore silencieusement (log debug)
+        log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::cronRefreshStatus() l.' . __LINE__ . ' — Daemon indisponible pour eqLogic #' . $eqLogic->getId());
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // QR code — récupéré depuis le daemon
   // -------------------------------------------------------------------------
 
@@ -490,7 +535,16 @@ class jeewhatsapp extends eqLogic {
   }
 
   public function getConnectionStatus() {
-    return $this->sendToDaemon('getStatus', ['instance_id' => $this->getId()]);
+    $st = $this->sendToDaemon('getStatus', ['instance_id' => $this->getId()]);
+    // Mise à jour automatique de la cmd info connected_since si disponible
+    if (isset($st['connected_since']) && $st['connected_since']) {
+      // ISO 8601 → format Jeedom YYYY-MM-DD HH:MM:SS
+      $ts = strtotime($st['connected_since']);
+      if ($ts !== false) {
+        $this->checkAndUpdateCmd('connected_since', date('Y-m-d H:i:s', $ts));
+      }
+    }
+    return $st;
   }
 
   public function createGroup($_name = null) {
@@ -547,6 +601,8 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_sender_name', 'name' => 'Nom expéditeur',          'subType' => 'string'],
       ['logicalId' => 'last_received_at', 'name' => 'Reçu le',                 'subType' => 'string'],
       ['logicalId' => 'sent_hour',        'name' => 'Envoyés (heure en cours)', 'subType' => 'numeric', 'isHistorized' => 1],
+      ['logicalId' => 'messages_today',   'name' => 'Reçus aujourd\'hui',       'subType' => 'numeric', 'isHistorized' => 1],
+      ['logicalId' => 'connected_since',  'name' => 'Connecté depuis',          'subType' => 'string'],
     ];
 
     $order = 0;

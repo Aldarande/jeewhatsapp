@@ -118,9 +118,10 @@ function authDir(id) {
   try { fs.chmodSync(dir, 0o700); } catch (_) {}
   return dir;
 }
-function qrFilePath(id)       { return path.join(authDir(id), 'qr.txt'); }
-function statusFilePath(id)   { return path.join(authDir(id), 'status.txt'); }
-function groupJidFilePath(id) { return path.join(authDir(id), 'group_jid.txt'); }
+function qrFilePath(id)               { return path.join(authDir(id), 'qr.txt'); }
+function statusFilePath(id)           { return path.join(authDir(id), 'status.txt'); }
+function groupJidFilePath(id)         { return path.join(authDir(id), 'group_jid.txt'); }
+function connectedSinceFilePath(id)   { return path.join(authDir(id), 'connected_since.txt'); }
 
 function writeStatus(id, status) {
   try { fs.writeFileSync(statusFilePath(id), status); } catch (_) {}
@@ -223,6 +224,8 @@ async function connectInstance(instance) {
       writeStatus(id, 'connected');
       const qf = qrFilePath(id);
       if (fs.existsSync(qf)) { fs.unlinkSync(qf); }
+      // Mémorise la date de connexion (exposée via getStatus pour cmd info connected_since)
+      try { fs.writeFileSync(connectedSinceFilePath(id), new Date().toISOString()); } catch (_) {}
       logMsg('info', '[' + id + '] ✓ Connecté à WhatsApp');
 
       // Rechercher le groupe canal — retardé de 2 s pour laisser à Baileys
@@ -714,10 +717,16 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
     case 'getStatus': {
       const st = fs.existsSync(statusFilePath(id))
         ? fs.readFileSync(statusFilePath(id), 'utf8').trim() : 'unknown';
+      let connectedSince = null;
+      const csf = connectedSinceFilePath(id);
+      if (sockets[id] && fs.existsSync(csf)) {
+        connectedSince = fs.readFileSync(csf, 'utf8').trim();
+      }
       return {
-        status:    st,
-        connected: !!sockets[id],
-        group_jid: groupJids[id] || null,
+        status:          st,
+        connected:       !!sockets[id],
+        group_jid:       groupJids[id] || null,
+        connected_since: connectedSince,
       };
     }
 

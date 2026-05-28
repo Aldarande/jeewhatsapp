@@ -40,8 +40,8 @@ Objectif : ouvrir la réception, ajouter les briques manquantes pour traiter ce 
 | 4 | ✅ **Cmd action `send_contact`** (vCard) | 🟢 | Numéro + nom, conversion 0X → 33X auto. |
 | 5 | **Whitelist d'expéditeurs** 🛡️ | 🟡 | Configuration eqLogic : liste de numéros autorisés à déclencher les interactions Jeedom. Refuse silencieusement les autres. |
 | 6 | **Filtre par mot-clé** sur interactions | 🟢 | Préfixe obligatoire (ex: `!` ou `@jeedom`) avant déclenchement interactions. Évite le bruit. |
-| 7 | **Cmd info `messages_today`** | 🟢 | Compteur de messages reçus aujourd'hui (reset minuit). |
-| 8 | **Cmd info `connected_since`** | 🟢 | Timestamp dernière connexion établie. |
+| 7 | ✅ **Cmd info `messages_today`** | 🟢 | Compteur reçus aujourd'hui (reset cron 00:02). |
+| 8 | ✅ **Cmd info `connected_since`** | 🟢 | Date dernière connexion (refresh cron 5 min). |
 
 **Sécurité bundlée v0.2** :
 - F-004 — Secret partagé sur HTTP daemon (env var JEEDOM_DAEMON_SECRET + header `X-Daemon-Secret`) 🛡️
