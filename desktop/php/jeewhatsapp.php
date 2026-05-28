@@ -151,9 +151,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									<select class="eqLogicAttr form-control" data-l1key="object_id">
 										<option value="">{{Aucun}}</option>
 										<?php foreach (jeeObject::buildTree(null, false) as $object) : ?>
-											<option value="<?php echo $object->getId(); ?>">
-												<?php echo str_repeat('&nbsp;&nbsp;', $object->getConfiguration('parentNumber')); ?>
-												<?php echo $object->getName(); ?>
+											<option value="<?php echo (int) $object->getId(); ?>">
+												<?php echo str_repeat('&nbsp;&nbsp;', (int) $object->getConfiguration('parentNumber')); ?>
+												<?php echo htmlspecialchars($object->getName(), ENT_QUOTES, 'UTF-8'); ?>
 											</option>
 										<?php endforeach; ?>
 									</select>
@@ -165,8 +165,8 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								<div class="col-sm-7">
 									<?php foreach (jeedom::getConfiguration('eqLogic:category') as $key => $value) : ?>
 										<label class="checkbox-inline">
-											<input type="checkbox" class="eqLogicAttr" data-l1key="category" data-l2key="<?php echo $key; ?>">
-											<?php echo $value['name']; ?>
+											<input type="checkbox" class="eqLogicAttr" data-l1key="category" data-l2key="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>">
+											<?php echo htmlspecialchars($value['name'], ENT_QUOTES, 'UTF-8'); ?>
 										</label>
 									<?php endforeach; ?>
 								</div>
@@ -559,7 +559,13 @@ $('#btn_find_group').on('click', function () {
       if (data.state === 'ok') {
         var jid = data.result.jid;
         $('input.eqLogicAttr[data-l1key="configuration"][data-l2key="group_jid"]').val(jid);
-        $result.html('<i class="fas fa-check-circle" style="color:#25D366;"></i> {{Groupe}} <strong>' + groupName + '</strong> {{trouvé — JID renseigné. Sauvegardez.}}').css('color', '#25D366').show();
+        // SECURITY (F-007): échappement via .text() pour éviter XSS sur groupName
+        $result.empty()
+          .append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+          .append(' {{Groupe}} ')
+          .append($('<strong>').text(groupName))
+          .append(' {{trouvé — JID renseigné. Sauvegardez.}}')
+          .css('color', '#25D366').show();
       } else {
         $result.text('{{Groupe introuvable : }}' + (data.result || data.error || '?')).css('color', 'red').show();
       }
@@ -595,7 +601,13 @@ $('#btn_create_group').on('click', function () {
       if (data.state === 'ok') {
         var jid = data.result.jid;
         $('input.eqLogicAttr[data-l1key="configuration"][data-l2key="group_jid"]').val(jid);
-        $result.html('<i class="fas fa-check-circle" style="color:#25D366;"></i> {{Groupe}} <strong>' + groupName + '</strong> {{créé — JID renseigné. Sauvegardez.}}').css('color', '#25D366').show();
+        // SECURITY (F-007): échappement via .text() pour éviter XSS sur groupName
+        $result.empty()
+          .append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+          .append(' {{Groupe}} ')
+          .append($('<strong>').text(groupName))
+          .append(' {{créé — JID renseigné. Sauvegardez.}}')
+          .css('color', '#25D366').show();
       } else {
         $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();
       }

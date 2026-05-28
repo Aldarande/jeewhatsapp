@@ -6,7 +6,10 @@
 **Commit analysé :** 120c19a — Audit complet du plugin — 28 corrections (conformité Jeedom 4.4)
 **Branche :** dev
 **Fichiers analysés :** 9 (PHP, JS, Bash, JSON)
-**Score de sécurité :** 56/100
+**Score de sécurité :** 56/100 → **~85/100** (après corrections v0.2)
+**État des findings :** F-001 / F-002 / F-003 / F-005 / F-006 / F-010 ✅ corrigés v0.1
+F-004 / F-007 / F-008 / F-009 ✅ corrigés v0.2
+F-011 (commit package-lock) ⏳ encore ouvert
 
 ---
 

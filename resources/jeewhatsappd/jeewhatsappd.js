@@ -42,9 +42,12 @@ const PID_FILE     = args['pid-file'];
 const LOG_FILE     = args['log-file'] || '';
 const DEBUG        = args['debug'] === 'true' || args['debug'] === '1';
 // SECURITY (F-001): API key lue depuis l'environnement, jamais en argument CLI
-const API_KEY      = process.env.JEEDOM_APIKEY || '';
-// On efface immédiatement la variable du process pour éviter qu'un dump éventuel ne la révèle
+const API_KEY        = process.env.JEEDOM_APIKEY || '';
+// SECURITY (F-004): secret partagé pour authentifier les requêtes PHP→daemon
+const DAEMON_SECRET  = process.env.JEEDOM_DAEMON_SECRET || '';
+// On efface immédiatement les variables du process pour éviter qu'un dump éventuel ne les révèle
 delete process.env.JEEDOM_APIKEY;
+delete process.env.JEEDOM_DAEMON_SECRET;
 
 let instances = [];
 try {
@@ -471,9 +474,30 @@ function sendCallback(instanceId, data) {
 // Serveur HTTP local — commandes depuis PHP
 // ---------------------------------------------------------------------------
 
+// SECURITY (F-004, CWE-208): comparaison à temps constant pour empêcher les timing attacks
+function safeStringEquals(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch (_) {
+    return false;
+  }
+}
+
 http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/action') {
     res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
+  }
+  // SECURITY (F-004): authentification par secret partagé
+  // Si DAEMON_SECRET est configuré côté daemon, le header X-Daemon-Secret est obligatoire.
+  // Si DAEMON_SECRET est vide (cas migration/dev), on accepte mais on warn.
+  if (DAEMON_SECRET !== '') {
+    const provided = req.headers['x-daemon-secret'] || '';
+    if (!safeStringEquals(provided, DAEMON_SECRET)) {
+      logMsg('warning', 'Daemon HTTP : requête refusée (X-Daemon-Secret manquant ou invalide) depuis ' + req.socket.remoteAddress);
+      res.writeHead(401); res.end(JSON.stringify({ error: 'Unauthorized' })); return;
+    }
   }
   let body = '';
   req.on('data', chunk => { body += chunk; });

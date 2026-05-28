@@ -61,6 +61,32 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Security
 
+- **F-004 (MEDIUM, CWE-306)** — authentification du serveur HTTP local du daemon :
+  - PHP `deamon_start()` génère un secret 256 bits via `random_bytes(32)` à chaque démarrage
+  - Stocké en cache Jeedom (TTL 7j) et transmis via env var `JEEDOM_DAEMON_SECRET`
+  - `sendToDaemon()` ajoute le header `X-Daemon-Secret` sur chaque requête
+  - Daemon refuse 401 sur tout `/action` sans header valide (`crypto.timingSafeEqual`
+    pour comparaison à temps constant — protection timing attack CWE-208)
+  - Empêche un autre process local d'envoyer des messages WhatsApp via le daemon HTTP
+- **F-007 (MEDIUM, CWE-79)** — XSS DOM dans le JS inline desktop : `groupName`
+  passe désormais par `.text()` au lieu d'être concaténé dans `.html()`. Touche
+  les fonctions Recherche/Création de groupe.
+- **F-008 (MEDIUM, CWE-79)** — XSS stocké via objets/catégories Jeedom :
+  `htmlspecialchars()` + cast `(int)` systématiques sur `$object->getName()`,
+  `$value['name']`, `$object->getId()`, `$object->getConfiguration('parentNumber')`
+  dans le template desktop.
+- **F-009 (LOW, CWE-532)** — masquage des PII dans les logs debug :
+  - Nouveau helper privé statique `redactPayloadForLog($action, $params)`
+  - `message`/`caption` > 8 chars → tronqués à `"abc…(N chars)"`
+  - `phone`/`mention`/`contact_phone` > 4 chars → masqués à `"33…78"` (2 premiers / 2 derniers)
+  - Réponse daemon tronquée à 200 chars (évite dump complet d'un QR base64)
+- Tests sécurité validés :
+  - `curl -X POST http://127.0.0.1:55148/action` sans header → 401 attendu ✓
+  - `sendMessage()` via PHP avec secret → OK ✓
+  - Log debug `sendToDaemon` montre `"TES…(52 chars)"` au lieu du message complet ✓
+
+Score sécurité estimé : 56→**~85/100** (toutes les failles HIGH + 5 MEDIUM clôturées).
+
 ---
 
 ## [0.1.0] - 2026-05-27

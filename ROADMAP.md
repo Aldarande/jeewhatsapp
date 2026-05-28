@@ -44,9 +44,9 @@ Objectif : ouvrir la réception, ajouter les briques manquantes pour traiter ce 
 | 8 | ✅ **Cmd info `connected_since`** | 🟢 | Date dernière connexion (refresh cron 5 min). |
 
 **Sécurité bundlée v0.2** :
-- F-004 — Secret partagé sur HTTP daemon (env var JEEDOM_DAEMON_SECRET + header `X-Daemon-Secret`) 🛡️
-- F-007/F-008 — Échappement HTML systématique sur le desktop 🛡️
-- F-009 — Masquage PII (messages, phones) dans logs debug 🛡️
+- ✅ F-004 — Secret partagé sur HTTP daemon (env var JEEDOM_DAEMON_SECRET + header `X-Daemon-Secret`) 🛡️
+- ✅ F-007/F-008 — Échappement HTML systématique sur le desktop 🛡️
+- ✅ F-009 — Masquage PII (messages, phones) dans logs debug 🛡️
 
 ---
 

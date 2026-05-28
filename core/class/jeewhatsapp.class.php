@@ -98,8 +98,15 @@ class jeewhatsapp extends eqLogic {
     $pid_file = jeedom::getTmpFolder(__CLASS__) . '/daemon.pid';
     $log_file = log::getPathToLog(__CLASS__);
 
-    // SECURITY (F-001): API key passée via env var, jamais en argument CLI visible dans ps aux
+    // SECURITY (F-004, CWE-306): secret partagé pour authentifier les requêtes PHP→daemon
+    // Régénéré à chaque démarrage du daemon, stocké en cache Jeedom (TTL 7j > usage normal)
+    // Le daemon le lit via env var JEEDOM_DAEMON_SECRET, le PHP le passe en header X-Daemon-Secret
+    $daemon_secret = bin2hex(random_bytes(32));
+    cache::set('jeewhatsapp::daemon_secret', $daemon_secret, 86400 * 7);
+
+    // SECURITY (F-001 + F-004): API key + daemon secret passés via env, jamais en CLI
     $cmd  = 'JEEDOM_APIKEY=' . escapeshellarg($api_key) . ' ';
+    $cmd .= 'JEEDOM_DAEMON_SECRET=' . escapeshellarg($daemon_secret) . ' ';
     $cmd .= 'node ' . escapeshellarg(dirname(__FILE__) . '/../../resources/jeewhatsappd/jeewhatsappd.js');
     $cmd .= ' --instances '  . escapeshellarg(json_encode($instances));
     $cmd .= ' --port '       . self::getPort();
@@ -734,14 +741,47 @@ class jeewhatsapp extends eqLogic {
   // Communication avec le daemon
   // -------------------------------------------------------------------------
 
+  // SECURITY (F-009, CWE-532): masque les champs sensibles d'un payload daemon
+  // avant log debug. Conserve la structure pour debug efficace mais retire les PII.
+  private static function redactPayloadForLog($_action, $_params) {
+    $clone = $_params;
+    foreach (['message', 'caption'] as $k) {
+      if (isset($clone[$k]) && is_string($clone[$k]) && strlen($clone[$k]) > 8) {
+        $clone[$k] = substr($clone[$k], 0, 8) . '…(' . strlen($clone[$k]) . ' chars)';
+      }
+    }
+    foreach (['phone', 'mention', 'contact_phone'] as $k) {
+      if (isset($clone[$k]) && is_string($clone[$k]) && strlen($clone[$k]) > 4) {
+        $digits = preg_replace('/\D/', '', $clone[$k]);
+        $clone[$k] = strlen($digits) > 4
+          ? substr($digits, 0, 2) . '…' . substr($digits, -2)
+          : '****';
+      }
+    }
+    return json_encode(array_merge(['action' => $_action], $clone));
+  }
+
   private function sendToDaemon($_action, $_params = []) {
     $url     = 'http://127.0.0.1:' . self::getPort() . '/action';
     $payload = json_encode(array_merge(['action' => $_action], $_params));
-    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — ' . $_action . ' → ' . $payload);
+
+    // SECURITY (F-009, CWE-532): masquer les données sensibles dans les logs debug
+    // Le payload complet contient potentiellement messages WhatsApp + numéros téléphones
+    $logPayload = self::redactPayloadForLog($_action, $_params);
+    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — ' . $_action . ' → ' . $logPayload);
+
+    // SECURITY (F-004, CWE-306): header X-Daemon-Secret authentifie la requête locale.
+    // Le daemon refuse 401 sans header valide → empêche un process local malveillant
+    // d'envoyer des messages WhatsApp via le HTTP daemon bindé sur 127.0.0.1.
+    $secret = cache::byKey('jeewhatsapp::daemon_secret')->getValue('');
+    $headers = "Content-Type: application/json\r\n";
+    if ($secret !== '') {
+      $headers .= "X-Daemon-Secret: " . $secret . "\r\n";
+    }
     // ignore_errors permet de lire le corps même sur HTTP 4xx/5xx (erreurs renvoyées par le daemon)
     $opts = ['http' => [
       'method'        => 'POST',
-      'header'        => 'Content-Type: application/json',
+      'header'        => $headers,
       'content'       => $payload,
       'timeout'       => 15,
       'ignore_errors' => true,
@@ -751,7 +791,9 @@ class jeewhatsapp extends eqLogic {
     if ($raw === false) {
       throw new Exception(__('Daemon non joignable sur le port ', __FILE__) . self::getPort() . __(' — vérifiez qu\'il est démarré', __FILE__));
     }
-    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — réponse daemon : ' . $raw);
+    // SECURITY (F-009): tronquer la réponse à 200 chars (peut contenir un QR base64, etc.)
+    $logRaw = strlen($raw) > 200 ? substr($raw, 0, 200) . '…(' . strlen($raw) . ' bytes)' : $raw;
+    log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::sendToDaemon() — réponse : ' . $logRaw);
     $decoded = json_decode($raw, true);
     if (isset($decoded['error'])) {
       throw new Exception($decoded['error']);
