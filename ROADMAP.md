@@ -58,9 +58,9 @@ Objectif : sortir du paradigme « bot one-way » et offrir des interactions rich
 |---|---|---|---|
 | 9 | **Polls / Sondages** ⭐ | 🔴 | Cmd action `send_poll` (title=question, message=options séparées par `\|`). Réception des votes via callback → cmds info `poll_results`. Cf [Baileys polls](https://baileys.wiki). |
 | 10 | **Stickers personnalisés** | 🟡 | Cmd action `send_sticker` avec chemin .webp. Auto-conversion JPG/PNG → WebP via `sharp` (à ajouter aux deps). |
-| 11 | **Édition de message** | 🟡 | Cmd action `edit_last` — remplace le dernier message envoyé (Baileys `sendMessage(..., {edit: msgKey})`). |
-| 12 | **Suppression (revoke)** | 🟡 | Cmd action `revoke_last` — équivalent "Supprimer pour tous". |
-| 13 | **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |
+| 11 | ✅ **Édition de message** | 🟡 | Cmd action `edit_last` — remplace le dernier message envoyé (Baileys `sendMessage(..., {edit: msgKey})`). |
+| 12 | ✅ **Suppression (revoke)** | 🟡 | Cmd action `revoke_last` — équivalent "Supprimer pour tous". |
+| 13 | ✅ **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |
 | 14 | ✅ **Présence typing/recording** | 🟢 | `sendPresenceUpdate('composing')` avant envoi auto. UX humanisée. Config eqLogic `presence_enabled`. |
 | 15 | **Messages éphémères** | 🟡 | Option par eqLogic : tous les envois disparaissent après 24h/7j/90j. |
 | 16 | **Multi-groupes par eqLogic** ⭐ | 🔴 | Aujourd'hui 1 groupe canal. Permettre N groupes (alertes, info, famille…) avec tag par défaut sur la commande action. |

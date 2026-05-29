@@ -641,6 +641,47 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Édition du dernier message envoyé par Jeedom (v0.3 #11)
+  // -------------------------------------------------------------------------
+
+  public function editLast($_newText) {
+    $text = trim((string) $_newText);
+    if ($text === '') {
+      throw new Exception(__('Nouveau texte obligatoire', __FILE__));
+    }
+    // Réapplique le préfixe Jeedom comme pour un envoi normal
+    $prefix = $this->getConfiguration('interaction_prefix', '🏠 ');
+    $text   = $prefix !== '' ? $prefix . $text : $text;
+    return $this->sendToDaemon('editLast', [
+      'instance_id' => $this->getId(),
+      'message'     => $text,
+    ]);
+  }
+
+  // -------------------------------------------------------------------------
+  // Suppression "pour tous" du dernier message envoyé (v0.3 #12)
+  // -------------------------------------------------------------------------
+
+  public function revokeLast() {
+    return $this->sendToDaemon('revokeLast', [
+      'instance_id' => $this->getId(),
+    ]);
+  }
+
+  // -------------------------------------------------------------------------
+  // Transfert du dernier message reçu vers un destinataire (v0.3 #13)
+  // $_phone : null/'' = groupe canal, sinon numéro ou JID
+  // -------------------------------------------------------------------------
+
+  public function forwardLastTo($_phone = null) {
+    $params = ['instance_id' => $this->getId()];
+    if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    $result = $this->sendToDaemon('forwardTo', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
   // Whitelist : vérifie si un sender est autorisé à déclencher des interactions
   // - Whitelist vide → tout le monde est autorisé (comportement legacy v0.1)
   // - Sinon normalisation (chiffres uniquement) + conversion FR 0X → 33X côté
@@ -981,6 +1022,67 @@ class jeewhatsapp extends eqLogic {
       $react->setDisplay('message_placeholder', 'Emoji (ex: ❤️ 👍 🎉 — chaîne vide pour retirer la réaction)');
       $react->save();
     }
+
+    // Commande action : Éditer le dernier message envoyé (v0.3 #11)
+    // Convention : message = nouveau texte, title inutilisé
+    $edit = $this->getCmd('action', 'edit_last');
+    if (!is_object($edit)) {
+      $edit = new jeewhatsappCmd();
+      $edit->setEqLogic_id($this->getId());
+      $edit->setLogicalId('edit_last');
+      $edit->setType('action');
+      $edit->setSubType('message');
+      $edit->setName('Éditer le dernier message');
+      $edit->setIsVisible(1);
+      $edit->setOrder($order++);
+      $edit->save();
+    }
+    if ($edit->getDisplay('title_placeholder') !== 'Inutilisé') {
+      $edit->setDisplay('title_placeholder', 'Inutilisé');
+      $edit->save();
+    }
+    if ($edit->getDisplay('message_placeholder') !== 'Nouveau texte du dernier message envoyé') {
+      $edit->setDisplay('message_placeholder', 'Nouveau texte du dernier message envoyé');
+      $edit->save();
+    }
+
+    // Commande action : Supprimer (revoke) le dernier message envoyé (v0.3 #12)
+    // Convention : aucun paramètre — subType 'other' (bouton sans champ)
+    $revoke = $this->getCmd('action', 'revoke_last');
+    if (!is_object($revoke)) {
+      $revoke = new jeewhatsappCmd();
+      $revoke->setEqLogic_id($this->getId());
+      $revoke->setLogicalId('revoke_last');
+      $revoke->setType('action');
+      $revoke->setSubType('other');
+      $revoke->setName('Supprimer le dernier message');
+      $revoke->setIsVisible(1);
+      $revoke->setOrder($order++);
+      $revoke->save();
+    }
+
+    // Commande action : Transférer le dernier message reçu (v0.3 #13)
+    // Convention : title = destinataire optionnel (vide = groupe canal)
+    $forward = $this->getCmd('action', 'forward_to');
+    if (!is_object($forward)) {
+      $forward = new jeewhatsappCmd();
+      $forward->setEqLogic_id($this->getId());
+      $forward->setLogicalId('forward_to');
+      $forward->setType('action');
+      $forward->setSubType('message');
+      $forward->setName('Transférer le dernier message reçu');
+      $forward->setIsVisible(1);
+      $forward->setOrder($order++);
+      $forward->save();
+    }
+    if ($forward->getDisplay('title_placeholder') !== 'Destinataire (optionnel — vide = groupe canal)') {
+      $forward->setDisplay('title_placeholder', 'Destinataire (optionnel — vide = groupe canal)');
+      $forward->save();
+    }
+    if ($forward->getDisplay('message_placeholder') !== 'Inutilisé (ignoré)') {
+      $forward->setDisplay('message_placeholder', 'Inutilisé (ignoré)');
+      $forward->save();
+    }
   }
 }
 
@@ -1044,6 +1146,24 @@ class jeewhatsappCmd extends cmd {
         // message = emoji ; title inutilisé
         $emoji = $_options['message'] ?? '';
         $eqLogic->reactToLast($emoji);
+        break;
+
+      case 'edit_last':
+        // message = nouveau texte ; title inutilisé
+        $eqLogic->editLast($_options['message'] ?? '');
+        break;
+
+      case 'revoke_last':
+        // aucun paramètre — supprime le dernier message envoyé
+        $eqLogic->revokeLast();
+        break;
+
+      case 'forward_to':
+        // title = destinataire optionnel (vide = groupe canal)
+        $dest = (isset($_options['title']) && trim($_options['title']) !== '')
+          ? trim($_options['title'])
+          : null;
+        $eqLogic->forwardLastTo($dest);
         break;
     }
   }

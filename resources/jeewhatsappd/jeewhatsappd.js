@@ -826,6 +826,47 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       return { sent: true, emoji, target: target.key.id };
     }
 
+    // ── Édition du dernier message envoyé (v0.3 #11) ───────────────────────
+    case 'editLast': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const last = lastSentMsg[id];
+      if (!last) { throw new Error('Aucun message envoyé à éditer — envoyez d\'abord un message via Jeedom'); }
+      const newText = String(message || '').trim();
+      if (newText === '') { throw new Error('Nouveau texte obligatoire (champ message)'); }
+      logMsg('info', '[' + id + '] ✎ Edit → ' + last.jid + ' : ' + newText.substring(0, 60));
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Édition — délai dépassé')), 10000));
+      await Promise.race([sock.sendMessage(last.jid, { text: newText, edit: last.key }), t]);
+      return { edited: true, target: last.key.id };
+    }
+
+    // ── Suppression "pour tous" du dernier message envoyé (v0.3 #12) ────────
+    case 'revokeLast': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const last = lastSentMsg[id];
+      if (!last) { throw new Error('Aucun message envoyé à supprimer — envoyez d\'abord un message via Jeedom'); }
+      logMsg('info', '[' + id + '] 🗑 Revoke → ' + last.jid + ' (' + last.key.id + ')');
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Suppression — délai dépassé')), 10000));
+      await Promise.race([sock.sendMessage(last.jid, { delete: last.key }), t]);
+      delete lastSentMsg[id];
+      return { revoked: true };
+    }
+
+    // ── Transfert du dernier message reçu vers un destinataire (v0.3 #13) ───
+    case 'forwardTo': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const src = lastIncomingMsg[id];
+      if (!src) { throw new Error('Aucun message reçu à transférer — attendez un message dans le groupe canal'); }
+      const jid = resolveJid(id, phone);
+      logMsg('info', '[' + id + '] ⇪ Forward → ' + jid + ' (depuis ' + (src.key.id || '?') + ')');
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Transfert — délai dépassé')), 15000));
+      const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }), t]);
+      recordSent(id, fwd);
+      return { forwarded: true, to: jid };
+    }
+
     // ── Réponse "quoted" au dernier message reçu dans le groupe canal ──────
     case 'replyLast': {
       const sock = sockets[id];

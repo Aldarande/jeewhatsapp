@@ -9,6 +9,17 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **`edit_last`** — cmd action (subType=message) pour éditer le dernier message
+  envoyé par Jeedom. `message` = nouveau texte. Daemon mémorise `lastSentMsg[id]`
+  (clé + jid) après chaque envoi (`recordSent()`), édition via
+  `sock.sendMessage(jid, { text, edit: key })`. Le préfixe Jeedom est réappliqué.
+  (v0.3 ROADMAP #11)
+- **`revoke_last`** — cmd action (subType=other, bouton) qui supprime "pour tous"
+  le dernier message envoyé via `sock.sendMessage(jid, { delete: key })`.
+  `lastSentMsg[id]` est purgé après suppression. (v0.3 ROADMAP #12)
+- **`forward_to`** — cmd action (subType=message) qui transfère le dernier message
+  reçu vers un destinataire. `title` = destinataire optionnel (vide = groupe canal),
+  via `sock.sendMessage(jid, { forward: lastIncomingMsg })`. (v0.3 ROADMAP #13)
 - **Présence "en train d'écrire"** — config eqLogic `presence_enabled` (checkbox). Si
   activée, le daemon envoie `composing` (ou `recording` pour l'audio) pendant ~1,2 s
   avant chaque envoi automatique (texte, reply, média), puis `paused`. Humanise les

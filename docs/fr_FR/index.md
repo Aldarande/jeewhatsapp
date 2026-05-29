@@ -193,6 +193,9 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Envoyer une localisation | `send_location` | message | Envoie une position GPS. Champ **Titre** = `lat\|long` ou `lat\|long\|nom`. |
 | Envoyer un contact | `send_contact` | message | Envoie une carte vCard. Champ **Titre** = numéro, **Message** = nom affiché (optionnel). |
 | Réagir au dernier message | `react_last` | message | Envoie une réaction emoji sur le dernier message reçu. Champ **Message** = emoji (❤️ 👍 🎉 …) ou vide pour retirer la réaction. |
+| Éditer le dernier message | `edit_last` | message | (v0.3) Remplace le texte du dernier message **envoyé** par Jeedom. Champ **Message** = nouveau texte. |
+| Supprimer le dernier message | `revoke_last` | other | (v0.3) Supprime "pour tous" le dernier message **envoyé** par Jeedom (bouton, aucun paramètre). |
+| Transférer le dernier message reçu | `forward_to` | message | (v0.3) Transfère le dernier message **reçu** vers un destinataire. Champ **Titre** = destinataire optionnel (vide = groupe canal). |
 
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  
