@@ -1837,6 +1837,80 @@ class jeewhatsapp extends eqLogic {
       $sgroup->save();
     }
   }
+
+  // -------------------------------------------------------------------------
+  // Widget dashboard — tuile style WhatsApp (v0.6 #28)
+  // Affiche : statut de connexion, dernier message reçu (bulle de chat),
+  // compteurs, zone d'envoi rapide, bouton sourdine.
+  // -------------------------------------------------------------------------
+
+  public function toHtml($_version = 'dashboard') {
+    $replace = $this->preToHtml($_version);
+    if (!is_array($replace)) {
+      return $replace;
+    }
+    $version = jeedom::versionAlias($_version);
+
+    $replace['#eqLogic_id#']  = $this->getId();
+    $replace['#device_name#'] = htmlspecialchars($this->getName());
+
+    // Statut de connexion : lecture du fichier status.txt du daemon (local, pas
+    // d'appel réseau). Valeurs : connecting/qr_pending/connected/reconnecting/…
+    $statusFile = __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId() . '/status.txt';
+    $status = (is_file($statusFile)) ? trim((string) @file_get_contents($statusFile)) : 'unknown';
+    $statusMap = [
+      'connected'    => ['connecté',        'ok'],
+      'connecting'   => ['connexion…',      'warn'],
+      'reconnecting' => ['reconnexion…',    'warn'],
+      'qr_pending'   => ['scan QR requis',  'warn'],
+      'logged_out'   => ['déconnecté',      'ko'],
+    ];
+    $st = $statusMap[$status] ?? ['hors ligne', 'ko'];
+    $replace['#status_label#'] = $st[0];
+    $replace['#status_class#'] = $st[1];
+
+    // Helper local pour lire une cmd info
+    $info = function ($logicalId) {
+      $c = $this->getCmd('info', $logicalId);
+      return is_object($c) ? (string) $c->execCmd() : '';
+    };
+
+    $lastMessage = $info('last_message');
+    $lastSender  = $info('last_sender_profile');
+    if ($lastSender === '') { $lastSender = $info('last_sender_name'); }
+    if ($lastSender === '') { $lastSender = $info('last_sender'); }
+    $lastAt      = $info('last_received_at');
+
+    // Heure courte (HH:MM) pour la bulle
+    $lastTime = '';
+    if ($lastAt !== '' && ($tsv = strtotime($lastAt)) !== false) {
+      $lastTime = date('H:i', $tsv);
+    }
+
+    $replace['#has_message#']  = ($lastMessage !== '') ? '1' : '0';
+    $replace['#msg_js#']       = json_encode($lastMessage);
+    $replace['#sender_js#']    = json_encode($lastSender !== '' ? $lastSender : 'Inconnu');
+    $replace['#time_js#']      = json_encode($lastTime);
+
+    $replace['#messages_today#'] = htmlspecialchars($info('messages_today') ?: '0');
+    $replace['#sent_hour#']      = htmlspecialchars($info('sent_hour') ?: '0');
+
+    // IDs des commandes action utilisées par le widget
+    $actionIds = [
+      'send_message' => 'cmd_send_id',
+      'mute_chat'    => 'cmd_mute_id',
+      'mark_read'    => 'cmd_markread_id',
+    ];
+    foreach ($actionIds as $logicalId => $key) {
+      $c = $this->getCmd('action', $logicalId);
+      $replace['#' . $key . '#'] = is_object($c) ? $c->getId() : 0;
+    }
+
+    // Icône du plugin comme avatar
+    $replace['#avatar_url#'] = 'plugins/jeewhatsapp/plugin_info/jeewhatsapp_icon.png';
+
+    return $this->postToHtml($_version, template_replace($replace, getTemplate('core', $version, 'jeewhatsapp', 'jeewhatsapp')));
+  }
 }
 
 // =============================================================================

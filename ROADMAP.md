@@ -98,7 +98,7 @@ Objectif : transformer WhatsApp en interface vocale et command-line de Jeedom.
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
-| 28 | **Widget dashboard** ⭐ | 🟡 | Tile Jeedom : dernier message + statut connexion + zone envoi rapide + bouton mute. |
+| 28 | ✅ **Widget dashboard** ⭐ | 🟡 | Tuile style WhatsApp : `toHtml()` + template + CSS dédiés. Statut connexion live, bulle dernier message, compteurs, envoi rapide (`send_message`), bouton sourdine (`mute_chat`). |
 | 29 | **Templates messages** | 🟢 | Pool extensible (cf donation_messages.json) pour messages utilisateurs récurrents (rappels, anniversaires, formulaires). |
 | 30 | **Statistiques** | 🔴 | Graphique mensuel envoi/reception, top contacts, taux de réponse interactions, latence moyenne. |
 | 31 | **Mode debug visuel** | 🟡 | Onglet « Live » dans la page eqLogic : flux temps réel des messages (WebSocket vers le daemon). |

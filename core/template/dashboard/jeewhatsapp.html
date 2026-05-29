@@ -1,0 +1,135 @@
+<div class="jwa" id="jwa-#eqLogic_id#">
+
+  <!-- HEADER style WhatsApp -->
+  <div class="jwa-hdr">
+    <img class="jwa-avatar" src="#avatar_url#" alt="">
+    <div class="jwa-hdr-txt">
+      <a href="#eqLink#" class="jwa-name" title="Configurer cet équipement">#device_name#</a>
+      <span class="jwa-status jwa-st-#status_class#">
+        <span class="jwa-dot"></span><span class="jwa-stlabel">#status_label#</span>
+      </span>
+    </div>
+    <span class="jwa-icon jwa-mute" id="jwa-mute-#eqLogic_id#" title="Mettre en sourdine 8 h">
+      <i class="fas fa-bell-slash"></i>
+    </span>
+  </div>
+
+  <!-- ZONE DE CHAT (fond beige WhatsApp) -->
+  <div class="jwa-chat" id="jwa-chat-#eqLogic_id#"></div>
+
+  <!-- COMPTEURS -->
+  <div class="jwa-stats">
+    <span title="Messages reçus aujourd'hui"><i class="fas fa-inbox"></i> <b>#messages_today#</b> reçus</span>
+    <span title="Messages envoyés (heure en cours)"><i class="fas fa-paper-plane"></i> <b>#sent_hour#</b> envoyés</span>
+  </div>
+
+  <!-- ZONE D'ENVOI RAPIDE -->
+  <div class="jwa-input">
+    <input type="text" id="jwa-msg-#eqLogic_id#" placeholder="Écrire un message…" maxlength="1000" autocomplete="off">
+    <button class="jwa-send" id="jwa-send-#eqLogic_id#" title="Envoyer dans le groupe">
+      <i class="fas fa-paper-plane"></i>
+    </button>
+  </div>
+
+  <script>
+  try { (function () {
+    // CSS injectée une seule fois
+    if (!document.getElementById('jwa-css')) {
+      var lnk = document.createElement('link');
+      lnk.id = 'jwa-css'; lnk.rel = 'stylesheet'; lnk.type = 'text/css';
+      lnk.href = 'plugins/jeewhatsapp/desktop/css/jeewhatsapp.css?v=20260529';
+      document.head.appendChild(lnk);
+    }
+
+    var EQ = '#eqLogic_id#';
+    if (!EQ || EQ.indexOf('#') !== -1) { return; }
+
+    var hasMsg   = ('#has_message#' === '1');
+    var lastMsg  = #msg_js#;
+    var sender   = #sender_js#;
+    var lastTime = #time_js#;
+
+    var chat = document.getElementById('jwa-chat-' + EQ);
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Rendu d'une bulle (dir = 'in' reçu / 'out' envoyé)
+    function bubble(dir, name, text, time, pending) {
+      var who = (dir === 'in' && name) ? '<div class="jwa-bname">' + esc(name) + '</div>' : '';
+      var meta = '<span class="jwa-btime">' + esc(time || '') +
+        (dir === 'out' ? ' <i class="fas fa-check' + (pending ? '' : '-double') + ' jwa-tick"></i>' : '') +
+        '</span>';
+      return '<div class="jwa-bubble jwa-' + dir + '">' + who +
+        '<div class="jwa-btxt">' + esc(text) + '</div>' + meta + '</div>';
+    }
+
+    function nowHM() {
+      var d = new Date();
+      return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    }
+
+    if (chat) {
+      if (hasMsg) {
+        chat.innerHTML = bubble('in', sender, lastMsg, lastTime, false);
+      } else {
+        chat.innerHTML = '<div class="jwa-empty"><i class="fab fa-whatsapp"></i><br>Aucun message reçu</div>';
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // ── Envoi rapide ────────────────────────────────────────────────────
+    var input = document.getElementById('jwa-msg-' + EQ);
+    var sendBtn = document.getElementById('jwa-send-' + EQ);
+    function doSend() {
+      if ('#cmd_send_id#' === '0') { return; }
+      var txt = (input.value || '').trim();
+      if (txt === '') { return; }
+      input.value = '';
+      input.disabled = true;
+      // bulle optimiste
+      if (chat) {
+        if (chat.querySelector('.jwa-empty')) { chat.innerHTML = ''; }
+        chat.insertAdjacentHTML('beforeend', bubble('out', '', txt, nowHM(), true));
+        chat.scrollTop = chat.scrollHeight;
+        var last = chat.lastElementChild;
+      }
+      jeedom.cmd.execute({
+        id: '#cmd_send_id#',
+        options: { message: txt, title: '' },
+        success: function () {
+          input.disabled = false; input.focus();
+          if (last) { var t = last.querySelector('.jwa-tick'); if (t) t.className = 'fas fa-check-double jwa-tick'; }
+        },
+        error: function () {
+          input.disabled = false;
+          if (last) { last.classList.add('jwa-failed'); }
+        }
+      });
+    }
+    if (sendBtn) { sendBtn.addEventListener('click', doSend); }
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doSend(); }
+      });
+    }
+
+    // ── Sourdine ────────────────────────────────────────────────────────
+    var muteBtn = document.getElementById('jwa-mute-' + EQ);
+    if (muteBtn) {
+      muteBtn.addEventListener('click', function () {
+        if ('#cmd_mute_id#' === '0') { return; }
+        muteBtn.classList.add('jwa-busy');
+        jeedom.cmd.execute({
+          id: '#cmd_mute_id#',
+          options: { title: '' },
+          success: function () { muteBtn.classList.remove('jwa-busy'); muteBtn.classList.add('jwa-active'); },
+          error:   function () { muteBtn.classList.remove('jwa-busy'); }
+        });
+      });
+    }
+  })(); } catch (e) { /* widget JeeWhatsApp : erreur non bloquante */ }
+  </script>
+</div>

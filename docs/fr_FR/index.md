@@ -499,6 +499,23 @@ d'administration du groupe canal. **Le compte WhatsApp lié doit être administr
 
 ---
 
+### Widget dashboard (v0.6)
+
+Sur le dashboard Jeedom, l'équipement s'affiche sous forme de **tuile au style WhatsApp** :
+
+- **En-tête** : avatar (icône du plugin), nom de l'équipement et **statut de connexion** en
+  direct (point vert = connecté, orange = connexion/QR en attente, rouge = hors ligne) ;
+- **Chat** : le dernier message reçu sous forme de bulle (expéditeur + heure) ;
+- **Compteurs** : messages reçus aujourd'hui et envoyés sur l'heure en cours ;
+- **Envoi rapide** : un champ texte + bouton d'envoi pour écrire directement dans le groupe
+  canal depuis le dashboard ;
+- **Bouton sourdine** : met le groupe en sourdine (8 h) d'un clic.
+
+Aucune configuration nécessaire : le widget est actif dès que l'équipement est visible sur le
+dashboard.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe
