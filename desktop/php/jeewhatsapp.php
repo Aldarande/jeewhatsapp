@@ -306,6 +306,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Présence typing (v0.3 #14) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Présence "en train d'écrire"}}</label>
+								<div class="col-sm-7">
+									<label class="checkbox-inline">
+										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="presence_enabled" value="1"> {{Activer}}
+									</label>
+									<span class="help-block">
+										<small>{{Affiche "en train d'écrire…" (ou "enregistre…" pour l'audio) pendant ~1s avant chaque envoi automatique. Rend les messages de Jeedom plus naturels.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Préfixe Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>

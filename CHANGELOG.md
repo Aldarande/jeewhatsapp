@@ -9,6 +9,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Présence "en train d'écrire"** — config eqLogic `presence_enabled` (checkbox). Si
+  activée, le daemon envoie `composing` (ou `recording` pour l'audio) pendant ~1,2 s
+  avant chaque envoi automatique (texte, reply, média), puis `paused`. Humanise les
+  messages de Jeedom. Helper daemon `applyPresence(sock, jid, presence)`, erreurs
+  silencieuses (la présence ne bloque jamais l'envoi). Helper PHP privé
+  `presenceParam()`. (v0.3 ROADMAP #14)
+
 - **`send_location`** — commande action pour envoyer une position GPS dans le groupe canal.
   Format du Titre : `lat|long` ou `lat|long|nom`. Validation lat ∈ [-90,90], long ∈ [-180,180].
   (v0.2 ROADMAP #3)

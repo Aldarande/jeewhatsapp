@@ -61,7 +61,7 @@ Objectif : sortir du paradigme « bot one-way » et offrir des interactions rich
 | 11 | **Édition de message** | 🟡 | Cmd action `edit_last` — remplace le dernier message envoyé (Baileys `sendMessage(..., {edit: msgKey})`). |
 | 12 | **Suppression (revoke)** | 🟡 | Cmd action `revoke_last` — équivalent "Supprimer pour tous". |
 | 13 | **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |
-| 14 | **Présence typing/recording** | 🟢 | `sendPresenceUpdate('composing')` avant envoi auto. UX humanisée. |
+| 14 | ✅ **Présence typing/recording** | 🟢 | `sendPresenceUpdate('composing')` avant envoi auto. UX humanisée. Config eqLogic `presence_enabled`. |
 | 15 | **Messages éphémères** | 🟡 | Option par eqLogic : tous les envois disparaissent après 24h/7j/90j. |
 | 16 | **Multi-groupes par eqLogic** ⭐ | 🔴 | Aujourd'hui 1 groupe canal. Permettre N groupes (alertes, info, famille…) avec tag par défaut sur la commande action. |
 

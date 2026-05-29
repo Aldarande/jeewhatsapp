@@ -192,7 +192,16 @@ function extractText(m) {
 const sockets         = {};  // id → sock
 const groupJids       = {};  // id → JID du groupe WhatsApp canal (@g.us)
 const instanceCfg     = {};  // id → { prefix, group_name }
-const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted)
+const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted / forward)
+const lastSentMsg     = {};  // id → clé du dernier msg envoyé (pour edit / revoke)
+
+// Mémorise la clé du dernier message envoyé par Jeedom (v0.3 #11/#12).
+// Baileys renvoie l'objet message complet ; on ne garde que key + jid utiles.
+function recordSent(id, sent) {
+  if (sent && sent.key) {
+    lastSentMsg[id] = { key: sent.key, jid: sent.key.remoteJid };
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Recherche d'un groupe par nom
@@ -602,6 +611,20 @@ function buildMediaPayload(filePath, caption) {
   return { payload, kind: info.kind };
 }
 
+// Présence typing/recording avant envoi (v0.3 #14) — humanise l'UX côté WhatsApp.
+// On envoie 'composing' (ou 'recording'), on patiente brièvement, puis 'paused'.
+// Toutes les erreurs sont silencieuses : la présence ne doit jamais bloquer l'envoi.
+async function applyPresence(sock, jid, presence) {
+  if (!presence || !sock) { return; }
+  const valid = ['composing', 'recording'];
+  const state = valid.includes(presence) ? presence : 'composing';
+  try {
+    await sock.sendPresenceUpdate(state, jid);
+    await new Promise(r => setTimeout(r, 1200));
+    await sock.sendPresenceUpdate('paused', jid);
+  } catch (_) { /* présence non critique */ }
+}
+
 // Résolution du JID destinataire — facteur commun à toutes les actions d'envoi
 function resolveJid(id, phone) {
   if (!phone || phone === '' || phone === 'group') {
@@ -621,7 +644,7 @@ function resolveJid(id, phone) {
 
 async function handleAction({ action, instance_id, phone, message, mention, media_path,
                               latitude, longitude, location_name,
-                              contact_phone, contact_name }) {
+                              contact_phone, contact_name, presence }) {
   const id = String(instance_id);
 
   switch (action) {
@@ -662,10 +685,12 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       }
 
       logMsg('info', '[' + id + '] → ' + jid + ' : ' + msgPayload.text.substring(0, 60));
+      await applyPresence(sock, jid, presence);
       const sendTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Envoi échoué — délai dépassé pour ' + jid)), 10000)
       );
-      await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
+      const sent = await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
+      recordSent(id, sent);
       return { sent: true };
     }
 
@@ -765,11 +790,15 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       logMsg('info', '[' + id + '] → ' + jid + ' : [' + kind + '] ' + path.basename(media_path)
         + ' (' + Math.round(stat.size / 1024) + 'KB)' + (message ? ' caption="' + String(message).substring(0, 40) + '"' : ''));
 
+      // Présence cohérente avec le type de média (audio → recording, sinon composing)
+      if (presence) { await applyPresence(sock, jid, kind === 'audio' ? 'recording' : 'composing'); }
+
       // Timeout 60s pour les médias (upload plus long que texte)
       const sendTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Envoi média échoué — délai dépassé (60s) pour ' + jid)), 60000)
       );
-      await Promise.race([sock.sendMessage(jid, payload), sendTimeout]);
+      const sentMedia = await Promise.race([sock.sendMessage(jid, payload), sendTimeout]);
+      recordSent(id, sentMedia);
 
       // Audio : pas de caption native — envoyer un message texte séparé si fourni
       if (kind === 'audio' && message && String(message).trim() !== '') {
@@ -810,12 +839,15 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         // Fallback : envoi simple si pas de message à citer
         logMsg('warning', '[' + id + '] replyLast — aucun message à citer, envoi simple');
         const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
-        await Promise.race([sock.sendMessage(jid, { text: message }), t]);
+        const sentFb = await Promise.race([sock.sendMessage(jid, { text: message }), t]);
+        recordSent(id, sentFb);
         return { sent: true, quoted: false };
       }
       logMsg('info', '[' + id + '] ↩ Reply (quoted) → ' + jid + ' : ' + String(message).substring(0, 60));
+      await applyPresence(sock, jid, presence);
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
-      await Promise.race([sock.sendMessage(jid, { text: message }, { quoted }), t]);
+      const sentReply = await Promise.race([sock.sendMessage(jid, { text: message }, { quoted }), t]);
+      recordSent(id, sentReply);
       return { sent: true, quoted: true };
     }
 

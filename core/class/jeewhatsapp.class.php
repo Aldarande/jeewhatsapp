@@ -261,6 +261,7 @@ class jeewhatsapp extends eqLogic {
     if ($_mention !== null && $_mention !== '') {
       $params['mention'] = $_mention;
     }
+    if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
 
     $result = $this->sendToDaemon('send', $params);
     $this->incrementSentCounters();
@@ -474,6 +475,7 @@ class jeewhatsapp extends eqLogic {
     if ($_phone !== null && $_phone !== '') {
       $params['phone'] = $_phone;
     }
+    if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
 
     $result = $this->sendToDaemon('sendMedia', $params);
     $this->incrementSentCounters();
@@ -488,12 +490,20 @@ class jeewhatsapp extends eqLogic {
     $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
     $message = $prefix !== '' ? $prefix . $_message : $_message;
 
-    $result = $this->sendToDaemon('replyLast', [
+    $params = [
       'instance_id' => $this->getId(),
       'message'     => $message,
-    ]);
+    ];
+    if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
+    $result = $this->sendToDaemon('replyLast', $params);
     $this->incrementSentCounters();
     return $result;
+  }
+
+  // Retourne 'composing' si l'option de présence (typing) est activée pour cet
+  // équipement, sinon null. Lue depuis la config eqLogic presence_enabled (v0.3 #14).
+  private function presenceParam() {
+    return ((int) $this->getConfiguration('presence_enabled', 0) === 1) ? 'composing' : null;
   }
 
   // -------------------------------------------------------------------------
