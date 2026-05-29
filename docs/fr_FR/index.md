@@ -111,6 +111,7 @@ Allez dans **Plugins → Communication → JeeWhatsApp** et cliquez sur **Ajoute
 | **Groupe lié** | JID du groupe renseigné automatiquement après recherche ou création — en lecture seule |
 | Interactions Jeedom | Active les réponses automatiques via le moteur d'interactions |
 | **Présence "en train d'écrire"** | (v0.3) Affiche `en train d'écrire…` / `enregistre…` pendant ~1 s avant chaque envoi automatique. Humanise les messages. |
+| **Messages éphémères** | (v0.3) Désactivé / 24 h / 7 j / 90 j. Tous les messages envoyés par Jeedom disparaissent automatiquement après le délai choisi. |
 | **Préfixe Jeedom** | Texte ajouté au début de chaque message envoyé par Jeedom (défaut : `🏠 `) |
 
 Sauvegardez. Les commandes sont créées automatiquement.

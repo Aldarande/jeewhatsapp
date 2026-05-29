@@ -62,7 +62,7 @@ Objectif : sortir du paradigme « bot one-way » et offrir des interactions rich
 | 12 | ✅ **Suppression (revoke)** | 🟡 | Cmd action `revoke_last` — équivalent "Supprimer pour tous". |
 | 13 | ✅ **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |
 | 14 | ✅ **Présence typing/recording** | 🟢 | `sendPresenceUpdate('composing')` avant envoi auto. UX humanisée. Config eqLogic `presence_enabled`. |
-| 15 | **Messages éphémères** | 🟡 | Option par eqLogic : tous les envois disparaissent après 24h/7j/90j. |
+| 15 | ✅ **Messages éphémères** | 🟡 | Option par eqLogic `ephemeral_duration` : tous les envois disparaissent après 24h/7j/90j (Baileys `ephemeralExpiration`). |
 | 16 | **Multi-groupes par eqLogic** ⭐ | 🔴 | Aujourd'hui 1 groupe canal. Permettre N groupes (alertes, info, famille…) avec tag par défaut sur la commande action. |
 
 ---

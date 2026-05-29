@@ -262,6 +262,7 @@ class jeewhatsapp extends eqLogic {
       $params['mention'] = $_mention;
     }
     if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
 
     $result = $this->sendToDaemon('send', $params);
     $this->incrementSentCounters();
@@ -417,6 +418,7 @@ class jeewhatsapp extends eqLogic {
       'location_name' => trim((string) $_name),
     ];
     if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
     $result = $this->sendToDaemon('sendLocation', $params);
     $this->incrementSentCounters();
     return $result;
@@ -436,6 +438,7 @@ class jeewhatsapp extends eqLogic {
       'contact_name'  => trim((string) $_contactName),
     ];
     if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
     $result = $this->sendToDaemon('sendContact', $params);
     $this->incrementSentCounters();
     return $result;
@@ -476,6 +479,7 @@ class jeewhatsapp extends eqLogic {
       $params['phone'] = $_phone;
     }
     if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
 
     $result = $this->sendToDaemon('sendMedia', $params);
     $this->incrementSentCounters();
@@ -495,6 +499,7 @@ class jeewhatsapp extends eqLogic {
       'message'     => $message,
     ];
     if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
     $result = $this->sendToDaemon('replyLast', $params);
     $this->incrementSentCounters();
     return $result;
@@ -504,6 +509,14 @@ class jeewhatsapp extends eqLogic {
   // équipement, sinon null. Lue depuis la config eqLogic presence_enabled (v0.3 #14).
   private function presenceParam() {
     return ((int) $this->getConfiguration('presence_enabled', 0) === 1) ? 'composing' : null;
+  }
+
+  // Retourne la durée d'expiration des messages éphémères (en secondes) si l'option
+  // est activée pour cet équipement, sinon null. Config eqLogic ephemeral_duration
+  // (0=désactivé, 86400=24h, 604800=7j, 7776000=90j). (v0.3 #15)
+  private function ephemeralParam() {
+    $secs = (int) $this->getConfiguration('ephemeral_duration', 0);
+    return $secs > 0 ? $secs : null;
   }
 
   // -------------------------------------------------------------------------
@@ -662,6 +675,7 @@ class jeewhatsapp extends eqLogic {
       'media_path'  => $path,
     ];
     if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
     $result = $this->sendToDaemon('sendSticker', $params);
     $this->incrementSentCounters();
     return $result;
@@ -703,6 +717,7 @@ class jeewhatsapp extends eqLogic {
   public function forwardLastTo($_phone = null) {
     $params = ['instance_id' => $this->getId()];
     if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
     $result = $this->sendToDaemon('forwardTo', $params);
     $this->incrementSentCounters();
     return $result;

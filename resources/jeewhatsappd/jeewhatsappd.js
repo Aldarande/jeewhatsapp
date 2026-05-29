@@ -644,8 +644,14 @@ function resolveJid(id, phone) {
 
 async function handleAction({ action, instance_id, phone, message, mention, media_path,
                               latitude, longitude, location_name,
-                              contact_phone, contact_name, presence }) {
+                              contact_phone, contact_name, presence, ephemeral }) {
   const id = String(instance_id);
+
+  // Messages éphémères (v0.3 #15) — si une durée est fournie (en secondes),
+  // chaque envoi expire automatiquement côté WhatsApp. Passé en 3ᵉ argument
+  // options de sock.sendMessage via ephemeralExpiration.
+  const ephSecs  = parseInt(ephemeral, 10);
+  const sendOpts = (!Number.isNaN(ephSecs) && ephSecs > 0) ? { ephemeralExpiration: ephSecs } : {};
 
   switch (action) {
 
@@ -689,7 +695,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const sendTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Envoi échoué — délai dépassé pour ' + jid)), 10000)
       );
-      const sent = await Promise.race([sock.sendMessage(jid, msgPayload), sendTimeout]);
+      const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
       recordSent(id, sent);
       return { sent: true };
     }
@@ -713,7 +719,8 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       }
       logMsg('info', '[' + id + '] → ' + jid + ' : 📍 ' + lat + ',' + lng + (loc.name ? ' (' + loc.name + ')' : ''));
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi location — délai dépassé')), 10000));
-      await Promise.race([sock.sendMessage(jid, { location: loc }), t]);
+      const sentLoc = await Promise.race([sock.sendMessage(jid, { location: loc }, sendOpts), t]);
+      recordSent(id, sentLoc);
       return { sent: true, latitude: lat, longitude: lng, name: loc.name || null };
     }
 
@@ -737,10 +744,11 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const jid = resolveJid(id, phone);
       logMsg('info', '[' + id + '] → ' + jid + ' : 👤 contact ' + cName + ' (' + cDigits + ')');
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi contact — délai dépassé')), 10000));
-      await Promise.race([
-        sock.sendMessage(jid, { contacts: { displayName: cName, contacts: [{ vcard }] } }),
+      const sentContact = await Promise.race([
+        sock.sendMessage(jid, { contacts: { displayName: cName, contacts: [{ vcard }] } }, sendOpts),
         t,
       ]);
+      recordSent(id, sentContact);
       return { sent: true, name: cName, phone: cDigits };
     }
 
@@ -797,12 +805,12 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const sendTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Envoi média échoué — délai dépassé (60s) pour ' + jid)), 60000)
       );
-      const sentMedia = await Promise.race([sock.sendMessage(jid, payload), sendTimeout]);
+      const sentMedia = await Promise.race([sock.sendMessage(jid, payload, sendOpts), sendTimeout]);
       recordSent(id, sentMedia);
 
       // Audio : pas de caption native — envoyer un message texte séparé si fourni
       if (kind === 'audio' && message && String(message).trim() !== '') {
-        await sock.sendMessage(jid, { text: message });
+        await sock.sendMessage(jid, { text: message }, sendOpts);
       }
 
       return { sent: true, kind, file: path.basename(media_path), bytes: stat.size };
@@ -841,7 +849,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       logMsg('info', '[' + id + '] → ' + jid + ' : 🏷 sticker ' + path.basename(media_path)
         + ' (' + Math.round(stickerBuf.length / 1024) + 'KB)');
       const tSt = new Promise((_, r) => setTimeout(() => r(new Error('Envoi sticker — délai dépassé')), 30000));
-      const sentSticker = await Promise.race([sock.sendMessage(jid, { sticker: stickerBuf }), tSt]);
+      const sentSticker = await Promise.race([sock.sendMessage(jid, { sticker: stickerBuf }, sendOpts), tSt]);
       recordSent(id, sentSticker);
       return { sent: true, kind: 'sticker', file: path.basename(media_path) };
     }
@@ -900,7 +908,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const jid = resolveJid(id, phone);
       logMsg('info', '[' + id + '] ⇪ Forward → ' + jid + ' (depuis ' + (src.key.id || '?') + ')');
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Transfert — délai dépassé')), 15000));
-      const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }), t]);
+      const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
       recordSent(id, fwd);
       return { forwarded: true, to: jid };
     }
@@ -918,14 +926,14 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         // Fallback : envoi simple si pas de message à citer
         logMsg('warning', '[' + id + '] replyLast — aucun message à citer, envoi simple');
         const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
-        const sentFb = await Promise.race([sock.sendMessage(jid, { text: message }), t]);
+        const sentFb = await Promise.race([sock.sendMessage(jid, { text: message }, sendOpts), t]);
         recordSent(id, sentFb);
         return { sent: true, quoted: false };
       }
       logMsg('info', '[' + id + '] ↩ Reply (quoted) → ' + jid + ' : ' + String(message).substring(0, 60));
       await applyPresence(sock, jid, presence);
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi échoué — délai dépassé')), 10000));
-      const sentReply = await Promise.race([sock.sendMessage(jid, { text: message }, { quoted }), t]);
+      const sentReply = await Promise.race([sock.sendMessage(jid, { text: message }, Object.assign({ quoted }, sendOpts)), t]);
       recordSent(id, sentReply);
       return { sent: true, quoted: true };
     }

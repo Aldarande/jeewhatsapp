@@ -9,6 +9,11 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Messages éphémères** — config eqLogic `ephemeral_duration` (select : désactivé,
+  24h, 7j, 90j). Si activée, tous les envois Jeedom (texte, reply, média, location,
+  contact, sticker, forward) expirent automatiquement via l'option Baileys
+  `ephemeralExpiration`. Helper PHP `ephemeralParam()`, daemon construit `sendOpts`
+  une fois et le passe à chaque `sock.sendMessage`. (v0.3 ROADMAP #15)
 - **`send_sticker`** — cmd action (subType=message) pour envoyer un sticker. `title` =
   chemin absolu. Les `.webp` sont envoyés tels quels ; les images `.png/.jpg/.gif/.bmp`
   sont converties en WebP 512×512 (fond transparent) via **`sharp`** (nouvelle dépendance

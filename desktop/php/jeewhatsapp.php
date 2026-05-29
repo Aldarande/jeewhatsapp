@@ -319,6 +319,22 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Messages éphémères (v0.3 #15) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Messages éphémères}}</label>
+								<div class="col-sm-7">
+									<select class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="ephemeral_duration">
+										<option value="0">{{Désactivé (messages permanents)}}</option>
+										<option value="86400">{{24 heures}}</option>
+										<option value="604800">{{7 jours}}</option>
+										<option value="7776000">{{90 jours}}</option>
+									</select>
+									<span class="help-block">
+										<small>{{Si activé, tous les messages envoyés par Jeedom disparaissent automatiquement après la durée choisie (fonction "messages éphémères" de WhatsApp).}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Préfixe Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
