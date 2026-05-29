@@ -319,6 +319,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Reconnaissance utilisateur (v0.4 #21) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Reconnaissance utilisateur}}</label>
+								<div class="col-sm-7">
+									<textarea class="eqLogicAttr form-control" rows="3"
+										   data-l1key="configuration" data-l2key="user_mapping"
+										   placeholder="33612345678=Papa&#10;0698765432=Maman&#10;33700000000=Enfant"></textarea>
+									<span class="help-block">
+										<small>{{Associe un numéro d'expéditeur à un profil Jeedom. Une ligne par correspondance au format <strong>numéro=profil</strong>. Le profil résolu est exposé dans la commande info « Expéditeur — profil » et transmis au moteur d'interactions (compatible avec le plugin Profils). Numéros normalisés au format international.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Présence typing (v0.3 #14) -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Présence "en train d'écrire"}}</label>

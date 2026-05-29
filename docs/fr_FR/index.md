@@ -335,6 +335,37 @@ Un déclencheur inconnu renvoie `❓ Raccourci inconnu : /xxx`.
 
 ---
 
+### Reconnaissance utilisateur (v0.4)
+
+Champ **« Reconnaissance utilisateur »** : associe le numéro d'un expéditeur à un **profil
+Jeedom**. Une ligne par correspondance, au format `numéro=profil`.
+
+```
+33612345678=Papa
+0698765432=Maman
+33700000000=Enfant
+```
+
+Les numéros sont normalisés au format international (`0612345678`, `+33 6 12 34 56 78` et
+`33612345678` sont équivalents).
+
+Lorsqu'un message arrive d'un numéro mappé :
+
+- le profil résolu est exposé dans la commande info **« Expéditeur — profil »**
+  (`last_sender_profile`) — utilisable dans des scénarios pour personnaliser les réponses ;
+- il est transmis au moteur d'interactions Jeedom via l'option `profile`, ce qui le rend
+  **compatible avec le plugin Profils** (règles d'accès, restrictions, personnalisation par
+  personne).
+
+Si aucun mapping ne correspond, le profil retombe sur le nom WhatsApp de l'expéditeur,
+puis sur son numéro brut. La commande info reste vide quand l'expéditeur n'est pas mappé.
+
+> **Exemple** : avec `33612345678=Papa`, un message « éteins la chambre » envoyé depuis ce
+> numéro est traité par les interactions Jeedom comme provenant du profil *Papa* — vous
+> pouvez ainsi autoriser certaines commandes uniquement à ce profil via le plugin Profils.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

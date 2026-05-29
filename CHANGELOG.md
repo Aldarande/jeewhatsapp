@@ -9,6 +9,14 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Reconnaissance utilisateur** ⭐ — config eqLogic `user_mapping` (textarea, une ligne
+  `numéro=profil`). Le numéro/JID de l'expéditeur d'un message entrant est résolu en un
+  profil Jeedom via le mapping (numéros normalisés au format international). Le profil
+  résolu est exposé dans la nouvelle cmd info `last_sender_profile` (« Expéditeur — profil »)
+  et transmis au moteur d'interactions via l'option `profile` de `interactQuery::tryToReply()`
+  (compatible avec le plugin Profils — permet des règles d'accès / personnalisation par
+  personne). Fallback : nom WhatsApp puis numéro brut si aucun mapping ne correspond.
+  Helpers PHP `parseUserMapping()` (static) et `resolveSenderProfile()`. (v0.4 ROADMAP #21)
 - **Commandes shortcuts (slash)** ⭐ — config eqLogic `interaction_shortcuts` (textarea,
   une ligne `/déclencheur=cible`). Un message reçu commençant par `/` est traité en
   priorité sur le moteur d'interactions (NLP). La cible peut être : une commande seule

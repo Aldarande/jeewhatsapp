@@ -172,10 +172,19 @@ class jeewhatsapp extends eqLogic {
       return;
     }
 
+    // v0.4 #21 — Reconnaissance utilisateur : résout un profil Jeedom à partir du
+    // numéro/JID expéditeur via le mapping configuré (user_mapping). Fallback sur le
+    // nom WhatsApp puis sur le numéro brut si aucune correspondance.
+    $resolvedProfile = $this->resolveSenderProfile($_data['sender'] ?? '');
+    $profileForInteract = $resolvedProfile
+      ?? ($_data['sender_name'] ?? null)
+      ?? ($_data['sender'] ?? '');
+
     // checkAndUpdateCmd met à jour la valeur et déclenche les scénarios/interactions associés
     $this->checkAndUpdateCmd('last_message',     $_data['message']      ?? '');
     $this->checkAndUpdateCmd('last_sender',      $_data['sender']       ?? '');
     $this->checkAndUpdateCmd('last_sender_name', $_data['sender_name']  ?? '');
+    $this->checkAndUpdateCmd('last_sender_profile', $resolvedProfile ?? '');
     $this->checkAndUpdateCmd('last_received_at', $_data['received_at']  ?? date('Y-m-d H:i:s'));
     // v0.3 #16 — groupe d'origine ('' = groupe canal par défaut, sinon tag additionnel)
     $this->checkAndUpdateCmd('last_group',       $_data['group_tag']    ?? '');
@@ -245,7 +254,7 @@ class jeewhatsapp extends eqLogic {
 
     $reply = interactQuery::tryToReply($message, [
       'plugin'     => 'jeewhatsapp',
-      'profile'    => $_data['sender_name'] ?? $sender,
+      'profile'    => $profileForInteract,
       'emptyReply' => 0,
     ]);
 
@@ -934,6 +943,37 @@ class jeewhatsapp extends eqLogic {
     return false;
   }
 
+  // -------------------------------------------------------------------------
+  // v0.4 #21 — Reconnaissance utilisateur
+  // Parse la config `user_mapping` (textarea, une ligne `numéro=Profil`) :
+  //   numéro = identifiant WhatsApp (06…, 336…, JID complet — normalisé en chiffres)
+  //   Profil = nom de profil Jeedom (ou simple libellé) associé à cet expéditeur
+  // Retourne une map [numéro_normalisé => profil].
+  // -------------------------------------------------------------------------
+  public static function parseUserMapping($_raw) {
+    $map = [];
+    if (!is_string($_raw) || trim($_raw) === '') { return $map; }
+    foreach (preg_split('/\r\n|\r|\n/', $_raw) as $line) {
+      $line = trim($line);
+      if ($line === '' || strpos($line, '=') === false) { continue; }
+      list($num, $profile) = explode('=', $line, 2);
+      $num     = self::normalizePhone($num);
+      $profile = trim($profile);
+      if ($num === '' || $profile === '') { continue; }
+      $map[$num] = $profile;
+    }
+    return $map;
+  }
+
+  // Résout le profil Jeedom associé à un expéditeur via `user_mapping`.
+  // Retourne le profil mappé, ou null si aucun mapping ne correspond.
+  public function resolveSenderProfile($_sender) {
+    $map = self::parseUserMapping($this->getConfiguration('user_mapping', ''));
+    if (empty($map)) { return null; }
+    $n = self::normalizePhone($_sender);
+    return ($n !== '' && isset($map[$n])) ? $map[$n] : null;
+  }
+
   // Normalise un numéro WhatsApp : ne garde que les chiffres, convertit 0[67]XXXXXXXX → 336/337XXXXXXXX
   public static function normalizePhone($_phone) {
     $digits = preg_replace('/\D/', '', (string) $_phone);
@@ -1110,6 +1150,7 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'poll_total',    'name' => 'Sondage — total votes',       'subType' => 'numeric', 'isHistorized' => 1],
       ['logicalId' => 'last_group',      'name' => 'Dernier groupe — tag',      'subType' => 'string'],
       ['logicalId' => 'last_group_name', 'name' => 'Dernier groupe — nom',      'subType' => 'string'],
+      ['logicalId' => 'last_sender_profile', 'name' => 'Expéditeur — profil',   'subType' => 'string'],
     ];
 
     $order = 0;
