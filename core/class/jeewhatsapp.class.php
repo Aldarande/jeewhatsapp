@@ -1156,6 +1156,40 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Streame un média entrant vers le navigateur (widget) (v0.6 #28)
+  // SECURITY : le chemin demandé est confiné au dossier incoming/{eqId} via
+  // realpath (empêche tout accès hors de ce dossier). Réservé à isConnect('admin')
+  // côté ajax. Contourne le .htaccess de /data (lecture serveur + readfile).
+  // -------------------------------------------------------------------------
+
+  public function streamIncomingMedia($_path) {
+    $base = realpath(__DIR__ . '/../../../../data/jeewhatsapp/incoming/' . $this->getId());
+    $full = ($_path !== '') ? realpath($_path) : false;
+    if ($base === false || $full === false
+        || strpos($full, $base . DIRECTORY_SEPARATOR) !== 0
+        || !is_file($full) || !is_readable($full)) {
+      throw new Exception(__('Média introuvable ou accès refusé', __FILE__));
+    }
+
+    $ext   = strtolower(pathinfo($full, PATHINFO_EXTENSION));
+    $mimes = [
+      'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png',
+      'gif' => 'image/gif',  'webp' => 'image/webp',
+      'ogg' => 'audio/ogg',  'opus' => 'audio/ogg', 'mp3' => 'audio/mpeg',
+      'm4a' => 'audio/mp4',  'aac' => 'audio/aac',   'wav' => 'audio/wav',
+      'mp4' => 'video/mp4',  '3gp' => 'video/3gpp',  'pdf' => 'application/pdf',
+    ];
+    $mime = $mimes[$ext] ?? 'application/octet-stream';
+
+    while (ob_get_level() > 0) { ob_end_clean(); }
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($full));
+    header('Cache-Control: private, max-age=3600');
+    header('X-Content-Type-Options: nosniff');
+    readfile($full);
+  }
+
+  // -------------------------------------------------------------------------
   // Archive / épingle / met en sourdine la conversation du groupe canal (v0.5 #24)
   // $_op : archive|unarchive|pin|unpin|mute|unmute
   // $_value : pour mute, durée en heures (null = 8h par défaut)
@@ -1930,6 +1964,11 @@ class jeewhatsapp extends eqLogic {
     $replace['#sender_js#']    = json_encode($lastSender !== '' ? $lastSender : 'Inconnu');
     $replace['#time_js#']      = json_encode($lastTime);
 
+    // Pièce jointe courante (pour le rendu média initial) + transcription STT
+    $replace['#att_path_js#']  = json_encode($info('last_attachment_path'));
+    $replace['#att_type_js#']  = json_encode($info('last_attachment_type'));
+    $replace['#voice_js#']     = json_encode($info('last_voice_text'));
+
     $replace['#messages_today#'] = htmlspecialchars($info('messages_today') ?: '0');
     $replace['#sent_hour#']      = htmlspecialchars($info('sent_hour') ?: '0');
 
@@ -1947,11 +1986,13 @@ class jeewhatsapp extends eqLogic {
 
     // IDs des commandes info (pour la mise à jour live via jeedom.cmd.addUpdateFunction)
     $infoIds = [
-      'last_message'        => 'info_msg_id',
-      'last_sender_profile' => 'info_profile_id',
-      'last_sender_name'    => 'info_sender_id',
-      'last_received_at'    => 'info_time_id',
-      'last_voice_text'     => 'info_voice_id',
+      'last_message'         => 'info_msg_id',
+      'last_sender_profile'  => 'info_profile_id',
+      'last_sender_name'     => 'info_sender_id',
+      'last_received_at'     => 'info_time_id',
+      'last_voice_text'      => 'info_voice_id',
+      'last_attachment_path' => 'info_att_path_id',
+      'last_attachment_type' => 'info_att_type_id',
     ];
     foreach ($infoIds as $logicalId => $key) {
       $c = $this->getCmd('info', $logicalId);

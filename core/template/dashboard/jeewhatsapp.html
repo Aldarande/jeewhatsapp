@@ -51,6 +51,7 @@
     var lastMsg  = #msg_js#;
     var sender   = #sender_js#;
     var lastTime = #time_js#;
+    var attPath  = #att_path_js#;
 
     var chat = document.getElementById('jwa-chat-' + EQ);
 
@@ -58,37 +59,10 @@
       return String(s == null ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
-
-    // Rendu d'une bulle (dir = 'in' reçu / 'out' envoyé)
-    function bubble(dir, name, text, time, pending) {
-      var who = (dir === 'in' && name) ? '<div class="jwa-bname">' + esc(name) + '</div>' : '';
-      var meta = '<span class="jwa-btime">' + esc(time || '') +
-        (dir === 'out' ? ' <i class="fas fa-check' + (pending ? '' : '-double') + ' jwa-tick"></i>' : '') +
-        '</span>';
-      return '<div class="jwa-bubble jwa-' + dir + '">' + who +
-        '<div class="jwa-btxt">' + esc(text) + '</div>' + meta + '</div>';
-    }
-
     function nowHM() {
       var d = new Date();
       return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
     }
-
-    if (chat) {
-      if (hasMsg) {
-        chat.innerHTML = bubble('in', sender, prettyKind(lastMsg), lastTime, false);
-      } else {
-        chat.innerHTML = '<div class="jwa-empty"><i class="fab fa-whatsapp"></i><br>Aucun message reçu</div>';
-      }
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    // ── Mise à jour live (jeedom.cmd.addUpdateFunction) ─────────────────
-    // Quand un nouveau message arrive, last_message change → on ajoute une
-    // bulle entrante sans recharger la page. Les médias non transcrits sont
-    // affichés joliment (« 🎤 Note vocale », « 🖼 Image »…).
-    var curSender = sender, curTime = lastTime;
-    var lastShownKey = hasMsg ? (prettyKind(lastMsg) + '|' + lastTime) : '';
     function prettyKind(v) {
       switch (v) {
         case '[audio]':    return '🎤 Note vocale';
@@ -99,8 +73,70 @@
         default:           return v;
       }
     }
+    function isKindTag(v) { return /^\[(image|video|audio|document|sticker)\]$/.test(String(v)); }
+
+    // Type de média déduit de l'extension (robuste, indépendant de l'ordre des updates)
+    function typeFromPath(p) {
+      var ext = (String(p).split('.').pop() || '').toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].indexOf(ext) >= 0) { return 'image'; }
+      if (['ogg', 'opus', 'mp3', 'm4a', 'aac', 'wav'].indexOf(ext) >= 0) { return 'audio'; }
+      if (['mp4', '3gp', 'mov', 'mkv', 'webm'].indexOf(ext) >= 0) { return 'video'; }
+      return 'document';
+    }
+    function mediaUrl(p) {
+      return 'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php?action=getMedia&eqLogic_id='
+        + encodeURIComponent(EQ) + '&path=' + encodeURIComponent(p);
+    }
+    function mediaInner(type, p) {
+      var u = mediaUrl(p);
+      if (type === 'image')    { return '<img class="jwa-media" src="' + u + '" alt="image" loading="lazy">'; }
+      if (type === 'video')    { return '<video class="jwa-media" controls preload="metadata" src="' + u + '"></video>'; }
+      if (type === 'audio')    { return '<audio class="jwa-audio" controls preload="none" src="' + u + '"></audio>'; }
+      return '<a class="jwa-doc" href="' + u + '" target="_blank" rel="noopener"><i class="fas fa-file-arrow-down"></i> Document</a>';
+    }
+
+    // Bulle texte
+    function bubble(dir, name, text, time, pending) {
+      var who = (dir === 'in' && name) ? '<div class="jwa-bname">' + esc(name) + '</div>' : '';
+      var meta = '<span class="jwa-btime">' + esc(time || '') +
+        (dir === 'out' ? ' <i class="fas fa-check' + (pending ? '' : '-double') + ' jwa-tick"></i>' : '') +
+        '</span>';
+      return '<div class="jwa-bubble jwa-' + dir + '">' + who +
+        '<div class="jwa-btxt">' + esc(text) + '</div>' + meta + '</div>';
+    }
+    // Bulle média entrante
+    function appendMedia(type, p, name, time) {
+      if (!chat) { return; }
+      var em = chat.querySelector('.jwa-empty'); if (em) { chat.innerHTML = ''; }
+      var who = name ? '<div class="jwa-bname">' + esc(name) + '</div>' : '';
+      var meta = '<span class="jwa-btime">' + esc(time || '') + '</span>';
+      chat.insertAdjacentHTML('beforeend',
+        '<div class="jwa-bubble jwa-in jwa-mediab">' + who + mediaInner(type, p) + meta + '</div>');
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    var curSender = sender, curTime = lastTime;
+    var lastShownKey = '';
+
+    // ── Rendu initial ───────────────────────────────────────────────────
+    if (chat) {
+      if (hasMsg && isKindTag(lastMsg) && attPath) {
+        lastShownKey = 'ATT|' + attPath;
+        appendMedia(typeFromPath(attPath), attPath, sender, lastTime);
+      } else if (hasMsg) {
+        lastShownKey = prettyKind(lastMsg) + '|' + lastTime;
+        chat.innerHTML = bubble('in', sender, prettyKind(lastMsg), lastTime, false);
+      } else {
+        chat.innerHTML = '<div class="jwa-empty"><i class="fab fa-whatsapp"></i><br>Aucun message reçu</div>';
+      }
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Ajoute une bulle texte entrante (les médias passent par appendMedia)
     function appendIncoming(text) {
-      text = prettyKind(String(text == null ? '' : text));
+      text = String(text == null ? '' : text);
+      if (isKindTag(text)) { return; } // média : géré par last_attachment_path
+      text = prettyKind(text);
       var key = text + '|' + curTime;
       if (text === '' || key === lastShownKey) { return; }
       lastShownKey = key;
@@ -110,6 +146,8 @@
         chat.scrollTop = chat.scrollHeight;
       }
     }
+
+    // ── Mise à jour live (jeedom.cmd.addUpdateFunction) ─────────────────
     if (window.jeedom && jeedom.cmd && jeedom.cmd.addUpdateFunction) {
       var jval = function (p) { return (p.display_value != null ? p.display_value : p.value); };
       function bindUpd(id, fn) { if (id !== '0') { jeedom.cmd.addUpdateFunction(id, fn); } }
@@ -119,6 +157,16 @@
         var t = Date.parse(String(jval(p)).replace(' ', 'T'));
         if (!isNaN(t)) { var d = new Date(t); curTime = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
       });
+      // Nouveau média reçu → bulle image/audio/vidéo/document
+      bindUpd('#info_att_path_id#', function (p) {
+        var path = jval(p);
+        if (!path) { return; }
+        var key = 'ATT|' + path;
+        if (key === lastShownKey) { return; }
+        lastShownKey = key;
+        appendMedia(typeFromPath(path), path, curSender, curTime);
+      });
+      // Nouveau message texte / transcription STT réinjectée → bulle texte
       bindUpd('#info_msg_id#', function (p) { appendIncoming(jval(p)); });
     }
 

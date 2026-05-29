@@ -23,9 +23,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   Endpoint `uploadVoice` + méthode PHP `sendVoiceRecording()`.
 - **Widget : mise à jour live** — le widget s'enrichit désormais **en temps réel** sans
   recharger la page : abonnement aux valeurs des cmds info via `jeedom.cmd.addUpdateFunction`
-  (`last_message`, expéditeur, heure). Chaque nouveau message reçu ajoute une bulle entrante ;
-  les médias non transcrits sont affichés joliment (« 🎤 Note vocale », « 🖼️ Image », « 🎬 Vidéo »,
-  « 📎 Document », « 🏷️ Sticker »). Déduplication pour éviter les doublons.
+  (`last_message`, expéditeur, heure). Chaque nouveau message reçu ajoute une bulle entrante.
+- **Widget : rendu des médias** — les médias reçus sont affichés directement dans les bulles :
+  **image** en miniature, **vidéo** en lecteur, **note vocale/audio** en **lecteur audio** natif,
+  **document** en lien téléchargeable. Type déduit de l'extension du fichier (robuste). Les médias
+  sont servis par un endpoint AJAX authentifié **`getMedia`** (méthode `streamIncomingMedia()`,
+  chemin confiné au dossier `incoming/{eqId}` par `realpath` — contourne le `.htaccess` de `/data`).
+  Quand **STT** est activé, la **transcription** de la note vocale apparaît en plus en bulle texte.
 - **Gestion du groupe** (v0.5 #22) — section « Gestion du groupe » dans la config équipement :
   ajouter / retirer / promouvoir admin / rétrograder un participant (par numéro), changer le
   **sujet** et la **description**, générer/**révoquer le lien d'invitation**, **quitter** le
