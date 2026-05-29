@@ -395,6 +395,28 @@ indiquez son nom de fichier dans le champ **« Voix de synthèse »** (ou un che
 
 ---
 
+### OCR sur images reçues (v0.4)
+
+Le plugin peut **lire le texte des images** reçues grâce à **Tesseract**, un moteur OCR
+**100 % local** (aucun service tiers).
+
+**Activation** : cochez **« OCR images reçues → Activer »** dans la configuration de
+l'équipement. Dès lors, chaque image reçue dans le groupe canal est analysée et le texte
+reconnu est placé dans la commande info **« OCR — texte image »** (`last_ocr_text`).
+
+**Langue** : `fra` (français) par défaut. Le champ accepte plusieurs langues combinées avec
+`+`, par exemple `fra+eng` pour du texte mêlant français et anglais.
+
+**Cas d'usage** : relevé de compteur (eau, gaz, électricité), lecture d'un ticket de caisse,
+d'un panneau, d'un numéro de série… Vous pouvez ensuite réagir au changement de
+`last_ocr_text` dans un scénario (extraction de chiffres, archivage, alerte…).
+
+> **Prérequis** : les paquets `tesseract-ocr` et `tesseract-ocr-fra` sont installés
+> automatiquement (apt) lors de l'installation des dépendances du plugin. Si l'installation
+> échoue, l'OCR est simplement désactivé — la réception des médias continue normalement.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

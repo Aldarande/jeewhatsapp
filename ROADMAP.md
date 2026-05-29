@@ -76,7 +76,7 @@ Objectif : transformer WhatsApp en interface vocale et command-line de Jeedom.
 | 17 | **STT sur notes vocales reçues** ⭐ | 🔴🧪 | Vocal entrant → transcription via Whisper (local, plugin tts existe ?) ou Vosk → traité comme texte par `interactQuery`. Permet "Allume la lumière du salon" en vocal. |
 | 18 | ✅ **TTS sur réponses** | 🟡 | Synthèse locale **Piper** (voix fr). Cmd action `send_voice` + méthode `speak()` (Piper → WAV → ffmpeg Opus `.ogg` PTT). Mode « vocal-first » par eqLogic (`tts_enabled`) via `sendReply()`, repli texte si échec. Voix configurable (`tts_voice`). Install auto non bloquante. |
 | 19 | ✅ **Commandes shortcuts** (slash) | 🟡 | Config eqLogic `interaction_shortcuts` (`/déclencheur=cible`). Cible = commande `#id#` (action exécutée / info renvoyée) ou texte modèle avec tags `#id#` + placeholders `#args#`/`#1#`. Prioritaire sur le NLP, sans dépendance externe. Helpers `parseShortcuts()` / `handleShortcut()`. |
-| 20 | **OCR sur images reçues** | 🔴 | Image entrante → Tesseract → texte exposé en cmd info. Ex: capture compteur eau/gaz. |
+| 20 | ✅ **OCR sur images reçues** | 🔴 | Image entrante → Tesseract (local) → cmd info `last_ocr_text`. Activable par eqLogic (`ocr_enabled`), langue `ocr_lang` (défaut `fra`). Méthode `runOcr()` dans `updateFromAttachment()`. Install auto apt non bloquante. |
 | 21 | ✅ **Reconnaissance utilisateur** | 🟡 | Config eqLogic `user_mapping` (`numéro=profil`). Expéditeur résolu en profil Jeedom (compatible plugin Profils), exposé en cmd info `last_sender_profile` et transmis à `interactQuery` via l'option `profile`. Fallback nom WhatsApp → numéro. Helpers `parseUserMapping()` / `resolveSenderProfile()`. |
 
 ---

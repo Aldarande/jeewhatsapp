@@ -99,6 +99,29 @@ else
   fi
 fi
 
+echo 96 > "$PROGRESS_FILE"
+
+# ---------------------------------------------------------------------------
+# Tesseract OCR (v0.4 #20) — extraction de texte des images reçues (optionnel)
+# Paquets apt tesseract-ocr + langue française. Non bloquant : si l'installation
+# échoue, l'OCR est simplement indisponible (les médias restent traités).
+# ---------------------------------------------------------------------------
+if command -v tesseract &> /dev/null; then
+  log "Tesseract OCR déjà installé ($(tesseract --version 2>&1 | head -1))"
+elif command -v apt-get &> /dev/null; then
+  log "Installation de Tesseract OCR (français, optionnel)..."
+  SUDO=""
+  [ "$(id -u)" -ne 0 ] && command -v sudo &> /dev/null && SUDO="sudo"
+  if $SUDO apt-get update -qq >/dev/null 2>&1 \
+     && $SUDO apt-get install -y -qq tesseract-ocr tesseract-ocr-fra >/dev/null 2>&1; then
+    log "Tesseract OCR installé ($(tesseract --version 2>&1 | head -1))"
+  else
+    log "AVERTISSEMENT : installation de Tesseract échouée — OCR indisponible"
+  fi
+else
+  log "AVERTISSEMENT : apt-get introuvable — Tesseract non installé (OCR indisponible)"
+fi
+
 log "Installation terminée avec succès"
 log "Baileys : $(node -e "import('@whiskeysockets/baileys/package.json', {with:{type:'json'}}).then(m=>console.log(m.default.version))" 2>/dev/null || echo 'installé')"
 echo 100 > "$PROGRESS_FILE"

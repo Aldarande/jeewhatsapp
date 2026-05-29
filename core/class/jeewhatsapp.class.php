@@ -832,6 +832,62 @@ class jeewhatsapp extends eqLogic {
       'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
       . ' — Média ' . $kind . ' (' . $mime . ', ' . round($size / 1024) . 'KB) reçu de '
       . $from . ' → ' . $path);
+
+    // OCR (v0.4 #20) : si activé et que le média est une image, extraire le texte
+    // via Tesseract et l'exposer dans la cmd info last_ocr_text. Échec silencieux
+    // (log warning) pour ne jamais bloquer le traitement de la réception.
+    if ($kind === 'image' && $this->getConfiguration('ocr_enabled', 0) == 1) {
+      try {
+        $text = $this->runOcr($path);
+        $this->checkAndUpdateCmd('last_ocr_text', $text);
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
+          . ' — OCR : ' . mb_strlen($text) . ' caractère(s) extrait(s)');
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'warning',
+          'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
+          . ' — OCR impossible : ' . $e->getMessage());
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // OCR — extraction de texte d'une image via Tesseract (v0.4 #20)
+  // Retourne le texte reconnu (chaîne, éventuellement vide). Lève une exception
+  // si Tesseract est absent, le fichier introuvable ou la commande échoue.
+  // -------------------------------------------------------------------------
+
+  public function runOcr($_path) {
+    $path = trim((string) $_path);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+      throw new Exception(__('Image introuvable ou non lisible', __FILE__) . ' : ' . $path);
+    }
+
+    // Localisation du binaire (PATH puis emplacements usuels)
+    $bin = trim((string) shell_exec('command -v tesseract 2>/dev/null'));
+    if ($bin === '') {
+      foreach (['/usr/bin/tesseract', '/usr/local/bin/tesseract'] as $cand) {
+        if (is_executable($cand)) { $bin = $cand; break; }
+      }
+    }
+    if ($bin === '') {
+      throw new Exception(__('Tesseract non installé (OCR indisponible)', __FILE__));
+    }
+
+    // Langue : configurable, validée (lettres/chiffres/+ uniquement pour éviter l'injection)
+    $lang = trim((string) $this->getConfiguration('ocr_lang', 'fra'));
+    if ($lang === '' || !preg_match('/^[a-zA-Z0-9_+]+$/', $lang)) { $lang = 'fra'; }
+
+    // Sortie sur stdout : tesseract <image> stdout -l <lang>
+    $cmd = escapeshellarg($bin) . ' ' . escapeshellarg($path) . ' stdout -l ' . escapeshellarg($lang) . ' 2>/dev/null';
+    $output = [];
+    $rc = 0;
+    exec($cmd, $output, $rc);
+    if ($rc !== 0) {
+      throw new Exception(__('Échec de Tesseract', __FILE__) . ' (rc=' . $rc . ')');
+    }
+
+    return trim(implode("\n", $output));
   }
 
   // Cron daily : supprime les médias entrants > 30 jours dans data/jeewhatsapp/incoming/
@@ -1217,6 +1273,7 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_group',      'name' => 'Dernier groupe — tag',      'subType' => 'string'],
       ['logicalId' => 'last_group_name', 'name' => 'Dernier groupe — nom',      'subType' => 'string'],
       ['logicalId' => 'last_sender_profile', 'name' => 'Expéditeur — profil',   'subType' => 'string'],
+      ['logicalId' => 'last_ocr_text',    'name' => 'OCR — texte image',        'subType' => 'string'],
     ];
 
     $order = 0;

@@ -9,6 +9,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **OCR sur images reçues** ⭐ — extraction **locale** de texte des images reçues via
+  **Tesseract** (aucun service tiers). Activable par équipement (`ocr_enabled`), langue
+  configurable (`ocr_lang`, défaut `fra`, combinable `fra+eng`). Le texte reconnu est exposé
+  dans la nouvelle cmd info **`last_ocr_text`** (« OCR — texte image ») — utilisable dans les
+  scénarios (lecture de compteur, ticket, panneau…). Méthode PHP `runOcr()` intégrée à
+  `updateFromAttachment()` pour les médias de type image, échec silencieux (log warning) si
+  Tesseract absent. Installation auto (apt, non bloquante) dans `install_dep.sh`. (v0.4 ROADMAP #20)
 - **Réponses vocales / TTS** ⭐ — synthèse vocale **locale** via **Piper** (aucun service
   tiers). Nouvelle cmd action **`send_voice`** (`message` = texte à dire, `title` =
   destinataire optionnel) qui synthétise le texte en note vocale Opus (`.ogg` PTT) et

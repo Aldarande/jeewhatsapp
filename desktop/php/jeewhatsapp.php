@@ -371,6 +371,22 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- OCR sur images reçues (v0.4 #20) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{OCR images reçues}}</label>
+								<div class="col-sm-7">
+									<label class="checkbox-inline">
+										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="ocr_enabled" value="1"> {{Activer}}
+									</label>
+									<input type="text" class="eqLogicAttr form-control" style="margin-top:6px;"
+										   data-l1key="configuration" data-l2key="ocr_lang"
+										   placeholder="fra (défaut) — ex: fra+eng">
+									<span class="help-block">
+										<small>{{Si activé, le texte des images reçues est extrait automatiquement via Tesseract et exposé dans la commande info « OCR — texte image » (<code>last_ocr_text</code>). Pratique pour lire un compteur, un ticket, un panneau… Langue Tesseract : <strong>fra</strong> par défaut, combinable (<strong>fra+eng</strong>). Échec silencieux si Tesseract est absent.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Messages éphémères (v0.3 #15) -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Messages éphémères}}</label>
