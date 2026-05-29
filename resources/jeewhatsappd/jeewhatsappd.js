@@ -200,12 +200,23 @@ const instanceCfg     = {};  // id → { prefix, group_name, extra: [{tag,name}]
 const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted / forward)
 const lastSentMsg     = {};  // id → clé du dernier msg envoyé (pour edit / revoke)
 const lastPollMsg     = {};  // id → message de création du dernier sondage (pour décrypter les votes)
+const sentMsgIds      = {};  // id → Set des key.id envoyés par Jeedom (anti-écho fromMe, v0.4)
 
 // Mémorise la clé du dernier message envoyé par Jeedom (v0.3 #11/#12).
 // Baileys renvoie l'objet message complet ; on ne garde que key + jid utiles.
+// On mémorise aussi l'ID du message dans un Set borné (v0.4) : sur un compte lié,
+// les envois Jeedom reviennent en fromMe ; les ignorer par ID est fiable pour TOUS
+// les types (texte, note vocale, média) là où le préfixe texte ne suffit pas.
 function recordSent(id, sent) {
   if (sent && sent.key) {
     lastSentMsg[id] = { key: sent.key, jid: sent.key.remoteJid };
+    if (sent.key.id) {
+      if (!sentMsgIds[id]) { sentMsgIds[id] = new Set(); }
+      const set = sentMsgIds[id];
+      set.add(sent.key.id);
+      // Borne mémoire : conserve les ~200 derniers IDs
+      if (set.size > 200) { set.delete(set.values().next().value); }
+    }
   }
 }
 
@@ -405,20 +416,28 @@ async function connectInstance(instance) {
         : (instanceCfg[id]?.extra || []).find(g => g.tag === groupTag)?.name || '';
 
       // Gestion des messages fromMe (compte WhatsApp lié au daemon).
-      // Sur un appareil lié, les messages tapés par l'utilisateur ET les envois
-      // automatiques de Jeedom sont tous marqués fromMe. On les distingue par le
-      // PRÉFIXE Jeedom (ex « 🏠 ») : seul un message TEXTE non préfixé est considéré
-      // comme tapé par l'humain → traité (permet de piloter Jeedom depuis le compte lié).
-      // Tout le reste (envoi préfixé de Jeedom, écho, média/réaction, préfixe absent)
-      // est ignoré pour éviter les boucles d'auto-traitement.
+      // Sur un appareil lié, les messages produits par l'utilisateur ET les envois
+      // automatiques de Jeedom sont tous marqués fromMe. Distinction en deux temps :
+      //   1) ÉCHO Jeedom : si l'ID du message est dans sentMsgIds → c'est un de nos
+      //      propres envois (texte, note vocale, média, réaction…) → ignoré de façon
+      //      fiable, quel que soit le type. C'est ce qui permet à la note vocale TTS
+      //      de ne pas être re-transcrite (le préfixe texte ne s'applique pas à l'audio).
+      //   2) Sinon (message produit par l'humain sur le compte lié) → accepté, ce qui
+      //      autorise le pilotage de Jeedom depuis le compte lié, y compris par note
+      //      vocale. Garde-fou résiduel : un TEXTE préfixé Jeedom reste ignoré (au cas
+      //      où un envoi n'aurait pas été capté par ID).
       if (msg.key.fromMe) {
-        const prefixSelf = (instanceCfg[id]?.prefix || '').trim();
-        const textSelf   = extractText(msg.message) || '';
-        if (textSelf === '' || prefixSelf === '' || textSelf.startsWith(prefixSelf)) {
-          debug('[' + id + '] Ignoré (fromMe : envoi Jeedom / non-texte / préfixe absent)');
+        if (msg.key.id && sentMsgIds[id]?.has(msg.key.id)) {
+          debug('[' + id + '] Ignoré (fromMe : écho d\'un envoi Jeedom, id connu)');
           continue;
         }
-        debug('[' + id + '] fromMe humain (compte lié, texte non préfixé) → traité');
+        const prefixSelf = (instanceCfg[id]?.prefix || '').trim();
+        const textSelf   = extractText(msg.message) || '';
+        if (textSelf !== '' && prefixSelf !== '' && textSelf.startsWith(prefixSelf)) {
+          debug('[' + id + '] Ignoré (fromMe : texte préfixé Jeedom)');
+          continue;
+        }
+        debug('[' + id + '] fromMe accepté (compte lié, non-écho) → traité');
       }
 
       if (!msg.message) {
@@ -1025,10 +1044,11 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const jid = target.key.remoteJid;
       logMsg('info', '[' + id + '] ↪ React ' + emoji + ' → ' + jid);
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi réaction — délai dépassé')), 10000));
-      await Promise.race([
+      const sentReact = await Promise.race([
         sock.sendMessage(jid, { react: { text: emoji, key: target.key } }),
         t,
       ]);
+      recordSent(id, sentReact);
       return { sent: true, emoji, target: target.key.id };
     }
 
@@ -1071,6 +1091,34 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
       recordSent(id, fwd);
       return { forwarded: true, to: jid };
+    }
+
+    // ── Définit l'icône (photo de profil) d'un groupe (v0.4) ───────────────
+    // L'image (icône du plugin par défaut) est convertie en JPEG carré 640×640
+    // via sharp (la transparence est aplatie sur fond blanc). Le compte lié doit
+    // être administrateur du groupe pour que WhatsApp accepte la modification.
+    case 'setGroupIcon': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const jid = resolveJid(id, phone, group_tag);
+      if (!String(jid).endsWith('@g.us')) {
+        throw new Error('La cible n\'est pas un groupe — l\'icône ne s\'applique qu\'aux groupes');
+      }
+      if (!media_path || !fs.existsSync(media_path)) {
+        throw new Error('Image introuvable : ' + media_path);
+      }
+      let sharp;
+      try { sharp = (await import('sharp')).default; }
+      catch (e) { throw new Error('Conversion image impossible : dépendance "sharp" absente. Relancez l\'installation des dépendances du plugin.'); }
+      const jpeg = await sharp(media_path)
+        .resize(640, 640, { fit: 'cover' })
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+      logMsg('info', '[' + id + '] 🖼 Mise à jour icône groupe → ' + jid);
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Mise à jour icône — délai dépassé')), 15000));
+      await Promise.race([sock.updateProfilePicture(jid, jpeg), t]);
+      return { updated: true, jid };
     }
 
     // ── Réponse "quoted" au dernier message reçu dans le groupe canal ──────

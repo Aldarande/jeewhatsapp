@@ -9,6 +9,12 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Icône du groupe WhatsApp** — bouton « Icône » (à côté de Rechercher/Créer dans la config
+  équipement) qui définit **l'icône du plugin** (`plugin_info/jeewhatsapp_icon.png`) comme
+  photo du groupe canal. Action daemon `setGroupIcon` (conversion JPEG carré 640×640 via
+  `sharp`, transparence aplatie sur blanc) → `sock.updateProfilePicture()`. Méthode PHP
+  `setGroupIcon()` + endpoint AJAX. Nécessite que le compte WhatsApp lié soit administrateur
+  du groupe.
 - **STT sur notes vocales reçues** ⭐ — transcription **locale** des notes vocales via
   **Vosk** (offline, aucun service tiers, modèle français léger). Activable par équipement
   (`stt_enabled`). Le texte transcrit est exposé dans la nouvelle cmd info **`last_voice_text`**
@@ -151,6 +157,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **Anti-écho `fromMe` par ID de message** — sur un compte lié, la distinction entre un
+  envoi automatique de Jeedom et un message produit par l'humain ne repose plus uniquement
+  sur le préfixe texte (inopérant pour les **notes vocales** et médias). Le daemon mémorise
+  désormais l'**ID** de chaque message qu'il envoie (`sentMsgIds`, set borné) ; à la réception
+  d'un `fromMe`, l'écho est ignoré de façon fiable par son ID, quel que soit le type. Tout
+  autre `fromMe` (humain sur le compte lié) est traité — y compris une **note vocale**, ce qui
+  rend le pilotage vocal opérant depuis le compte lié. Le garde-fou préfixe est conservé pour
+  le texte. Les réactions envoyées par Jeedom (`reactLast`) sont désormais elles aussi
+  enregistrées (évite le re-traitement de leur écho).
 - **Interactions depuis le compte WhatsApp lié** — la réception filtre désormais les
   messages `fromMe` par **préfixe Jeedom** au lieu de les ignorer en bloc. Un message
   `fromMe` est ignoré s'il est vide/non-texte OU s'il commence par le préfixe de
