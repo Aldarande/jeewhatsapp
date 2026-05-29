@@ -122,6 +122,47 @@ else
   log "AVERTISSEMENT : apt-get introuvable — Tesseract non installé (OCR indisponible)"
 fi
 
+echo 98 > "$PROGRESS_FILE"
+
+# ---------------------------------------------------------------------------
+# Vosk STT (v0.4 #17) — transcription des notes vocales reçues (optionnel)
+# Module python `vosk` + modèle français léger dans resources/stt/model-fr/.
+# Non bloquant : si l'installation échoue, la transcription est indisponible.
+# ---------------------------------------------------------------------------
+STT_DIR="$(dirname "$0")/stt"
+VOSK_MODEL_URL="https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip"
+
+if ! command -v python3 &> /dev/null; then
+  log "AVERTISSEMENT : python3 introuvable — transcription vocale (STT) indisponible"
+elif python3 -c "import vosk" >/dev/null 2>&1 && [ -d "$STT_DIR/model-fr" ]; then
+  log "Vosk STT déjà installé"
+else
+  log "Installation de Vosk STT (transcription vocale, optionnel)..."
+  PIP_FLAGS="--quiet"
+  pip3 install $PIP_FLAGS --break-system-packages vosk >/dev/null 2>&1 \
+    || pip3 install $PIP_FLAGS vosk >/dev/null 2>&1 || true
+  if python3 -c "import vosk" >/dev/null 2>&1; then
+    if [ ! -d "$STT_DIR/model-fr" ]; then
+      mkdir -p "$STT_DIR"
+      command -v unzip >/dev/null 2>&1 || { [ "$(id -u)" -eq 0 ] && apt-get install -y -qq unzip >/dev/null 2>&1; }
+      if curl -fsSL -m 240 -o "$STT_DIR/model-fr.zip" "$VOSK_MODEL_URL" \
+         && unzip -q -o "$STT_DIR/model-fr.zip" -d "$STT_DIR" \
+         && mv "$STT_DIR"/vosk-model-small-fr-* "$STT_DIR/model-fr" 2>/dev/null; then
+        rm -f "$STT_DIR/model-fr.zip"
+        chmod +x "$STT_DIR/stt.py" 2>/dev/null || true
+        log "Vosk STT installé (modèle fr small)"
+      else
+        log "AVERTISSEMENT : téléchargement du modèle Vosk échoué — STT indisponible"
+        rm -f "$STT_DIR/model-fr.zip"
+      fi
+    else
+      log "Vosk STT installé (modèle déjà présent)"
+    fi
+  else
+    log "AVERTISSEMENT : installation du module python vosk échouée — STT indisponible"
+  fi
+fi
+
 log "Installation terminée avec succès"
 log "Baileys : $(node -e "import('@whiskeysockets/baileys/package.json', {with:{type:'json'}}).then(m=>console.log(m.default.version))" 2>/dev/null || echo 'installé')"
 echo 100 > "$PROGRESS_FILE"

@@ -20,6 +20,11 @@ resources/piper/piper/
 resources/piper/voices/
 resources/piper/*.tar.gz
 
+# Vosk STT — modèle de langue installé par install_dep.sh (lourd, non versionné)
+resources/stt/model-fr/
+resources/stt/*.zip
+resources/stt/__pycache__/
+
 # Artefacts locaux
 jeewhatsapp/
 

@@ -9,6 +9,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **STT sur notes vocales reçues** ⭐ — transcription **locale** des notes vocales via
+  **Vosk** (offline, aucun service tiers, modèle français léger). Activable par équipement
+  (`stt_enabled`). Le texte transcrit est exposé dans la nouvelle cmd info **`last_voice_text`**
+  (« STT — note vocale ») **et réinjecté comme un message** → déclenche raccourcis et
+  interactions Jeedom : **pilotage de Jeedom à la voix**. Combiné au mode vocal (`tts_enabled`),
+  forme un **assistant vocal complet** (voix entrante → commande → réponse vocale). Script
+  `resources/stt/stt.py` (ffmpeg → PCM 16 kHz → Vosk), méthode PHP `transcribe()` intégrée à
+  `updateFromAttachment()` (médias audio). Échec silencieux si Vosk absent. Installation auto
+  (pip + modèle, non bloquante) dans `install_dep.sh`. (v0.4 ROADMAP #17)
 - **OCR sur images reçues** ⭐ — extraction **locale** de texte des images reçues via
   **Tesseract** (aucun service tiers). Activable par équipement (`ocr_enabled`), langue
   configurable (`ocr_lang`, défaut `fra`, combinable `fra+eng`). Le texte reconnu est exposé

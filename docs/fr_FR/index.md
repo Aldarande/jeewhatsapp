@@ -417,6 +417,32 @@ d'un panneau, d'un numéro de série… Vous pouvez ensuite réagir au changemen
 
 ---
 
+### Transcription vocale — STT (v0.4)
+
+Le plugin peut **transcrire les notes vocales** reçues grâce à **Vosk**, un moteur de
+reconnaissance vocale **100 % local et hors-ligne** (aucun service tiers).
+
+**Activation** : cochez **« Transcription vocale (STT) → Activer »** dans la configuration
+de l'équipement. Dès lors, chaque note vocale reçue dans le groupe canal est transcrite :
+
+- le texte est placé dans la commande info **« STT — note vocale »** (`last_voice_text`) ;
+- il est **réinjecté comme un message texte**, ce qui déclenche les **raccourcis** (`/`) et
+  les **interactions Jeedom** exactement comme si vous aviez tapé le message.
+
+Vous pouvez donc **piloter Jeedom à la voix** : envoyez une note vocale « *allume la lumière
+du salon* » et l'interaction Jeedom correspondante s'exécute.
+
+> **Assistant vocal complet** : activez à la fois **« Transcription vocale (STT) »** et
+> **« Réponses vocales (TTS) »**. La boucle devient : note vocale entrante → transcription →
+> commande Jeedom → **réponse synthétisée en note vocale**. Tout reste local sur votre serveur.
+
+> **Prérequis** : le module Python `vosk` et le modèle français léger sont installés
+> automatiquement lors de l'installation des dépendances du plugin (`ffmpeg` requis). Si
+> l'installation échoue, la transcription est simplement désactivée — la réception des notes
+> vocales continue normalement.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

@@ -73,7 +73,7 @@ Objectif : transformer WhatsApp en interface vocale et command-line de Jeedom.
 
 | # | Feature | Effort | Notes |
 |---|---|---|---|
-| 17 | **STT sur notes vocales reçues** ⭐ | 🔴🧪 | Vocal entrant → transcription via Whisper (local, plugin tts existe ?) ou Vosk → traité comme texte par `interactQuery`. Permet "Allume la lumière du salon" en vocal. |
+| 17 | ✅ **STT sur notes vocales reçues** ⭐ | 🔴🧪 | Vocal entrant → transcription **Vosk** (local, modèle fr) → cmd info `last_voice_text` + réinjection comme message (raccourcis/interactions). Pilotage vocal de Jeedom ; assistant vocal complet avec `tts_enabled`. Script `stt.py`, méthode `transcribe()`, config `stt_enabled`. Install auto non bloquante. |
 | 18 | ✅ **TTS sur réponses** | 🟡 | Synthèse locale **Piper** (voix fr). Cmd action `send_voice` + méthode `speak()` (Piper → WAV → ffmpeg Opus `.ogg` PTT). Mode « vocal-first » par eqLogic (`tts_enabled`) via `sendReply()`, repli texte si échec. Voix configurable (`tts_voice`). Install auto non bloquante. |
 | 19 | ✅ **Commandes shortcuts** (slash) | 🟡 | Config eqLogic `interaction_shortcuts` (`/déclencheur=cible`). Cible = commande `#id#` (action exécutée / info renvoyée) ou texte modèle avec tags `#id#` + placeholders `#args#`/`#1#`. Prioritaire sur le NLP, sans dépendance externe. Helpers `parseShortcuts()` / `handleShortcut()`. |
 | 20 | ✅ **OCR sur images reçues** | 🔴 | Image entrante → Tesseract (local) → cmd info `last_ocr_text`. Activable par eqLogic (`ocr_enabled`), langue `ocr_lang` (défaut `fra`). Méthode `runOcr()` dans `updateFromAttachment()`. Install auto apt non bloquante. |

@@ -387,6 +387,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- STT sur notes vocales reçues (v0.4 #17) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Transcription vocale (STT)}}</label>
+								<div class="col-sm-7">
+									<label class="checkbox-inline">
+										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="stt_enabled" value="1"> {{Activer}}
+									</label>
+									<span class="help-block">
+										<small>{{Si activé, les notes vocales reçues sont transcrites en texte (Vosk, hors-ligne) et exposées dans la commande info « STT — note vocale » (<code>last_voice_text</code>). Le texte est aussi réinjecté comme un message : il déclenche les raccourcis et les interactions Jeedom — vous pouvez piloter Jeedom à la voix. Combiné au mode « Réponses vocales », vous obtenez un assistant vocal complet.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Messages éphémères (v0.3 #15) -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Messages éphémères}}</label>

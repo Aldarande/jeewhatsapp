@@ -849,6 +849,78 @@ class jeewhatsapp extends eqLogic {
           . ' — OCR impossible : ' . $e->getMessage());
       }
     }
+
+    // STT (v0.4 #17) : si activé et que le média est une note vocale/audio, transcrire
+    // via Vosk et l'exposer dans last_voice_text, puis ré-injecter le texte comme un
+    // message normal → déclenche raccourcis/interactions (assistant vocal complet :
+    // voix entrante → commande Jeedom → réponse texte ou vocale selon tts_enabled).
+    if ($kind === 'audio' && $this->getConfiguration('stt_enabled', 0) == 1) {
+      try {
+        $transcript = $this->transcribe($path);
+        $this->checkAndUpdateCmd('last_voice_text', $transcript);
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
+          . ' — STT : « ' . $transcript . ' »');
+        if ($transcript !== '') {
+          // Ré-injection comme message texte (réutilise whitelist/keyword/shortcuts/interactQuery)
+          $this->updateFromMessage([
+            'event_type'  => 'message',
+            'message'     => $transcript,
+            'sender'      => $from,
+            'sender_name' => $name,
+            'received_at' => $at,
+            'group_tag'   => $_data['group_tag']  ?? '',
+            'group_name'  => $_data['group_name'] ?? '',
+          ]);
+        }
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'warning',
+          'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
+          . ' — STT impossible : ' . $e->getMessage());
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // STT — transcription d'une note vocale via Vosk (offline, local) (v0.4 #17)
+  // Retourne le texte reconnu (chaîne, éventuellement vide). Lève une exception
+  // si Python/Vosk/le modèle sont absents ou si le script échoue.
+  // -------------------------------------------------------------------------
+
+  public function transcribe($_path) {
+    $path = trim((string) $_path);
+    if ($path === '' || !is_file($path) || !is_readable($path)) {
+      throw new Exception(__('Fichier audio introuvable ou non lisible', __FILE__) . ' : ' . $path);
+    }
+
+    $script = realpath(__DIR__ . '/../../resources/stt/stt.py');
+    if ($script === false || !is_file($script)) {
+      throw new Exception(__('Transcription indisponible : Vosk non installé (resources/stt/stt.py manquant)', __FILE__));
+    }
+
+    // Modèle optionnel : nom d'un sous-dossier de resources/stt/ ou chemin absolu
+    $modelCfg = trim((string) $this->getConfiguration('stt_model', ''));
+    $model = '';
+    if ($modelCfg !== '') {
+      $model = (strpos($modelCfg, '/') === 0)
+        ? $modelCfg
+        : (realpath(__DIR__ . '/../../resources/stt/' . $modelCfg) ?: '');
+    }
+
+    $py = trim((string) shell_exec('command -v python3 2>/dev/null')) ?: 'python3';
+
+    $cmd = escapeshellarg($py) . ' ' . escapeshellarg($script) . ' ' . escapeshellarg($path);
+    if ($model !== '') { $cmd .= ' ' . escapeshellarg($model); }
+    $cmd .= ' 2>/dev/null';
+
+    $output = [];
+    $rc = 0;
+    exec($cmd, $output, $rc);
+    if ($rc !== 0) {
+      throw new Exception(__('Échec de la transcription Vosk', __FILE__) . ' (rc=' . $rc . ')');
+    }
+
+    return trim(implode(' ', $output));
   }
 
   // -------------------------------------------------------------------------
@@ -1274,6 +1346,7 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_group_name', 'name' => 'Dernier groupe — nom',      'subType' => 'string'],
       ['logicalId' => 'last_sender_profile', 'name' => 'Expéditeur — profil',   'subType' => 'string'],
       ['logicalId' => 'last_ocr_text',    'name' => 'OCR — texte image',        'subType' => 'string'],
+      ['logicalId' => 'last_voice_text',  'name' => 'STT — note vocale',        'subType' => 'string'],
     ];
 
     $order = 0;
