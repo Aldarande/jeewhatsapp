@@ -1118,6 +1118,44 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Réception d'un enregistrement vocal du widget (navigateur) (v0.6 #28)
+  // Reçoit le blob audio uploadé ($_FILES), le convertit en Opus (.ogg PTT)
+  // via ffmpeg, puis l'envoie comme note vocale dans le groupe canal.
+  // -------------------------------------------------------------------------
+
+  public function sendVoiceRecording($_file) {
+    if (!is_array($_file) || !isset($_file['tmp_name']) || ($_file['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($_file['tmp_name'])) {
+      throw new Exception(__('Aucun fichier audio reçu', __FILE__));
+    }
+    if (($_file['size'] ?? 0) > 10 * 1024 * 1024) {
+      throw new Exception(__('Enregistrement trop volumineux (max 10 Mo)', __FILE__));
+    }
+
+    $tmpDir = jeedom::getTmpFolder('jeewhatsapp');
+    if (!is_dir($tmpDir)) { @mkdir($tmpDir, 0775, true); }
+    $in  = $tmpDir . '/rec_' . $this->getId() . '_' . uniqid();
+    $out = $in . '.ogg';
+    if (!move_uploaded_file($_file['tmp_name'], $in)) {
+      throw new Exception(__('Échec de la réception du fichier audio', __FILE__));
+    }
+
+    try {
+      $ff = trim((string) shell_exec('command -v ffmpeg 2>/dev/null')) ?: 'ffmpeg';
+      $cmd = escapeshellarg($ff) . ' -y -i ' . escapeshellarg($in)
+           . ' -c:a libopus -b:a 32k -ar 48000 -ac 1 ' . escapeshellarg($out) . ' 2>/dev/null';
+      $o = []; $rc = 0;
+      exec($cmd, $o, $rc);
+      if ($rc !== 0 || !file_exists($out) || filesize($out) === 0) {
+        throw new Exception(__('Conversion audio (ffmpeg) échouée', __FILE__) . ' (rc=' . $rc . ')');
+      }
+      return $this->sendMediaFile($out, '');
+    } finally {
+      @unlink($in);
+      @unlink($out);
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Archive / épingle / met en sourdine la conversation du groupe canal (v0.5 #24)
   // $_op : archive|unarchive|pin|unpin|mute|unmute
   // $_value : pour mute, durée en heures (null = 8h par défaut)

@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -80,6 +80,16 @@ try {
       $value = trim(init('value', ''));
       $tag   = trim(init('tag', ''));
       ajax::success($eqLogic->groupAction($op, $value !== '' ? $value : null, $tag !== '' ? $tag : null));
+      break;
+
+    // ── Réception d'un enregistrement vocal depuis le widget ────────────
+    case 'uploadVoice':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      $eqLogic->sendVoiceRecording(isset($_FILES['audio']) ? $_FILES['audio'] : null);
+      ajax::success();
       break;
 
     // ── Statut de connexion WhatsApp ────────────────────────────────────

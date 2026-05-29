@@ -164,6 +164,16 @@
   color: #fff;
   box-shadow: 0 0 6px rgba(37, 211, 102, .6);
 }
+.jwa-mic.jwa-rec {
+  background: #e74c3c;
+  color: #fff;
+  animation: jwa-pulse 1s ease-in-out infinite;
+}
+@keyframes jwa-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(231, 76, 60, .6); }
+  70%  { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
 .jwa-input input {
   flex: 1 1 auto;
   min-width: 0;

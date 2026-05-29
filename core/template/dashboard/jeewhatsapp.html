@@ -83,25 +83,31 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // ── Mode vocal (TTS) : bascule micro ────────────────────────────────
-    var voiceMode = false;
-    var micBtn = document.getElementById('jwa-mic-' + EQ);
-    var input = document.getElementById('jwa-msg-' + EQ);
+    var input   = document.getElementById('jwa-msg-' + EQ);
     var sendBtn = document.getElementById('jwa-send-' + EQ);
-    var hasVoice = ('#cmd_voice_id#' !== '0');
-    if (micBtn) {
-      if (!hasVoice) {
-        micBtn.style.display = 'none'; // TTS indisponible (pas de cmd send_voice)
-      } else {
-        micBtn.addEventListener('click', function () {
-          voiceMode = !voiceMode;
-          micBtn.classList.toggle('jwa-active', voiceMode);
-          if (input) { input.placeholder = voiceMode ? 'Texte à dire (note vocale)…' : 'Écrire un message…'; }
-        });
-      }
+    var micBtn  = document.getElementById('jwa-mic-' + EQ);
+    var hasVoice  = ('#cmd_voice_id#' !== '0');
+    // Enregistrement micro possible uniquement en contexte sécurisé (HTTPS/localhost)
+    var canRecord = !!(window.isSecureContext && navigator.mediaDevices &&
+                       navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+    var voiceMode = false; // mode TTS (repli quand l'enregistrement n'est pas dispo)
+
+    // Ajoute une bulle "envoyée" optimiste, renvoie l'élément
+    function outBubble(text) {
+      if (!chat) { return null; }
+      if (chat.querySelector('.jwa-empty')) { chat.innerHTML = ''; }
+      chat.insertAdjacentHTML('beforeend', bubble('out', '', text, nowHM(), true));
+      chat.scrollTop = chat.scrollHeight;
+      return chat.lastElementChild;
+    }
+    function markBubble(el, ok) {
+      if (!el) { return; }
+      var t = el.querySelector('.jwa-tick');
+      if (t) { t.className = ok ? 'fas fa-check-double jwa-tick' : 'fas fa-times jwa-tick'; }
+      if (!ok) { el.classList.add('jwa-failed'); }
     }
 
-    // ── Envoi rapide (texte ou note vocale selon le mode) ────────────────
+    // ── Envoi texte / TTS ───────────────────────────────────────────────
     function doSend() {
       var useVoice = voiceMode && hasVoice;
       var cmdId = useVoice ? '#cmd_voice_id#' : '#cmd_send_id#';
@@ -110,25 +116,12 @@
       if (txt === '') { return; }
       input.value = '';
       input.disabled = true;
-      // bulle optimiste (icône micro en mode vocal)
-      if (chat) {
-        if (chat.querySelector('.jwa-empty')) { chat.innerHTML = ''; }
-        var shown = useVoice ? '🎤 ' + txt : txt;
-        chat.insertAdjacentHTML('beforeend', bubble('out', '', shown, nowHM(), true));
-        chat.scrollTop = chat.scrollHeight;
-        var last = chat.lastElementChild;
-      }
+      var last = outBubble(useVoice ? '🎤 ' + txt : txt);
       jeedom.cmd.execute({
         id: cmdId,
         value: { message: txt, title: '' },
-        success: function () {
-          input.disabled = false; input.focus();
-          if (last) { var t = last.querySelector('.jwa-tick'); if (t) t.className = 'fas fa-check-double jwa-tick'; }
-        },
-        error: function () {
-          input.disabled = false;
-          if (last) { last.classList.add('jwa-failed'); }
-        }
+        success: function () { input.disabled = false; input.focus(); markBubble(last, true); },
+        error:   function () { input.disabled = false; markBubble(last, false); }
       });
     }
     if (sendBtn) { sendBtn.addEventListener('click', doSend); }
@@ -136,6 +129,57 @@
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); doSend(); }
       });
+    }
+
+    // ── Bouton micro : enregistreur si possible, sinon bascule TTS ───────
+    if (micBtn) {
+      if (canRecord) {
+        // Mode ENREGISTREUR : clic = démarrer, clic = arrêter + envoyer
+        micBtn.title = 'Enregistrer une note vocale (clic pour démarrer/arrêter)';
+        var rec = null, chunks = [], recording = false, stream = null;
+        micBtn.addEventListener('click', function () {
+          if (recording) { try { rec.stop(); } catch (e) {} return; }
+          navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+            stream = s; chunks = [];
+            rec = new MediaRecorder(s);
+            rec.ondataavailable = function (e) { if (e.data && e.data.size) { chunks.push(e.data); } };
+            rec.onstop = function () {
+              recording = false; micBtn.classList.remove('jwa-rec');
+              if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); }
+              var blob = new Blob(chunks, { type: (rec.mimeType || 'audio/webm') });
+              if (!blob.size) { return; }
+              var last = outBubble('🎤 Note vocale');
+              var fd = new FormData();
+              fd.append('action', 'uploadVoice');
+              fd.append('eqLogic_id', EQ);
+              fd.append('audio', blob, 'rec.webm');
+              fetch('plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php', {
+                method: 'POST', body: fd, credentials: 'same-origin'
+              }).then(function (r) { return r.json(); })
+                .then(function (d) { markBubble(last, !!(d && d.state === 'ok')); })
+                .catch(function () { markBubble(last, false); });
+            };
+            rec.start(); recording = true; micBtn.classList.add('jwa-rec');
+          }).catch(function () {
+            if (input) {
+              var ph = input.placeholder;
+              input.placeholder = 'Micro refusé ou indisponible';
+              setTimeout(function () { input.placeholder = ph; }, 2500);
+            }
+          });
+        });
+      } else if (hasVoice) {
+        // Repli MODE TTS (contexte non sécurisé) : icône haut-parleur
+        var ico = micBtn.querySelector('i'); if (ico) { ico.className = 'fas fa-volume-up'; }
+        micBtn.title = 'Mode vocal TTS : le texte tapé est envoyé en note vocale synthétisée';
+        micBtn.addEventListener('click', function () {
+          voiceMode = !voiceMode;
+          micBtn.classList.toggle('jwa-active', voiceMode);
+          if (input) { input.placeholder = voiceMode ? 'Texte à dire (note vocale)…' : 'Écrire un message…'; }
+        });
+      } else {
+        micBtn.style.display = 'none';
+      }
     }
 
     // ── Sourdine ────────────────────────────────────────────────────────

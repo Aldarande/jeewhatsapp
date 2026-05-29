@@ -15,9 +15,12 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   connexion** en direct (point vert/orange/rouge lu depuis `status.txt`), zone de **chat**
   (fond beige, bulle du dernier message reçu avec expéditeur/heure), **compteurs** (reçus
   aujourd'hui / envoyés), **zone d'envoi rapide** (champ + bouton avion, bulle optimiste +
-  coches) et **bouton sourdine**. **Mode vocal** : un bouton micro bascule l'envoi du texte
-  tapé en **note vocale (TTS)** (`send_voice`) au lieu d'un message texte (masqué si TTS
-  indisponible). Envoi via `send_message`, sourdine via `mute_chat`.
+  coches) et **bouton sourdine**. **Bouton micro adaptatif** : en contexte sécurisé
+  (HTTPS/localhost) il **enregistre** une vraie note vocale via le micro du navigateur
+  (`getUserMedia` + `MediaRecorder`) → upload AJAX `uploadVoice` → conversion ffmpeg Opus →
+  envoi en note vocale ; sinon il bascule en **mode TTS** (texte tapé → voix synthétisée
+  `send_voice`, icône haut-parleur). Envoi texte via `send_message`, sourdine via `mute_chat`.
+  Endpoint `uploadVoice` + méthode PHP `sendVoiceRecording()`.
 - **Gestion du groupe** (v0.5 #22) — section « Gestion du groupe » dans la config équipement :
   ajouter / retirer / promouvoir admin / rétrograder un participant (par numéro), changer le
   **sujet** et la **description**, générer/**révoquer le lien d'invitation**, **quitter** le
