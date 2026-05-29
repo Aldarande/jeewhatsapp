@@ -345,6 +345,32 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Réponses vocales / TTS (v0.4 #18) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Réponses vocales (TTS)}}</label>
+								<div class="col-sm-7">
+									<label class="checkbox-inline">
+										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="tts_enabled" value="1"> {{Activer le mode vocal}}
+									</label>
+									<span class="help-block">
+										<small>{{Si activé, les réponses automatiques aux interactions et aux raccourcis sont envoyées sous forme de note vocale synthétisée (Piper). Repli automatique sur le texte si la synthèse échoue. La commande action « Envoyer une note vocale » reste disponible indépendamment de cette case.}}</small>
+									</span>
+								</div>
+							</div>
+
+							<!-- Voix TTS optionnelle (v0.4 #18) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Voix de synthèse}}</label>
+								<div class="col-sm-7">
+									<input type="text" class="eqLogicAttr form-control"
+										   data-l1key="configuration" data-l2key="tts_voice"
+										   placeholder="fr_FR-siwis-medium.onnx (défaut)">
+									<span class="help-block">
+										<small>{{Optionnel. Nom d'un modèle de voix Piper présent dans <strong>resources/piper/voices/</strong>, ou chemin absolu d'un fichier <strong>.onnx</strong>. Laisser vide pour utiliser la voix française par défaut.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Messages éphémères (v0.3 #15) -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Messages éphémères}}</label>

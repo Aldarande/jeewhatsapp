@@ -244,7 +244,7 @@ class jeewhatsapp extends eqLogic {
       if (isset($shortcut['reply']) && trim((string) $shortcut['reply']) !== '') {
         log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::updateFromMessage() — réponse raccourci : ' . $shortcut['reply']);
         try {
-          $this->sendMessage($shortcut['reply']);
+          $this->sendReply($shortcut['reply']);
         } catch (Exception $e) {
           log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__ . ' — Erreur envoi réponse raccourci : ' . $e->getMessage());
         }
@@ -267,7 +267,8 @@ class jeewhatsapp extends eqLogic {
 
     try {
       // En mode groupe, la réponse va dans le groupe canal (pas au sender direct)
-      $this->sendMessage($reply['reply']);
+      // sendReply() route vers une note vocale si tts_enabled, sinon texte.
+      $this->sendReply($reply['reply']);
       log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::updateFromMessage() — message transmis au daemon');
     } catch (Exception $e) {
       log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__ . ' — Erreur envoi réponse interaction : ' . $e->getMessage());
@@ -522,6 +523,71 @@ class jeewhatsapp extends eqLogic {
     $result = $this->sendToDaemon('sendMedia', $params);
     $this->incrementSentCounters();
     return $result;
+  }
+
+  // -------------------------------------------------------------------------
+  // Synthèse vocale (TTS) — v0.4 #18
+  // Génère une note vocale Opus (.ogg PTT) via Piper + ffmpeg puis l'envoie.
+  // $_phone = null → groupe canal ; sinon destinataire direct.
+  // -------------------------------------------------------------------------
+
+  public function speak($_text, $_phone = null) {
+    $text = trim((string) $_text);
+    if ($text === '') {
+      throw new Exception(__('Texte à synthétiser vide', __FILE__));
+    }
+
+    $script = realpath(__DIR__ . '/../../resources/piper/tts.sh');
+    if ($script === false || !is_file($script)) {
+      throw new Exception(__('Synthèse vocale indisponible : Piper non installé (resources/piper/tts.sh manquant)', __FILE__));
+    }
+
+    // Voix optionnelle : chemin absolu d'un modèle .onnx ou nom de fichier dans resources/piper/voices/
+    $voice = trim((string) $this->getConfiguration('tts_voice', ''));
+    if ($voice !== '' && strpos($voice, '/') === false) {
+      $voice = realpath(__DIR__ . '/../../resources/piper/voices/' . $voice) ?: '';
+    }
+
+    $tmpDir = jeedom::getTmpFolder('jeewhatsapp');
+    if (!is_dir($tmpDir)) { @mkdir($tmpDir, 0775, true); }
+    $out = $tmpDir . '/tts_' . $this->getId() . '_' . uniqid() . '.ogg';
+
+    $cmd = escapeshellarg($script) . ' ' . escapeshellarg($text) . ' ' . escapeshellarg($out);
+    if ($voice !== '') { $cmd .= ' ' . escapeshellarg($voice); }
+
+    $output = [];
+    $rc = 0;
+    exec($cmd . ' 2>&1', $output, $rc);
+
+    if ($rc !== 0 || !file_exists($out) || filesize($out) === 0) {
+      @unlink($out);
+      throw new Exception(
+        __('Échec de la synthèse vocale Piper', __FILE__)
+        . ' (rc=' . $rc . ') : ' . implode(' ', $output));
+    }
+
+    try {
+      // Pas de légende → note vocale pure (PTT). L'extension .ogg active ptt:true côté daemon.
+      return $this->sendMediaFile($out, '', $_phone);
+    } finally {
+      @unlink($out);
+    }
+  }
+
+  // Envoie une réponse en respectant le mode vocal (tts_enabled) : note vocale
+  // synthétisée si activé, sinon message texte classique. Fallback texte si la
+  // synthèse échoue (Piper absent, voix introuvable…).
+  public function sendReply($_text, $_phone = null) {
+    if ($this->getConfiguration('tts_enabled', 0) == 1) {
+      try {
+        return $this->speak($_text, $_phone);
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'warning',
+          'jeewhatsapp.class.php::sendReply() l.' . __LINE__
+          . ' — synthèse vocale impossible, repli sur texte : ' . $e->getMessage());
+      }
+    }
+    return $this->sendMessage($_text, $_phone);
   }
 
   // -------------------------------------------------------------------------
@@ -1347,6 +1413,29 @@ class jeewhatsapp extends eqLogic {
       $sticker->save();
     }
 
+    // Commande action : Envoyer une note vocale (TTS Piper) (v0.4 #18)
+    // Convention : message = texte à synthétiser, title = destinataire optionnel
+    $voice = $this->getCmd('action', 'send_voice');
+    if (!is_object($voice)) {
+      $voice = new jeewhatsappCmd();
+      $voice->setEqLogic_id($this->getId());
+      $voice->setLogicalId('send_voice');
+      $voice->setType('action');
+      $voice->setSubType('message');
+      $voice->setName('Envoyer une note vocale');
+      $voice->setIsVisible(1);
+      $voice->setOrder($order++);
+      $voice->save();
+    }
+    if ($voice->getDisplay('title_placeholder') !== 'Destinataire optionnel (vide = groupe canal)') {
+      $voice->setDisplay('title_placeholder', 'Destinataire optionnel (vide = groupe canal)');
+      $voice->save();
+    }
+    if ($voice->getDisplay('message_placeholder') !== 'Texte à dire à voix haute (synthèse vocale)') {
+      $voice->setDisplay('message_placeholder', 'Texte à dire à voix haute (synthèse vocale)');
+      $voice->save();
+    }
+
     // Commande action : Éditer le dernier message envoyé (v0.3 #11)
     // Convention : message = nouveau texte, title inutilisé
     $edit = $this->getCmd('action', 'edit_last');
@@ -1522,6 +1611,18 @@ class jeewhatsappCmd extends cmd {
           throw new Exception(__('Chemin du fichier (champ Titre) obligatoire', __FILE__));
         }
         $eqLogic->sendSticker($spath);
+        break;
+
+      case 'send_voice':
+        // message = texte à synthétiser ; title = destinataire optionnel (vide = groupe canal)
+        $vtext = $_options['message'] ?? '';
+        if (trim((string) $vtext) === '') {
+          throw new Exception(__('Texte à synthétiser (champ Message) obligatoire', __FILE__));
+        }
+        $vphone = (isset($_options['title']) && trim($_options['title']) !== '')
+          ? trim($_options['title'])
+          : null;
+        $eqLogic->speak($vtext, $vphone);
         break;
 
       case 'edit_last':

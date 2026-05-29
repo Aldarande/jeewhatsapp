@@ -9,6 +9,16 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Réponses vocales / TTS** ⭐ — synthèse vocale **locale** via **Piper** (aucun service
+  tiers). Nouvelle cmd action **`send_voice`** (`message` = texte à dire, `title` =
+  destinataire optionnel) qui synthétise le texte en note vocale Opus (`.ogg` PTT) et
+  l'envoie via le chemin média existant. Méthode PHP `speak()` (Piper → WAV → `ffmpeg`
+  libopus 48 kHz mono) + script `resources/piper/tts.sh`. Mode **« vocal-first »** par
+  équipement via config `tts_enabled` : les réponses automatiques aux interactions et aux
+  raccourcis sont alors envoyées en note vocale (helper `sendReply()`), avec **repli
+  automatique sur le texte** si la synthèse échoue. Voix configurable via `tts_voice`
+  (défaut `fr_FR-siwis-medium`). Installation auto (non bloquante) du binaire Piper + voix
+  française dans `install_dep.sh` ; `ffmpeg` requis. (v0.4 ROADMAP #18)
 - **Reconnaissance utilisateur** ⭐ — config eqLogic `user_mapping` (textarea, une ligne
   `numéro=profil`). Le numéro/JID de l'expéditeur d'un message entrant est résolu en un
   profil Jeedom via le mapping (numéros normalisés au format international). Le profil

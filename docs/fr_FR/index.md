@@ -366,6 +366,35 @@ puis sur son numéro brut. La commande info reste vide quand l'expéditeur n'est
 
 ---
 
+### Réponses vocales — synthèse vocale / TTS (v0.4)
+
+Le plugin peut **parler** : un texte est synthétisé en **note vocale** (Opus `.ogg`,
+affichée comme un message vocal dans WhatsApp) grâce à **Piper**, un moteur de synthèse
+**100 % local** (aucun service tiers, aucune donnée envoyée à l'extérieur).
+
+**Deux usages :**
+
+1. **Commande action « Envoyer une note vocale »** (`send_voice`) — à utiliser dans un
+   scénario : le champ *Message* contient le texte à dire, le champ *Titre* un destinataire
+   optionnel (vide = groupe canal). Exemple : `[Mon WhatsApp][Envoyer une note vocale]` →
+   Message : `La température du salon est de 21 degrés.`
+2. **Mode « vocal-first »** — cochez **« Réponses vocales (TTS) → Activer le mode vocal »**
+   dans la configuration de l'équipement. Toutes les réponses automatiques (interactions
+   Jeedom et raccourcis `/`) sont alors envoyées en note vocale au lieu de texte. En cas
+   d'échec de la synthèse, le plugin **retombe automatiquement sur le texte**.
+
+**Voix** : la voix française `fr_FR-siwis-medium` est installée par défaut. Pour en utiliser
+une autre, placez un modèle Piper (`.onnx` + `.onnx.json`) dans `resources/piper/voices/` et
+indiquez son nom de fichier dans le champ **« Voix de synthèse »** (ou un chemin absolu).
+
+> **Prérequis** : `ffmpeg` doit être installé sur le serveur (présent par défaut sur la
+> plupart des installations Jeedom). Le binaire Piper et la voix française sont téléchargés
+> automatiquement lors de l'installation des dépendances du plugin. Si l'installation de
+> Piper échoue, le plugin continue de fonctionner — seules les réponses vocales sont
+> désactivées (repli sur le texte).
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

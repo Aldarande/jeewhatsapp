@@ -66,6 +66,39 @@ if [ ! -d "$DAEMON_DIR/node_modules/qrcode" ]; then
   exit 1
 fi
 
+echo 92 > "$PROGRESS_FILE"
+
+# ---------------------------------------------------------------------------
+# Piper TTS (v0.4 #18) — synthèse vocale française (optionnel, non bloquant)
+# Binaire + voix installés dans resources/piper/ (gitignorés). ffmpeg requis
+# pour la conversion WAV → Opus (.ogg PTT). Si l'installation échoue, le plugin
+# continue de fonctionner : les réponses retombent en texte (sendReply).
+# ---------------------------------------------------------------------------
+PIPER_DIR="$(dirname "$0")/piper"
+PIPER_REL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_$(uname -m).tar.gz"
+VOICE_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR/siwis/medium"
+VOICE_NAME="fr_FR-siwis-medium"
+
+if ! command -v ffmpeg &> /dev/null; then
+  log "AVERTISSEMENT : ffmpeg introuvable — synthèse vocale (TTS) indisponible (les réponses resteront en texte)"
+elif [ -x "$PIPER_DIR/piper/piper" ] && [ -f "$PIPER_DIR/voices/$VOICE_NAME.onnx" ]; then
+  log "Piper TTS déjà installé — passage"
+else
+  log "Installation de Piper TTS (synthèse vocale, optionnel)..."
+  mkdir -p "$PIPER_DIR/voices"
+  if curl -fsSL -m 180 -o "$PIPER_DIR/piper.tar.gz" "$PIPER_REL" \
+     && tar xzf "$PIPER_DIR/piper.tar.gz" -C "$PIPER_DIR" \
+     && curl -fsSL -m 240 -o "$PIPER_DIR/voices/$VOICE_NAME.onnx"      "$VOICE_BASE/$VOICE_NAME.onnx?download=true" \
+     && curl -fsSL -m 60  -o "$PIPER_DIR/voices/$VOICE_NAME.onnx.json" "$VOICE_BASE/$VOICE_NAME.onnx.json?download=true"; then
+    rm -f "$PIPER_DIR/piper.tar.gz"
+    chmod +x "$PIPER_DIR/tts.sh" "$PIPER_DIR/piper/piper" 2>/dev/null || true
+    log "Piper TTS installé (voix $VOICE_NAME)"
+  else
+    log "AVERTISSEMENT : installation de Piper TTS échouée — synthèse vocale indisponible (réponses en texte)"
+    rm -f "$PIPER_DIR/piper.tar.gz"
+  fi
+fi
+
 log "Installation terminée avec succès"
 log "Baileys : $(node -e "import('@whiskeysockets/baileys/package.json', {with:{type:'json'}}).then(m=>console.log(m.default.version))" 2>/dev/null || echo 'installé')"
 echo 100 > "$PROGRESS_FILE"

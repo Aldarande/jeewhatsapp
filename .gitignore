@@ -15,6 +15,11 @@ resources/jeewhatsappd/package-lock.json
 # Credentials Baileys (générés à l'exécution, sensibles)
 resources/jeewhatsappd/auth/
 
+# Piper TTS — binaire + modèles de voix installés par install_dep.sh (lourds, non versionnés)
+resources/piper/piper/
+resources/piper/voices/
+resources/piper/*.tar.gz
+
 # Artefacts locaux
 jeewhatsapp/
 
