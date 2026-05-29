@@ -9,6 +9,10 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Statuts WhatsApp** (v0.5 #25) — cmd action **`post_status`** (« Publier un statut ») qui
+  publie un statut éphémère 24h (story-like) : *Message* = texte/légende, *Titre* = chemin
+  d'une image optionnelle. Daemon : action `postStatus` → `sock.sendMessage('status@broadcast', …)`.
+  L'**audience** (`statusJidList`) est construite depuis les participants du groupe canal.
 - **Archive / Épingle / Sourdine** (v0.5 #24) — trois cmds action sur la conversation du
   groupe canal : **`archive_chat`** (archiver/désarchiver), **`pin_chat`** (épingler/désépingler),
   **`mute_chat`** (sourdine, durée en heures ou réactivation). Daemon : action unique

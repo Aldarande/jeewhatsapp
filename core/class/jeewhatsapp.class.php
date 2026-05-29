@@ -1139,6 +1139,33 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Publie un statut WhatsApp éphémère 24h (texte ou image) (v0.5 #25)
+  // $_text  : texte du statut (ou légende si image)
+  // $_image : chemin absolu d'une image optionnelle (statut image)
+  // L'audience est construite côté daemon (participants du groupe canal).
+  // -------------------------------------------------------------------------
+
+  public function postStatus($_text = '', $_image = null) {
+    $params = ['instance_id' => $this->getId()];
+    if ($_image !== null && trim((string) $_image) !== '') {
+      $img = trim((string) $_image);
+      if (!is_file($img) || !is_readable($img)) {
+        throw new Exception(__('Image introuvable ou non lisible', __FILE__) . ' : ' . $img);
+      }
+      $params['media_path'] = $img;
+    }
+    if ($_text !== null && trim((string) $_text) !== '') {
+      $params['message'] = $_text;
+    }
+    if (!isset($params['media_path']) && !isset($params['message'])) {
+      throw new Exception(__('Statut vide : fournir un texte ou une image', __FILE__));
+    }
+    $result = $this->sendToDaemon('postStatus', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 
@@ -1671,6 +1698,29 @@ class jeewhatsapp extends eqLogic {
       }
     }
 
+    // Commande action : Publier un statut WhatsApp (story 24h) (v0.5 #25)
+    // Convention : message = texte (ou légende), title = chemin image optionnel
+    $status = $this->getCmd('action', 'post_status');
+    if (!is_object($status)) {
+      $status = new jeewhatsappCmd();
+      $status->setEqLogic_id($this->getId());
+      $status->setLogicalId('post_status');
+      $status->setType('action');
+      $status->setSubType('message');
+      $status->setName('Publier un statut');
+      $status->setIsVisible(1);
+      $status->setOrder($order++);
+      $status->save();
+    }
+    if ($status->getDisplay('title_placeholder') !== 'Chemin image optionnel (statut image)') {
+      $status->setDisplay('title_placeholder', 'Chemin image optionnel (statut image)');
+      $status->save();
+    }
+    if ($status->getDisplay('message_placeholder') !== 'Texte du statut (ou légende de l\'image)') {
+      $status->setDisplay('message_placeholder', 'Texte du statut (ou légende de l\'image)');
+      $status->save();
+    }
+
     // Commande action : Éditer le dernier message envoyé (v0.3 #11)
     // Convention : message = nouveau texte, title inutilisé
     $edit = $this->getCmd('action', 'edit_last');
@@ -1895,6 +1945,14 @@ class jeewhatsappCmd extends cmd {
         } else {
           $eqLogic->chatModify('mute', $h !== '' ? $h : null);
         }
+        break;
+
+      case 'post_status':
+        // message = texte/légende ; title = chemin image optionnel
+        $img = (isset($_options['title']) && trim($_options['title']) !== '')
+          ? trim($_options['title'])
+          : null;
+        $eqLogic->postStatus($_options['message'] ?? '', $img);
         break;
 
       case 'forward_to':

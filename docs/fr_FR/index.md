@@ -469,6 +469,20 @@ puis le réactiver le matin.
 
 ---
 
+### Publier un statut WhatsApp (v0.5)
+
+La commande action **« Publier un statut »** (`post_status`) publie un **statut éphémère 24 h**
+(comme une story) :
+
+- *Message* : le texte du statut (ou la légende si une image est fournie) ;
+- *Titre* : chemin absolu d'une **image** optionnelle (statut image).
+
+L'audience est constituée des **participants du groupe canal** (ce sont eux qui verront le
+statut dans leur fil). Exemple : publier chaque matin un statut « Maison sécurisée ✅ » via un
+scénario.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

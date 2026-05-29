@@ -88,7 +88,7 @@ Objectif : transformer WhatsApp en interface vocale et command-line de Jeedom.
 | 22 | **Gestion groupe complète** | 🔴 | Cmds AJAX desktop : add/remove participant, promote admin, change subject/picture (✅ icône faite, bouton « Icône »), generate invite link, leave group. |
 | 23 | ✅ **Lecture / accusés réception** | 🟢 | Cmd action `mark_read` (coches bleues, `sock.readMessages`) + cmd info `last_read_at` (callback `read_receipt` sur statut READ/PLAYED des messages envoyés). |
 | 24 | ✅ **Archive / pin / mute** | 🟡 | Cmds action `archive_chat` / `pin_chat` / `mute_chat` (daemon `chatModify` → `sock.chatModify`). Titre = sens (vide/durée vs `0`). |
-| 25 | **Statuts WhatsApp** (story-like) | 🟡 | Publier un statut éphémère 24h (texte ou image). |
+| 25 | ✅ **Statuts WhatsApp** (story-like) | 🟡 | Cmd action `post_status` (texte ou image) → `sock.sendMessage('status@broadcast')`, audience = participants du groupe canal. |
 | 26 | **Backup/restore session** 🛡️ | 🟡 | Export chiffré du dossier `auth/{id}/` vers backup Jeedom (via plugin backup). Restore en 1 clic après réinstall serveur. |
 | 27 | **Sync contacts WhatsApp** | 🟡 | Pull du carnet et création eqLogics enfants (1 par contact) — permet de gérer envois directs par cmd dédiée. |
 

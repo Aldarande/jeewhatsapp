@@ -1117,6 +1117,49 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       return { forwarded: true, to: jid };
     }
 
+    // ── Publie un statut WhatsApp (story éphémère 24h) (v0.5 #25) ──────────
+    // message = texte du statut (statut texte) ; media_path = image (statut image,
+    // message = légende). L'audience (statusJidList) est construite à partir des
+    // participants du groupe canal — sans audience, personne ne verrait le statut.
+    case 'postStatus': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+
+      // Construit l'audience depuis les participants du groupe canal
+      let audience = [];
+      try {
+        const gjid = groupJids[id];
+        if (gjid) {
+          const meta = await sock.groupMetadata(gjid);
+          audience = (meta.participants || []).map(p => p.id).filter(Boolean);
+        }
+      } catch (e) {
+        debug('[' + id + '] postStatus — audience indisponible : ' + e.message);
+      }
+      if (audience.length === 0) {
+        throw new Error('Audience vide — aucun participant connu pour diffuser le statut (groupe canal requis)');
+      }
+
+      let content;
+      if (media_path && fs.existsSync(media_path)) {
+        content = { image: fs.readFileSync(media_path) };
+        if (message && String(message).trim() !== '') { content.caption = message; }
+      } else {
+        const txt = String(message || '').trim();
+        if (txt === '') { throw new Error('Statut vide — fournir un texte (message) ou une image (media_path)'); }
+        content = { text: txt };
+      }
+
+      logMsg('info', '[' + id + '] 📢 Publication statut (' + (content.image ? 'image' : 'texte') + ') → ' + audience.length + ' contact(s)');
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Publication statut — délai dépassé')), 20000));
+      const sentStatus = await Promise.race([
+        sock.sendMessage('status@broadcast', content, { statusJidList: audience }),
+        t,
+      ]);
+      recordSent(id, sentStatus);
+      return { posted: true, recipients: audience.length };
+    }
+
     // ── Archive / épingle / met en sourdine une conversation (v0.5 #24) ────
     // chat_op : archive|unarchive|pin|unpin|mute|unmute
     // chat_value : pour mute, durée en heures (0/absent = 8h par défaut)
