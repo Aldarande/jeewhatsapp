@@ -483,6 +483,22 @@ scénario.
 
 ---
 
+### Gestion du groupe (v0.5)
+
+La section **« Gestion du groupe »** (configuration de l'équipement) regroupe les opérations
+d'administration du groupe canal. **Le compte WhatsApp lié doit être administrateur du groupe.**
+
+- **Participants** : saisissez un numéro puis utilisez les boutons pour **ajouter**, **retirer**,
+  **promouvoir administrateur** ou **rétrograder** un membre.
+- **Sujet** : changez le nom/sujet du groupe.
+- **Lien d'invitation** : génère le lien `https://chat.whatsapp.com/…` (affiché et cliquable),
+  ou **révoquez** l'ancien lien pour en créer un nouveau.
+- **Quitter** : fait quitter le groupe au compte lié (action irréversible, confirmation demandée).
+- **Icône** : le bouton « Icône » (à côté de Rechercher/Créer) applique l'icône du plugin comme
+  photo du groupe.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

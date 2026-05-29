@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -68,6 +68,18 @@ try {
       if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
       $tag = trim(init('tag', ''));
       ajax::success($eqLogic->setGroupIcon($tag !== '' ? $tag : null));
+      break;
+
+    // ── Gestion du groupe (admin) ───────────────────────────────────────
+    case 'groupAction':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      $op    = trim(init('op', ''));
+      $value = trim(init('value', ''));
+      $tag   = trim(init('tag', ''));
+      ajax::success($eqLogic->groupAction($op, $value !== '' ? $value : null, $tag !== '' ? $tag : null));
       break;
 
     // ── Statut de connexion WhatsApp ────────────────────────────────────

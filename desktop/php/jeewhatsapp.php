@@ -270,6 +270,35 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Gestion du groupe (v0.5 #22) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Gestion du groupe}}</label>
+								<div class="col-sm-7">
+									<div class="input-group" style="margin-bottom:6px;">
+										<input type="text" class="form-control" id="grp_participant" placeholder="{{Numéro participant (ex : 33612345678)}}">
+										<span class="input-group-btn">
+											<button class="btn btn-default grp-action" data-op="add" type="button" title="{{Ajouter au groupe}}"><i class="fas fa-user-plus"></i></button>
+											<button class="btn btn-default grp-action" data-op="remove" type="button" title="{{Retirer du groupe}}"><i class="fas fa-user-minus"></i></button>
+											<button class="btn btn-default grp-action" data-op="promote" type="button" title="{{Promouvoir admin}}"><i class="fas fa-user-shield"></i></button>
+											<button class="btn btn-default grp-action" data-op="demote" type="button" title="{{Rétrograder}}"><i class="fas fa-user"></i></button>
+										</span>
+									</div>
+									<div class="input-group" style="margin-bottom:6px;">
+										<input type="text" class="form-control" id="grp_subject" placeholder="{{Nouveau sujet / nom du groupe}}">
+										<span class="input-group-btn">
+											<button class="btn btn-default" id="grp_set_subject" type="button" title="{{Changer le sujet}}"><i class="fas fa-edit"></i> {{Sujet}}</button>
+										</span>
+									</div>
+									<button class="btn btn-default grp-simple" data-op="inviteLink" type="button"><i class="fas fa-link"></i> {{Lien d'invitation}}</button>
+									<button class="btn btn-default grp-simple" data-op="revokeInvite" type="button"><i class="fas fa-unlink"></i> {{Révoquer le lien}}</button>
+									<button class="btn btn-danger grp-simple" data-op="leave" type="button" title="{{Quitter le groupe}}"><i class="fas fa-sign-out-alt"></i> {{Quitter}}</button>
+									<span class="help-block">
+										<small>{{Opérations d'administration sur le groupe canal. Le compte WhatsApp lié doit être <strong>administrateur</strong> du groupe. Le changement d'icône se fait via le bouton « Icône » ci-dessus.}}</small>
+									</span>
+									<span id="grp_result" class="help-block" style="display:none;"></span>
+								</div>
+							</div>
+
 							<!-- Interactions Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
@@ -778,6 +807,61 @@ $('#btn_set_group_icon').on('click', function () {
       $result.text('{{Erreur de communication avec le daemon}}').css('color', 'red').show();
     }
   });
+});
+
+// ── Gestion du groupe (v0.5 #22) ─────────────────────────────────────────────
+function doGroupAction(op, value, $btn) {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  var $result = $('#grp_result');
+  if (!eqLogic_id) {
+    $result.text('{{Sauvegardez l\'équipement d\'abord}}').css('color', 'red').show();
+    return;
+  }
+  var prev = $btn ? $btn.html() : null;
+  if ($btn) { $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>'); }
+  $result.hide();
+  $.ajax({
+    type:     'POST',
+    url:      'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data:     { action: 'groupAction', eqLogic_id: eqLogic_id, op: op, value: value || '' },
+    dataType: 'json',
+    success: function (data) {
+      if ($btn && prev !== null) { $btn.prop('disabled', false).html(prev); }
+      if (data.state === 'ok') {
+        var r = data.result || {};
+        if (r.link) {
+          $result.empty()
+            .append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+            .append(' ')
+            .append($('<a>').attr('href', r.link).attr('target', '_blank').text(r.link))
+            .css('color', '#25D366').show();
+        } else {
+          $result.empty()
+            .append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+            .append(' {{Opération }}' + op + ' {{effectuée}}')
+            .css('color', '#25D366').show();
+        }
+      } else {
+        $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();
+      }
+    },
+    error: function () {
+      if ($btn && prev !== null) { $btn.prop('disabled', false).html(prev); }
+      $result.text('{{Erreur de communication avec le daemon}}').css('color', 'red').show();
+    }
+  });
+}
+
+$('.grp-action').on('click', function () {
+  doGroupAction($(this).data('op'), $('#grp_participant').val().trim(), $(this));
+});
+$('#grp_set_subject').on('click', function () {
+  doGroupAction('subject', $('#grp_subject').val().trim(), $(this));
+});
+$('.grp-simple').on('click', function () {
+  var op = $(this).data('op');
+  if (op === 'leave' && !confirm('{{Quitter ce groupe WhatsApp ? Cette action est irréversible.}}')) { return; }
+  doGroupAction(op, '', $(this));
 });
 
 // ── Envoi de test ───────────────────────────────────────────────────────────

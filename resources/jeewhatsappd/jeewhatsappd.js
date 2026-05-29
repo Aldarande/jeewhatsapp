@@ -834,7 +834,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
                               latitude, longitude, location_name,
                               contact_phone, contact_name, presence, ephemeral,
                               poll_question, poll_options, poll_selectable, group_tag,
-                              chat_op, chat_value }) {
+                              chat_op, chat_value, group_op }) {
   const id = String(instance_id);
 
   // Messages éphémères (v0.3 #15) — si une durée est fournie (en secondes),
@@ -1115,6 +1115,65 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
       recordSent(id, fwd);
       return { forwarded: true, to: jid };
+    }
+
+    // ── Gestion du groupe (v0.5 #22) ───────────────────────────────────────
+    // group_op : add|remove|promote|demote|subject|description|inviteLink|
+    //            revokeInvite|leave. phone = participant (ops participant),
+    //            message = texte (subject/description). Le compte doit être admin.
+    case 'groupAction': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const jid = resolveJid(id, '', group_tag);
+      if (!String(jid).endsWith('@g.us')) {
+        throw new Error('La cible n\'est pas un groupe');
+      }
+      const op = String(group_op || '').trim();
+      switch (op) {
+        case 'add':
+        case 'remove':
+        case 'promote':
+        case 'demote': {
+          const digits = String(phone || '').replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
+          if (!digits) { throw new Error('Numéro du participant requis'); }
+          const pjid = digits + '@s.whatsapp.net';
+          logMsg('info', '[' + id + '] 👥 groupAction ' + op + ' ' + pjid + ' → ' + jid);
+          const res = await sock.groupParticipantsUpdate(jid, [pjid], op);
+          // res = [{ status: '200'|..., jid }]
+          const st = Array.isArray(res) && res[0] ? res[0].status : '?';
+          if (st && String(st) !== '200') {
+            throw new Error('WhatsApp a refusé l\'opération (code ' + st + ') — êtes-vous admin ? le numéro est-il sur WhatsApp ?');
+          }
+          return { ok: true, op, participant: digits, status: st };
+        }
+        case 'subject': {
+          const subj = String(message || '').trim();
+          if (subj === '') { throw new Error('Sujet vide'); }
+          logMsg('info', '[' + id + '] 👥 Sujet → ' + subj);
+          await sock.groupUpdateSubject(jid, subj);
+          return { ok: true, op, subject: subj };
+        }
+        case 'description': {
+          logMsg('info', '[' + id + '] 👥 Description mise à jour');
+          await sock.groupUpdateDescription(jid, String(message || ''));
+          return { ok: true, op };
+        }
+        case 'inviteLink': {
+          const code = await sock.groupInviteCode(jid);
+          return { ok: true, op, link: 'https://chat.whatsapp.com/' + code };
+        }
+        case 'revokeInvite': {
+          const code = await sock.groupRevokeInvite(jid);
+          return { ok: true, op, link: 'https://chat.whatsapp.com/' + code };
+        }
+        case 'leave': {
+          logMsg('info', '[' + id + '] 👥 Quitte le groupe ' + jid);
+          await sock.groupLeave(jid);
+          return { ok: true, op };
+        }
+        default:
+          throw new Error('Opération groupe inconnue : ' + op);
+      }
     }
 
     // ── Publie un statut WhatsApp (story éphémère 24h) (v0.5 #25) ──────────

@@ -1166,6 +1166,38 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Gestion du groupe canal (v0.5 #22) — opérations d'administration
+  // $_op : add|remove|promote|demote|subject|description|inviteLink|revokeInvite|leave
+  // $_value : numéro (ops participant) ou texte (subject/description)
+  // $_tag : groupe additionnel optionnel (null = groupe canal)
+  // Le compte WhatsApp lié doit être administrateur du groupe.
+  // -------------------------------------------------------------------------
+
+  public function groupAction($_op, $_value = null, $_tag = null) {
+    $op = trim((string) $_op);
+    if ($op === '') {
+      throw new Exception(__('Opération de groupe manquante', __FILE__));
+    }
+    $params = [
+      'instance_id' => $this->getId(),
+      'group_op'    => $op,
+    ];
+    if (in_array($op, ['add', 'remove', 'promote', 'demote'], true)) {
+      $phone = self::normalizePhone((string) $_value);
+      if ($phone === '') {
+        throw new Exception(__('Numéro du participant requis', __FILE__));
+      }
+      $params['phone'] = $phone;
+    } elseif (in_array($op, ['subject', 'description'], true)) {
+      $params['message'] = (string) $_value;
+    }
+    if ($_tag !== null && trim((string) $_tag) !== '') {
+      $params['group_tag'] = trim((string) $_tag);
+    }
+    return $this->sendToDaemon('groupAction', $params);
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 

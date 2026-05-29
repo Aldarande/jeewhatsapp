@@ -9,6 +9,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Gestion du groupe** (v0.5 #22) — section « Gestion du groupe » dans la config équipement :
+  ajouter / retirer / promouvoir admin / rétrograder un participant (par numéro), changer le
+  **sujet** et la **description**, générer/**révoquer le lien d'invitation**, **quitter** le
+  groupe. Daemon : action `groupAction` (`sock.groupParticipantsUpdate` / `groupUpdateSubject` /
+  `groupUpdateDescription` / `groupInviteCode` / `groupRevokeInvite` / `groupLeave`). Méthode PHP
+  `groupAction()` + endpoint AJAX. Le compte WhatsApp lié doit être administrateur. (Le changement
+  d'icône — `setGroupIcon` — complète cet ensemble.)
 - **Statuts WhatsApp** (v0.5 #25) — cmd action **`post_status`** (« Publier un statut ») qui
   publie un statut éphémère 24h (story-like) : *Message* = texte/légende, *Titre* = chemin
   d'une image optionnelle. Daemon : action `postStatus` → `sock.sendMessage('status@broadcast', …)`.
