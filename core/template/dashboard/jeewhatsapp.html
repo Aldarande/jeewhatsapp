@@ -25,6 +25,9 @@
 
   <!-- ZONE D'ENVOI RAPIDE -->
   <div class="jwa-input">
+    <button class="jwa-mic" id="jwa-mic-#eqLogic_id#" title="Mode vocal : envoyer le texte en note vocale (TTS)">
+      <i class="fas fa-microphone"></i>
+    </button>
     <input type="text" id="jwa-msg-#eqLogic_id#" placeholder="Écrire un message…" maxlength="1000" autocomplete="off">
     <button class="jwa-send" id="jwa-send-#eqLogic_id#" title="Envoyer dans le groupe">
       <i class="fas fa-paper-plane"></i>
@@ -80,24 +83,43 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // ── Envoi rapide ────────────────────────────────────────────────────
+    // ── Mode vocal (TTS) : bascule micro ────────────────────────────────
+    var voiceMode = false;
+    var micBtn = document.getElementById('jwa-mic-' + EQ);
     var input = document.getElementById('jwa-msg-' + EQ);
     var sendBtn = document.getElementById('jwa-send-' + EQ);
+    var hasVoice = ('#cmd_voice_id#' !== '0');
+    if (micBtn) {
+      if (!hasVoice) {
+        micBtn.style.display = 'none'; // TTS indisponible (pas de cmd send_voice)
+      } else {
+        micBtn.addEventListener('click', function () {
+          voiceMode = !voiceMode;
+          micBtn.classList.toggle('jwa-active', voiceMode);
+          if (input) { input.placeholder = voiceMode ? 'Texte à dire (note vocale)…' : 'Écrire un message…'; }
+        });
+      }
+    }
+
+    // ── Envoi rapide (texte ou note vocale selon le mode) ────────────────
     function doSend() {
-      if ('#cmd_send_id#' === '0') { return; }
+      var useVoice = voiceMode && hasVoice;
+      var cmdId = useVoice ? '#cmd_voice_id#' : '#cmd_send_id#';
+      if (cmdId === '0') { return; }
       var txt = (input.value || '').trim();
       if (txt === '') { return; }
       input.value = '';
       input.disabled = true;
-      // bulle optimiste
+      // bulle optimiste (icône micro en mode vocal)
       if (chat) {
         if (chat.querySelector('.jwa-empty')) { chat.innerHTML = ''; }
-        chat.insertAdjacentHTML('beforeend', bubble('out', '', txt, nowHM(), true));
+        var shown = useVoice ? '🎤 ' + txt : txt;
+        chat.insertAdjacentHTML('beforeend', bubble('out', '', shown, nowHM(), true));
         chat.scrollTop = chat.scrollHeight;
         var last = chat.lastElementChild;
       }
       jeedom.cmd.execute({
-        id: '#cmd_send_id#',
+        id: cmdId,
         options: { message: txt, title: '' },
         success: function () {
           input.disabled = false; input.focus();

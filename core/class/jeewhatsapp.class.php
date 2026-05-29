@@ -1898,6 +1898,7 @@ class jeewhatsapp extends eqLogic {
     // IDs des commandes action utilisées par le widget
     $actionIds = [
       'send_message' => 'cmd_send_id',
+      'send_voice'   => 'cmd_voice_id',
       'mute_chat'    => 'cmd_mute_id',
       'mark_read'    => 'cmd_markread_id',
     ];
