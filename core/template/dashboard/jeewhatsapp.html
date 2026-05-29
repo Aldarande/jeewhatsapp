@@ -76,7 +76,7 @@
 
     if (chat) {
       if (hasMsg) {
-        chat.innerHTML = bubble('in', sender, lastMsg, lastTime, false);
+        chat.innerHTML = bubble('in', sender, prettyKind(lastMsg), lastTime, false);
       } else {
         chat.innerHTML = '<div class="jwa-empty"><i class="fab fa-whatsapp"></i><br>Aucun message reçu</div>';
       }
@@ -88,7 +88,7 @@
     // bulle entrante sans recharger la page. Les médias non transcrits sont
     // affichés joliment (« 🎤 Note vocale », « 🖼 Image »…).
     var curSender = sender, curTime = lastTime;
-    var lastShownKey = hasMsg ? (lastMsg + '|' + lastTime) : '';
+    var lastShownKey = hasMsg ? (prettyKind(lastMsg) + '|' + lastTime) : '';
     function prettyKind(v) {
       switch (v) {
         case '[audio]':    return '🎤 Note vocale';
