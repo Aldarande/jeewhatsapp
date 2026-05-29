@@ -21,6 +21,11 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   envoi en note vocale ; sinon il bascule en **mode TTS** (texte tapé → voix synthétisée
   `send_voice`, icône haut-parleur). Envoi texte via `send_message`, sourdine via `mute_chat`.
   Endpoint `uploadVoice` + méthode PHP `sendVoiceRecording()`.
+- **Widget : mise à jour live** — le widget s'enrichit désormais **en temps réel** sans
+  recharger la page : abonnement aux valeurs des cmds info via `jeedom.cmd.addUpdateFunction`
+  (`last_message`, expéditeur, heure). Chaque nouveau message reçu ajoute une bulle entrante ;
+  les médias non transcrits sont affichés joliment (« 🎤 Note vocale », « 🖼️ Image », « 🎬 Vidéo »,
+  « 📎 Document », « 🏷️ Sticker »). Déduplication pour éviter les doublons.
 - **Gestion du groupe** (v0.5 #22) — section « Gestion du groupe » dans la config équipement :
   ajouter / retirer / promouvoir admin / rétrograder un participant (par numéro), changer le
   **sujet** et la **description**, générer/**révoquer le lien d'invitation**, **quitter** le

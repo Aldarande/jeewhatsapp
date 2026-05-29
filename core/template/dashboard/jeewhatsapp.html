@@ -83,6 +83,45 @@
       chat.scrollTop = chat.scrollHeight;
     }
 
+    // ── Mise à jour live (jeedom.cmd.addUpdateFunction) ─────────────────
+    // Quand un nouveau message arrive, last_message change → on ajoute une
+    // bulle entrante sans recharger la page. Les médias non transcrits sont
+    // affichés joliment (« 🎤 Note vocale », « 🖼 Image »…).
+    var curSender = sender, curTime = lastTime;
+    var lastShownKey = hasMsg ? (lastMsg + '|' + lastTime) : '';
+    function prettyKind(v) {
+      switch (v) {
+        case '[audio]':    return '🎤 Note vocale';
+        case '[image]':    return '🖼️ Image';
+        case '[video]':    return '🎬 Vidéo';
+        case '[document]': return '📎 Document';
+        case '[sticker]':  return '🏷️ Sticker';
+        default:           return v;
+      }
+    }
+    function appendIncoming(text) {
+      text = prettyKind(String(text == null ? '' : text));
+      var key = text + '|' + curTime;
+      if (text === '' || key === lastShownKey) { return; }
+      lastShownKey = key;
+      if (chat) {
+        var em = chat.querySelector('.jwa-empty'); if (em) { chat.innerHTML = ''; }
+        chat.insertAdjacentHTML('beforeend', bubble('in', curSender, text, curTime, false));
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+    if (window.jeedom && jeedom.cmd && jeedom.cmd.addUpdateFunction) {
+      var jval = function (p) { return (p.display_value != null ? p.display_value : p.value); };
+      function bindUpd(id, fn) { if (id !== '0') { jeedom.cmd.addUpdateFunction(id, fn); } }
+      bindUpd('#info_profile_id#', function (p) { var v = jval(p); if (v) { curSender = v; } });
+      bindUpd('#info_sender_id#',  function (p) { var v = jval(p); if (v && ('#info_profile_id#' === '0')) { curSender = v; } });
+      bindUpd('#info_time_id#',    function (p) {
+        var t = Date.parse(String(jval(p)).replace(' ', 'T'));
+        if (!isNaN(t)) { var d = new Date(t); curTime = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+      });
+      bindUpd('#info_msg_id#', function (p) { appendIncoming(jval(p)); });
+    }
+
     var input   = document.getElementById('jwa-msg-' + EQ);
     var sendBtn = document.getElementById('jwa-send-' + EQ);
     var micBtn  = document.getElementById('jwa-mic-' + EQ);

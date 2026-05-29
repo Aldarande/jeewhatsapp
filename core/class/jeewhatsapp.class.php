@@ -1945,6 +1945,19 @@ class jeewhatsapp extends eqLogic {
       $replace['#' . $key . '#'] = is_object($c) ? $c->getId() : 0;
     }
 
+    // IDs des commandes info (pour la mise à jour live via jeedom.cmd.addUpdateFunction)
+    $infoIds = [
+      'last_message'        => 'info_msg_id',
+      'last_sender_profile' => 'info_profile_id',
+      'last_sender_name'    => 'info_sender_id',
+      'last_received_at'    => 'info_time_id',
+      'last_voice_text'     => 'info_voice_id',
+    ];
+    foreach ($infoIds as $logicalId => $key) {
+      $c = $this->getCmd('info', $logicalId);
+      $replace['#' . $key . '#'] = is_object($c) ? $c->getId() : 0;
+    }
+
     // Icône du plugin comme avatar
     $replace['#avatar_url#'] = 'plugins/jeewhatsapp/plugin_info/jeewhatsapp_icon.png';
 
