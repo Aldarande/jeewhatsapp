@@ -171,6 +171,14 @@ class jeewhatsapp extends eqLogic {
       $this->updateFromPollVote($_data);
       return;
     }
+    if ($eventType === 'read_receipt') {
+      $this->checkAndUpdateCmd('last_read_at', $_data['read_at'] ?? date('Y-m-d H:i:s'));
+      log::add('jeewhatsapp', 'info',
+        'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__
+        . ' — Accusé de lecture (' . ($_data['read_status'] ?? 'read') . ') msg '
+        . ($_data['message_id'] ?? '?'));
+      return;
+    }
 
     // v0.4 #21 — Reconnaissance utilisateur : résout un profil Jeedom à partir du
     // numéro/JID expéditeur via le mapping configuré (user_mapping). Fallback sur le
@@ -1100,6 +1108,16 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Marque le dernier message reçu comme lu (coches bleues) (v0.5 #23)
+  // -------------------------------------------------------------------------
+
+  public function markRead() {
+    return $this->sendToDaemon('markRead', [
+      'instance_id' => $this->getId(),
+    ]);
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 
@@ -1372,6 +1390,7 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_sender_profile', 'name' => 'Expéditeur — profil',   'subType' => 'string'],
       ['logicalId' => 'last_ocr_text',    'name' => 'OCR — texte image',        'subType' => 'string'],
       ['logicalId' => 'last_voice_text',  'name' => 'STT — note vocale',        'subType' => 'string'],
+      ['logicalId' => 'last_read_at',     'name' => 'Lu le',                    'subType' => 'string'],
     ];
 
     $order = 0;
@@ -1591,6 +1610,21 @@ class jeewhatsapp extends eqLogic {
       $voice->save();
     }
 
+    // Commande action : Marquer le dernier message reçu comme lu (v0.5 #23)
+    // Aucun paramètre — coches bleues sur le dernier message reçu dans le groupe canal
+    $markRead = $this->getCmd('action', 'mark_read');
+    if (!is_object($markRead)) {
+      $markRead = new jeewhatsappCmd();
+      $markRead->setEqLogic_id($this->getId());
+      $markRead->setLogicalId('mark_read');
+      $markRead->setType('action');
+      $markRead->setSubType('other');
+      $markRead->setName('Marquer comme lu');
+      $markRead->setIsVisible(1);
+      $markRead->setOrder($order++);
+      $markRead->save();
+    }
+
     // Commande action : Éditer le dernier message envoyé (v0.3 #11)
     // Convention : message = nouveau texte, title inutilisé
     $edit = $this->getCmd('action', 'edit_last');
@@ -1788,6 +1822,11 @@ class jeewhatsappCmd extends cmd {
       case 'revoke_last':
         // aucun paramètre — supprime le dernier message envoyé
         $eqLogic->revokeLast();
+        break;
+
+      case 'mark_read':
+        // aucun paramètre — marque le dernier message reçu comme lu (coches bleues)
+        $eqLogic->markRead();
         break;
 
       case 'forward_to':

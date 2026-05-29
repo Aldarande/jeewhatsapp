@@ -9,6 +9,11 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Accusés de lecture** (v0.5 #23) — cmd action **`mark_read`** (« Marquer comme lu ») qui
+  marque le dernier message reçu comme lu (coches bleues) via `sock.readMessages()`. En sens
+  inverse, le daemon écoute `messages.update` : quand un destinataire lit/écoute un message
+  **envoyé** par Jeedom (statut READ/PLAYED), un callback `read_receipt` met à jour la cmd
+  info **`last_read_at`** (« Lu le »).
 - **Icône du groupe WhatsApp** — bouton « Icône » (à côté de Rechercher/Créer dans la config
   équipement) qui définit **l'icône du plugin** (`plugin_info/jeewhatsapp_icon.png`) comme
   photo du groupe canal. Action daemon `setGroupIcon` (conversion JPEG carré 640×640 via

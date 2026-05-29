@@ -538,6 +538,29 @@ async function connectInstance(instance) {
     }
   });
 
+  // ── Accusés de lecture (v0.5 #23) ────────────────────────────────────────
+  // Baileys émet 'messages.update' avec un statut (WAMessageStatus) quand l'état
+  // d'un message évolue. Pour un message ENVOYÉ par Jeedom (key.fromMe), un statut
+  // READ (4) ou PLAYED (5) signifie que le destinataire l'a lu/écouté → on remonte
+  // un accusé de lecture à Jeedom (cmd info last_read_at).
+  sock.ev.on('messages.update', async (updates) => {
+    for (const u of (updates || [])) {
+      const st = u.update?.status;
+      if (!u.key?.fromMe) { continue; }
+      // 4 = READ, 5 = PLAYED (note vocale écoutée)
+      if (st === 4 || st === 5) {
+        const ts = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        debug('[' + id + '] Accusé de lecture (status=' + st + ') msg ' + (u.key.id || '?'));
+        await sendCallback(id, {
+          event_type:  'read_receipt',
+          read_status: st === 5 ? 'played' : 'read',
+          message_id:  u.key.id || '',
+          read_at:     ts,
+        });
+      }
+    }
+  });
+
 }
 
 // ---------------------------------------------------------------------------
@@ -1091,6 +1114,18 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
       recordSent(id, fwd);
       return { forwarded: true, to: jid };
+    }
+
+    // ── Marque le dernier message reçu comme lu (coches bleues) (v0.5 #23) ─
+    case 'markRead': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const target = lastIncomingMsg[id];
+      if (!target) { throw new Error('Aucun message reçu à marquer comme lu'); }
+      logMsg('info', '[' + id + '] ✓✓ Marque comme lu : ' + (target.key.id || '?'));
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('Marquage lu — délai dépassé')), 10000));
+      await Promise.race([sock.readMessages([target.key]), t]);
+      return { read: true, target: target.key.id };
     }
 
     // ── Définit l'icône (photo de profil) d'un groupe (v0.4) ───────────────

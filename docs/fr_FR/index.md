@@ -443,6 +443,19 @@ du salon* » et l'interaction Jeedom correspondante s'exécute.
 
 ---
 
+### Accusés de lecture (v0.5)
+
+Deux mécanismes complémentaires :
+
+- **Marquer comme lu** : la commande action **« Marquer comme lu »** (`mark_read`) place les
+  coches bleues sur le dernier message reçu dans le groupe canal. Pratique pour signaler à vos
+  correspondants que Jeedom (ou vous) avez bien pris connaissance du message.
+- **« Lu le »** : la commande info **`last_read_at`** est mise à jour automatiquement quand un
+  destinataire **lit ou écoute** un message *envoyé* par Jeedom. Vous pouvez ainsi savoir, dans
+  un scénario, si votre alerte a bien été consultée.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe
