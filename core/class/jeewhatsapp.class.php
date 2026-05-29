@@ -641,6 +641,33 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Envoi d'un sticker (v0.3 #10)
+  // $_path : chemin absolu d'un .webp (envoyé tel quel) ou image jpg/png/gif
+  //          (convertie en WebP 512×512 par le daemon via sharp)
+  // -------------------------------------------------------------------------
+
+  public function sendSticker($_path, $_phone = null) {
+    if (!is_string($_path) || trim($_path) === '') {
+      throw new Exception(__('Chemin du fichier vide', __FILE__));
+    }
+    $path = trim($_path);
+    if (!file_exists($path)) {
+      throw new Exception(__('Fichier introuvable', __FILE__) . ' : ' . $path);
+    }
+    if (!is_readable($path)) {
+      throw new Exception(__('Fichier non lisible', __FILE__) . ' : ' . $path);
+    }
+    $params = [
+      'instance_id' => $this->getId(),
+      'media_path'  => $path,
+    ];
+    if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    $result = $this->sendToDaemon('sendSticker', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 
@@ -1023,6 +1050,29 @@ class jeewhatsapp extends eqLogic {
       $react->save();
     }
 
+    // Commande action : Envoyer un sticker (v0.3 #10)
+    // Convention : title = chemin absolu (.webp ou image convertie), message inutilisé
+    $sticker = $this->getCmd('action', 'send_sticker');
+    if (!is_object($sticker)) {
+      $sticker = new jeewhatsappCmd();
+      $sticker->setEqLogic_id($this->getId());
+      $sticker->setLogicalId('send_sticker');
+      $sticker->setType('action');
+      $sticker->setSubType('message');
+      $sticker->setName('Envoyer un sticker');
+      $sticker->setIsVisible(1);
+      $sticker->setOrder($order++);
+      $sticker->save();
+    }
+    if ($sticker->getDisplay('title_placeholder') !== 'Chemin absolu (.webp, ou .png/.jpg converti en WebP)') {
+      $sticker->setDisplay('title_placeholder', 'Chemin absolu (.webp, ou .png/.jpg converti en WebP)');
+      $sticker->save();
+    }
+    if ($sticker->getDisplay('message_placeholder') !== 'Inutilisé (ignoré)') {
+      $sticker->setDisplay('message_placeholder', 'Inutilisé (ignoré)');
+      $sticker->save();
+    }
+
     // Commande action : Éditer le dernier message envoyé (v0.3 #11)
     // Convention : message = nouveau texte, title inutilisé
     $edit = $this->getCmd('action', 'edit_last');
@@ -1146,6 +1196,15 @@ class jeewhatsappCmd extends cmd {
         // message = emoji ; title inutilisé
         $emoji = $_options['message'] ?? '';
         $eqLogic->reactToLast($emoji);
+        break;
+
+      case 'send_sticker':
+        // title = chemin absolu du fichier (.webp ou image à convertir)
+        $spath = (isset($_options['title'])) ? trim($_options['title']) : '';
+        if ($spath === '') {
+          throw new Exception(__('Chemin du fichier (champ Titre) obligatoire', __FILE__));
+        }
+        $eqLogic->sendSticker($spath);
         break;
 
       case 'edit_last':

@@ -42,7 +42,7 @@ fi
 echo 30 > "$PROGRESS_FILE"
 
 # Installation des dépendances npm
-log "Installation des dépendances npm (@whiskeysockets/baileys, qrcode, pino)..."
+log "Installation des dépendances npm (@whiskeysockets/baileys, qrcode, pino, sharp)..."
 log "Cela peut prendre 2-5 minutes selon la connexion..."
 cd "$DAEMON_DIR" && npm install 2>&1
 if [ $? -ne 0 ]; then

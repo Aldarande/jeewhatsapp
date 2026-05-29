@@ -9,6 +9,11 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **`send_sticker`** — cmd action (subType=message) pour envoyer un sticker. `title` =
+  chemin absolu. Les `.webp` sont envoyés tels quels ; les images `.png/.jpg/.gif/.bmp`
+  sont converties en WebP 512×512 (fond transparent) via **`sharp`** (nouvelle dépendance
+  npm, import dynamique avec message d'erreur clair si absente). Daemon :
+  `sock.sendMessage(jid, { sticker: buffer })`. (v0.3 ROADMAP #10)
 - **`edit_last`** — cmd action (subType=message) pour éditer le dernier message
   envoyé par Jeedom. `message` = nouveau texte. Daemon mémorise `lastSentMsg[id]`
   (clé + jid) après chaque envoi (`recordSent()`), édition via

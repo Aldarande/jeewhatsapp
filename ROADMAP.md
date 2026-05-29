@@ -57,7 +57,7 @@ Objectif : sortir du paradigme « bot one-way » et offrir des interactions rich
 | # | Feature | Effort | Notes |
 |---|---|---|---|
 | 9 | **Polls / Sondages** ⭐ | 🔴 | Cmd action `send_poll` (title=question, message=options séparées par `\|`). Réception des votes via callback → cmds info `poll_results`. Cf [Baileys polls](https://baileys.wiki). |
-| 10 | **Stickers personnalisés** | 🟡 | Cmd action `send_sticker` avec chemin .webp. Auto-conversion JPG/PNG → WebP via `sharp` (à ajouter aux deps). |
+| 10 | ✅ **Stickers personnalisés** | 🟡 | Cmd action `send_sticker` avec chemin .webp. Auto-conversion JPG/PNG → WebP via `sharp` (ajouté aux deps). |
 | 11 | ✅ **Édition de message** | 🟡 | Cmd action `edit_last` — remplace le dernier message envoyé (Baileys `sendMessage(..., {edit: msgKey})`). |
 | 12 | ✅ **Suppression (revoke)** | 🟡 | Cmd action `revoke_last` — équivalent "Supprimer pour tous". |
 | 13 | ✅ **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |

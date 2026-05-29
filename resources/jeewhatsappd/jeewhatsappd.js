@@ -808,6 +808,44 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       return { sent: true, kind, file: path.basename(media_path), bytes: stat.size };
     }
 
+    // ── Envoi d'un sticker (.webp, ou image convertie via sharp) (v0.3 #10) ─
+    case 'sendSticker': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      if (!media_path || typeof media_path !== 'string') {
+        throw new Error('Paramètre media_path obligatoire (chemin absolu .webp/.png/.jpg)');
+      }
+      if (!path.isAbsolute(media_path)) { throw new Error('media_path doit être un chemin absolu : ' + media_path); }
+      if (!fs.existsSync(media_path)) { throw new Error('Fichier introuvable : ' + media_path); }
+      const sStat = fs.statSync(media_path);
+      if (!sStat.isFile() || sStat.size === 0) { throw new Error('Fichier invalide/vide : ' + media_path); }
+
+      const sExt = path.extname(media_path).slice(1).toLowerCase();
+      let stickerBuf;
+      if (sExt === 'webp') {
+        stickerBuf = fs.readFileSync(media_path);
+      } else if (['jpg', 'jpeg', 'png', 'gif', 'bmp'].includes(sExt)) {
+        // Conversion en WebP 512×512 (format sticker WhatsApp) via sharp
+        let sharp;
+        try { sharp = (await import('sharp')).default; }
+        catch (e) { throw new Error('Conversion sticker impossible : dépendance "sharp" absente. Relancez l\'installation des dépendances du plugin.'); }
+        stickerBuf = await sharp(media_path)
+          .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .webp()
+          .toBuffer();
+      } else {
+        throw new Error('Type non supporté pour un sticker (.' + sExt + ') — attendu .webp, .png, .jpg, .gif, .bmp');
+      }
+
+      const jid = resolveJid(id, phone);
+      logMsg('info', '[' + id + '] → ' + jid + ' : 🏷 sticker ' + path.basename(media_path)
+        + ' (' + Math.round(stickerBuf.length / 1024) + 'KB)');
+      const tSt = new Promise((_, r) => setTimeout(() => r(new Error('Envoi sticker — délai dépassé')), 30000));
+      const sentSticker = await Promise.race([sock.sendMessage(jid, { sticker: stickerBuf }), tSt]);
+      recordSent(id, sentSticker);
+      return { sent: true, kind: 'sticker', file: path.basename(media_path) };
+    }
+
     // ── Réaction emoji sur le dernier message reçu (v0.2) ──────────────────
     case 'reactLast': {
       const sock = sockets[id];
