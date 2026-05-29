@@ -833,7 +833,8 @@ function resolveJid(id, phone, tag) {
 async function handleAction({ action, instance_id, phone, message, mention, media_path,
                               latitude, longitude, location_name,
                               contact_phone, contact_name, presence, ephemeral,
-                              poll_question, poll_options, poll_selectable, group_tag }) {
+                              poll_question, poll_options, poll_selectable, group_tag,
+                              chat_op, chat_value }) {
   const id = String(instance_id);
 
   // Messages éphémères (v0.3 #15) — si une durée est fournie (en secondes),
@@ -1114,6 +1115,50 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
       recordSent(id, fwd);
       return { forwarded: true, to: jid };
+    }
+
+    // ── Archive / épingle / met en sourdine une conversation (v0.5 #24) ────
+    // chat_op : archive|unarchive|pin|unpin|mute|unmute
+    // chat_value : pour mute, durée en heures (0/absent = 8h par défaut)
+    case 'chatModify': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const jid = resolveJid(id, phone, group_tag);
+      const op  = String(chat_op || '').trim().toLowerCase();
+      let mod;
+      switch (op) {
+        case 'archive':
+        case 'unarchive': {
+          // L'archivage nécessite la référence du dernier message de la conversation
+          const last = lastIncomingMsg[id];
+          const lastMessages = last
+            ? [{ key: last.key, messageTimestamp: last.messageTimestamp }]
+            : [];
+          mod = { archive: op === 'archive', lastMessages };
+          break;
+        }
+        case 'pin':
+        case 'unpin':
+          mod = { pin: op === 'pin' };
+          break;
+        case 'mute':
+        case 'unmute': {
+          if (op === 'unmute') {
+            mod = { mute: null };
+          } else {
+            const hours = parseInt(chat_value, 10);
+            const ms = (!Number.isNaN(hours) && hours > 0) ? hours * 3600 * 1000 : 8 * 3600 * 1000;
+            mod = { mute: ms };
+          }
+          break;
+        }
+        default:
+          throw new Error('Opération inconnue : ' + op + ' (archive|unarchive|pin|unpin|mute|unmute)');
+      }
+      logMsg('info', '[' + id + '] ⚙ chatModify ' + op + ' → ' + jid);
+      const t = new Promise((_, r) => setTimeout(() => r(new Error('chatModify — délai dépassé')), 10000));
+      await Promise.race([sock.chatModify(mod, jid), t]);
+      return { modified: true, op, jid };
     }
 
     // ── Marque le dernier message reçu comme lu (coches bleues) (v0.5 #23) ─

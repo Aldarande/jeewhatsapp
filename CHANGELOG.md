@@ -9,6 +9,11 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Archive / Épingle / Sourdine** (v0.5 #24) — trois cmds action sur la conversation du
+  groupe canal : **`archive_chat`** (archiver/désarchiver), **`pin_chat`** (épingler/désépingler),
+  **`mute_chat`** (sourdine, durée en heures ou réactivation). Daemon : action unique
+  `chatModify` (op archive|unarchive|pin|unpin|mute|unmute) via `sock.chatModify()`. Méthode PHP
+  `chatModify()`. Le champ *Titre* pilote le sens (vide/valeur vs `0`).
 - **Accusés de lecture** (v0.5 #23) — cmd action **`mark_read`** (« Marquer comme lu ») qui
   marque le dernier message reçu comme lu (coches bleues) via `sock.readMessages()`. En sens
   inverse, le daemon écoute `messages.update` : quand un destinataire lit/écoute un message

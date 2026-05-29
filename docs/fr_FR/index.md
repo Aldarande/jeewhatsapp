@@ -456,6 +456,19 @@ Deux mécanismes complémentaires :
 
 ---
 
+### Archiver / Épingler / Mettre en sourdine (v0.5)
+
+Trois commandes action pilotent l'état de la conversation du groupe canal :
+
+- **Archiver la conversation** (`archive_chat`) — *Titre* vide = archiver, `0` = désarchiver.
+- **Épingler la conversation** (`pin_chat`) — *Titre* vide = épingler, `0` = désépingler.
+- **Mettre en sourdine** (`mute_chat`) — *Titre* = durée en heures (vide = 8 h), `0` = réactiver.
+
+Utile par exemple pour mettre automatiquement le groupe en sourdine la nuit via un scénario,
+puis le réactiver le matin.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

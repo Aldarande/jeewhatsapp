@@ -1118,6 +1118,27 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Archive / épingle / met en sourdine la conversation du groupe canal (v0.5 #24)
+  // $_op : archive|unarchive|pin|unpin|mute|unmute
+  // $_value : pour mute, durée en heures (null = 8h par défaut)
+  // $_tag : groupe additionnel optionnel (null = groupe canal)
+  // -------------------------------------------------------------------------
+
+  public function chatModify($_op, $_value = null, $_tag = null) {
+    $params = [
+      'instance_id' => $this->getId(),
+      'chat_op'     => $_op,
+    ];
+    if ($_value !== null && trim((string) $_value) !== '') {
+      $params['chat_value'] = $_value;
+    }
+    if ($_tag !== null && trim((string) $_tag) !== '') {
+      $params['group_tag'] = trim((string) $_tag);
+    }
+    return $this->sendToDaemon('chatModify', $params);
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 
@@ -1625,6 +1646,31 @@ class jeewhatsapp extends eqLogic {
       $markRead->save();
     }
 
+    // Commandes action : Archive / Épingle / Sourdine la conversation (v0.5 #24)
+    $chatActions = [
+      ['logicalId' => 'archive_chat', 'name' => 'Archiver la conversation',  'title' => 'Vide = archiver, 0 = désarchiver'],
+      ['logicalId' => 'pin_chat',     'name' => 'Épingler la conversation',  'title' => 'Vide = épingler, 0 = désépingler'],
+      ['logicalId' => 'mute_chat',    'name' => 'Mettre en sourdine',        'title' => 'Durée en heures (vide = 8h, 0 = réactiver)'],
+    ];
+    foreach ($chatActions as $def) {
+      $c = $this->getCmd('action', $def['logicalId']);
+      if (!is_object($c)) {
+        $c = new jeewhatsappCmd();
+        $c->setEqLogic_id($this->getId());
+        $c->setLogicalId($def['logicalId']);
+        $c->setType('action');
+        $c->setSubType('message');
+        $c->setName($def['name']);
+        $c->setIsVisible(1);
+        $c->setOrder($order++);
+        $c->save();
+      }
+      if ($c->getDisplay('title_placeholder') !== $def['title']) {
+        $c->setDisplay('title_placeholder', $def['title']);
+        $c->save();
+      }
+    }
+
     // Commande action : Éditer le dernier message envoyé (v0.3 #11)
     // Convention : message = nouveau texte, title inutilisé
     $edit = $this->getCmd('action', 'edit_last');
@@ -1827,6 +1873,28 @@ class jeewhatsappCmd extends cmd {
       case 'mark_read':
         // aucun paramètre — marque le dernier message reçu comme lu (coches bleues)
         $eqLogic->markRead();
+        break;
+
+      case 'archive_chat':
+        // title : '0' = désarchiver, sinon archiver
+        $off = (isset($_options['title']) && trim($_options['title']) === '0');
+        $eqLogic->chatModify($off ? 'unarchive' : 'archive');
+        break;
+
+      case 'pin_chat':
+        // title : '0' = désépingler, sinon épingler
+        $off = (isset($_options['title']) && trim($_options['title']) === '0');
+        $eqLogic->chatModify($off ? 'unpin' : 'pin');
+        break;
+
+      case 'mute_chat':
+        // title : durée en heures ('0' = réactiver, vide = 8h)
+        $h = isset($_options['title']) ? trim($_options['title']) : '';
+        if ($h === '0') {
+          $eqLogic->chatModify('unmute');
+        } else {
+          $eqLogic->chatModify('mute', $h !== '' ? $h : null);
+        }
         break;
 
       case 'forward_to':
