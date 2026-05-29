@@ -244,10 +244,13 @@ sendVarToJS('eqType', 'jeewhatsapp');
 											<button class="btn btn-default" type="button" id="btn_create_group" title="{{Créer ce groupe sur WhatsApp}}">
 												<i class="fab fa-whatsapp"></i> {{Créer}}
 											</button>
+											<button class="btn btn-default" type="button" id="btn_set_group_icon" title="{{Utiliser l'icône du plugin comme photo du groupe (le compte doit être admin du groupe)}}">
+												<i class="fas fa-image"></i> {{Icône}}
+											</button>
 										</span>
 									</div>
 									<span class="help-block">
-										<small>{{Nom exact du groupe WhatsApp utilisé comme canal de communication}}</small>
+										<small>{{Nom exact du groupe WhatsApp utilisé comme canal de communication. Le bouton « Icône » définit l'icône du plugin comme photo du groupe (nécessite que le compte WhatsApp lié soit administrateur du groupe).}}</small>
 									</span>
 								</div>
 							</div>
@@ -737,6 +740,41 @@ $('#btn_create_group').on('click', function () {
     },
     error: function () {
       $btn.prop('disabled', false).html('<i class="fab fa-whatsapp"></i> {{Créer}}');
+      $result.text('{{Erreur de communication avec le daemon}}').css('color', 'red').show();
+    }
+  });
+});
+
+// ── Définition de l'icône du groupe (icône du plugin) ───────────────────────
+$('#btn_set_group_icon').on('click', function () {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  if (!eqLogic_id) {
+    $('#group_link_result').text('{{Sauvegardez l\'équipement d\'abord}}').css('color', 'red').show();
+    return;
+  }
+  var $btn    = $(this);
+  var $result = $('#group_link_result');
+  $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Icône…}}');
+  $result.hide();
+
+  $.ajax({
+    type:     'POST',
+    url:      'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data:     { action: 'setGroupIcon', eqLogic_id: eqLogic_id },
+    dataType: 'json',
+    success: function (data) {
+      $btn.prop('disabled', false).html('<i class="fas fa-image"></i> {{Icône}}');
+      if (data.state === 'ok') {
+        $result.empty()
+          .append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+          .append(' {{Icône du groupe mise à jour}}')
+          .css('color', '#25D366').show();
+      } else {
+        $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();
+      }
+    },
+    error: function () {
+      $btn.prop('disabled', false).html('<i class="fas fa-image"></i> {{Icône}}');
       $result.text('{{Erreur de communication avec le daemon}}').css('color', 'red').show();
     }
   });

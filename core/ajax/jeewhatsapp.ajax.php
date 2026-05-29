@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -58,6 +58,16 @@ try {
       if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
       $name = trim(init('name', ''));
       ajax::success($eqLogic->createGroup($name !== '' ? $name : null));
+      break;
+
+    // ── Définit l'icône du plugin comme photo du groupe WhatsApp ────────
+    case 'setGroupIcon':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      $tag = trim(init('tag', ''));
+      ajax::success($eqLogic->setGroupIcon($tag !== '' ? $tag : null));
       break;
 
     // ── Statut de connexion WhatsApp ────────────────────────────────────

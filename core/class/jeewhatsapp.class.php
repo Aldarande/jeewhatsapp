@@ -1075,6 +1075,31 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Définit l'icône du plugin comme photo de profil du groupe WhatsApp (v0.4)
+  // $_tag = null → groupe canal par défaut ; sinon groupe additionnel par tag.
+  // Le compte lié doit être administrateur du groupe.
+  // -------------------------------------------------------------------------
+
+  public function setGroupIcon($_tag = null, $_iconPath = null) {
+    $icon = ($_iconPath !== null && trim((string) $_iconPath) !== '')
+      ? trim((string) $_iconPath)
+      : realpath(__DIR__ . '/../../plugin_info/jeewhatsapp_icon.png');
+
+    if ($icon === false || !is_file($icon) || !is_readable($icon)) {
+      throw new Exception(__('Icône du plugin introuvable', __FILE__) . ' : ' . $icon);
+    }
+
+    $params = [
+      'instance_id' => $this->getId(),
+      'media_path'  => $icon,
+    ];
+    if ($_tag !== null && trim((string) $_tag) !== '') {
+      $params['group_tag'] = trim((string) $_tag);
+    }
+    return $this->sendToDaemon('setGroupIcon', $params);
+  }
+
+  // -------------------------------------------------------------------------
   // Édition du dernier message envoyé par Jeedom (v0.3 #11)
   // -------------------------------------------------------------------------
 
