@@ -11,6 +11,7 @@ import makeWASocket, {
   fetchLatestBaileysVersion,
   isJidGroup,
   downloadMediaMessage,
+  getAggregateVotesInPollMessage,
 } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import pino          from 'pino';
@@ -194,6 +195,7 @@ const groupJids       = {};  // id → JID du groupe WhatsApp canal (@g.us)
 const instanceCfg     = {};  // id → { prefix, group_name }
 const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted / forward)
 const lastSentMsg     = {};  // id → clé du dernier msg envoyé (pour edit / revoke)
+const lastPollMsg     = {};  // id → message de création du dernier sondage (pour décrypter les votes)
 
 // Mémorise la clé du dernier message envoyé par Jeedom (v0.3 #11/#12).
 // Baileys renvoie l'objet message complet ; on ne garde que key + jid utiles.
@@ -448,6 +450,48 @@ async function connectInstance(instance) {
       });
     }
   });
+
+  // ── Réception des votes de sondage (v0.3 #9) ───────────────────────────
+  // Les votes arrivent via 'messages.update' avec un champ pollUpdates chiffré.
+  // On agrège avec getAggregateVotesInPollMessage à partir du message de création
+  // mémorisé (lastPollMsg[id]) qui contient le messageSecret nécessaire au déchiffrement.
+  sock.ev.on('messages.update', async (updates) => {
+    for (const { key, update } of updates) {
+      if (!update || !update.pollUpdates) { continue; }
+      const poll = lastPollMsg[id];
+      if (!poll || !poll.message) {
+        debug('[' + id + '] Vote reçu mais aucun sondage mémorisé');
+        continue;
+      }
+      // Ne traiter que les votes du sondage courant
+      if (key && key.id && poll.key && poll.key.id && key.id !== poll.key.id) { continue; }
+      try {
+        const aggregated = getAggregateVotesInPollMessage({
+          message:     poll.message,
+          pollUpdates: update.pollUpdates,
+        });
+        // aggregated = [{ name, voters: [jid, ...] }]
+        const results = (aggregated || []).map(o => ({
+          name:  o.name,
+          votes: Array.isArray(o.voters) ? o.voters.length : 0,
+        }));
+        const total = results.reduce((s, r) => s + r.votes, 0);
+        const question = poll.message?.pollCreationMessage?.name
+                      || poll.message?.pollCreationMessageV3?.name || '';
+        logMsg('info', '[' + id + '] 📊 Vote sondage — ' + total + ' vote(s) : '
+          + results.map(r => r.name + '=' + r.votes).join(', '));
+        await sendCallback(id, {
+          event_type:  'poll_vote',
+          poll_name:   question,
+          poll_results: JSON.stringify(results),
+          poll_total:  total,
+          received_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        });
+      } catch (e) {
+        logMsg('warning', '[' + id + '] Décryptage vote sondage échoué : ' + e.message);
+      }
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -644,7 +688,8 @@ function resolveJid(id, phone) {
 
 async function handleAction({ action, instance_id, phone, message, mention, media_path,
                               latitude, longitude, location_name,
-                              contact_phone, contact_name, presence, ephemeral }) {
+                              contact_phone, contact_name, presence, ephemeral,
+                              poll_question, poll_options, poll_selectable }) {
   const id = String(instance_id);
 
   // Messages éphémères (v0.3 #15) — si une durée est fournie (en secondes),
@@ -852,6 +897,31 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const sentSticker = await Promise.race([sock.sendMessage(jid, { sticker: stickerBuf }, sendOpts), tSt]);
       recordSent(id, sentSticker);
       return { sent: true, kind: 'sticker', file: path.basename(media_path) };
+    }
+
+    // ── Envoi d'un sondage (poll) (v0.3 #9) ────────────────────────────────
+    case 'sendPoll': {
+      const sock = sockets[id];
+      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
+      const q = String(poll_question || '').trim();
+      if (q === '') { throw new Error('Question du sondage obligatoire'); }
+      // Les options arrivent dans poll_options sous forme "opt1|opt2|opt3"
+      const options = String(poll_options || '')
+        .split('|').map(s => s.trim()).filter(s => s !== '');
+      if (options.length < 2) { throw new Error('Au moins 2 options requises (séparées par |)'); }
+      if (options.length > 12) { throw new Error('12 options maximum (limite WhatsApp)'); }
+      const jid = resolveJid(id, phone);
+      const selectable = (parseInt(poll_selectable, 10) > 1) ? parseInt(poll_selectable, 10) : 1;
+      logMsg('info', '[' + id + '] → ' + jid + ' : 📊 sondage "' + q + '" (' + options.length + ' options)');
+      const tP = new Promise((_, r) => setTimeout(() => r(new Error('Envoi sondage — délai dépassé')), 15000));
+      const sentPoll = await Promise.race([
+        sock.sendMessage(jid, { poll: { name: q, values: options, selectableCount: Math.min(selectable, options.length) } }, sendOpts),
+        tP,
+      ]);
+      recordSent(id, sentPoll);
+      // Mémorise le message de création pour pouvoir décrypter les votes (messageSecret)
+      lastPollMsg[id] = sentPoll;
+      return { sent: true, question: q, options };
     }
 
     // ── Réaction emoji sur le dernier message reçu (v0.2) ──────────────────

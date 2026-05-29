@@ -198,6 +198,7 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Supprimer le dernier message | `revoke_last` | other | (v0.3) Supprime "pour tous" le dernier message **envoyé** par Jeedom (bouton, aucun paramètre). |
 | Transférer le dernier message reçu | `forward_to` | message | (v0.3) Transfère le dernier message **reçu** vers un destinataire. Champ **Titre** = destinataire optionnel (vide = groupe canal). |
 | Envoyer un sticker | `send_sticker` | message | (v0.3) Envoie un sticker. Champ **Titre** = chemin absolu d'un `.webp` (ou `.png`/`.jpg` converti en WebP 512×512). |
+| Envoyer un sondage | `send_poll` | message | (v0.3) Envoie un sondage. Champ **Titre** = question, **Message** = options séparées par `\|` (ex: `Oui\|Non\|Peut-être`, 2 à 12 options). Les votes alimentent les commandes info `poll_*`. |
 
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  

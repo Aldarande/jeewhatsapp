@@ -165,6 +165,10 @@ class jeewhatsapp extends eqLogic {
       $this->updateFromAttachment($_data);
       return;
     }
+    if ($eventType === 'poll_vote') {
+      $this->updateFromPollVote($_data);
+      return;
+    }
 
     // checkAndUpdateCmd met à jour la valeur et déclenche les scénarios/interactions associés
     $this->checkAndUpdateCmd('last_message',     $_data['message']      ?? '');
@@ -654,6 +658,49 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Envoi d'un sondage (poll) (v0.3 #9)
+  // $_question  : intitulé du sondage
+  // $_options   : chaîne "opt1|opt2|opt3" (2 à 12 options)
+  // $_selectable: nombre de choix sélectionnables (1 = choix unique)
+  // -------------------------------------------------------------------------
+
+  public function sendPoll($_question, $_options, $_selectable = 1, $_phone = null) {
+    $question = trim((string) $_question);
+    if ($question === '') {
+      throw new Exception(__('Question du sondage obligatoire', __FILE__));
+    }
+    $opts = array_values(array_filter(array_map('trim', explode('|', (string) $_options)), function ($o) { return $o !== ''; }));
+    if (count($opts) < 2) {
+      throw new Exception(__('Au moins 2 options requises (séparées par |)', __FILE__));
+    }
+    if (count($opts) > 12) {
+      throw new Exception(__('12 options maximum (limite WhatsApp)', __FILE__));
+    }
+    $params = [
+      'instance_id'     => $this->getId(),
+      'poll_question'   => $question,
+      'poll_options'    => implode('|', $opts),
+      'poll_selectable' => max(1, (int) $_selectable),
+    ];
+    if ($_phone !== null && $_phone !== '') { $params['phone'] = $_phone; }
+    if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
+    $result = $this->sendToDaemon('sendPoll', $params);
+    $this->incrementSentCounters();
+    return $result;
+  }
+
+  // Réception d'un vote de sondage (v0.3 #9) — met à jour les cmds info.
+  // poll_results est un JSON [{"name":"…","votes":N}, …] exploitable en scénario.
+  public function updateFromPollVote($_data) {
+    $this->checkAndUpdateCmd('poll_question', (string) ($_data['poll_name'] ?? ''));
+    $this->checkAndUpdateCmd('poll_results',  (string) ($_data['poll_results'] ?? '[]'));
+    $this->checkAndUpdateCmd('poll_total',    (int)    ($_data['poll_total'] ?? 0));
+    log::add('jeewhatsapp', 'info',
+      'jeewhatsapp.class.php::updateFromPollVote() l.' . __LINE__
+      . ' — Vote sondage (' . (int) ($_data['poll_total'] ?? 0) . ' vote(s))');
+  }
+
+  // -------------------------------------------------------------------------
   // Envoi d'un sticker (v0.3 #10)
   // $_path : chemin absolu d'un .webp (envoyé tel quel) ou image jpg/png/gif
   //          (convertie en WebP 512×512 par le daemon via sharp)
@@ -915,6 +962,9 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'last_attachment_type', 'name' => 'Dernier média — type',   'subType' => 'string'],
       ['logicalId' => 'last_attachment_mime', 'name' => 'Dernier média — mime',   'subType' => 'string'],
       ['logicalId' => 'last_attachment_size', 'name' => 'Dernier média — taille', 'subType' => 'numeric'],
+      ['logicalId' => 'poll_question', 'name' => 'Sondage — question',          'subType' => 'string'],
+      ['logicalId' => 'poll_results',  'name' => 'Sondage — résultats (JSON)',  'subType' => 'string'],
+      ['logicalId' => 'poll_total',    'name' => 'Sondage — total votes',       'subType' => 'numeric', 'isHistorized' => 1],
     ];
 
     $order = 0;
@@ -1065,6 +1115,29 @@ class jeewhatsapp extends eqLogic {
       $react->save();
     }
 
+    // Commande action : Envoyer un sondage (v0.3 #9)
+    // Convention : title = question, message = "opt1|opt2|opt3"
+    $poll = $this->getCmd('action', 'send_poll');
+    if (!is_object($poll)) {
+      $poll = new jeewhatsappCmd();
+      $poll->setEqLogic_id($this->getId());
+      $poll->setLogicalId('send_poll');
+      $poll->setType('action');
+      $poll->setSubType('message');
+      $poll->setName('Envoyer un sondage');
+      $poll->setIsVisible(1);
+      $poll->setOrder($order++);
+      $poll->save();
+    }
+    if ($poll->getDisplay('title_placeholder') !== 'Question du sondage') {
+      $poll->setDisplay('title_placeholder', 'Question du sondage');
+      $poll->save();
+    }
+    if ($poll->getDisplay('message_placeholder') !== 'Options séparées par | (ex: Oui|Non|Peut-être)') {
+      $poll->setDisplay('message_placeholder', 'Options séparées par | (ex: Oui|Non|Peut-être)');
+      $poll->save();
+    }
+
     // Commande action : Envoyer un sticker (v0.3 #10)
     // Convention : title = chemin absolu (.webp ou image convertie), message inutilisé
     $sticker = $this->getCmd('action', 'send_sticker');
@@ -1211,6 +1284,16 @@ class jeewhatsappCmd extends cmd {
         // message = emoji ; title inutilisé
         $emoji = $_options['message'] ?? '';
         $eqLogic->reactToLast($emoji);
+        break;
+
+      case 'send_poll':
+        // title = question ; message = "opt1|opt2|opt3"
+        $pQuestion = (isset($_options['title'])) ? trim($_options['title']) : '';
+        $pOptions  = $_options['message'] ?? '';
+        if ($pQuestion === '') {
+          throw new Exception(__('Question du sondage (champ Titre) obligatoire', __FILE__));
+        }
+        $eqLogic->sendPoll($pQuestion, $pOptions, 1);
         break;
 
       case 'send_sticker':

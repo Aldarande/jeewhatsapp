@@ -9,6 +9,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **`send_poll`** ⭐ — cmd action (subType=message) pour envoyer un sondage WhatsApp.
+  `title` = question, `message` = options séparées par `|` (2 à 12). Daemon :
+  `sock.sendMessage(jid, { poll: { name, values, selectableCount } })`. Le message de
+  création est mémorisé (`lastPollMsg[id]`) pour décrypter les votes. (v0.3 ROADMAP #9)
+- **Réception des votes de sondage** — listener daemon `messages.update` →
+  `getAggregateVotesInPollMessage()` agrège les votes (déchiffrés via le `messageSecret`
+  du sondage), callback `event_type: 'poll_vote'`. PHP `updateFromPollVote()` met à jour
+  3 cmds info : `poll_question`, `poll_results` (JSON `[{name,votes}]`), `poll_total`
+  (historisée). Permet de déclencher des scénarios sur le résultat d'un vote.
 - **Messages éphémères** — config eqLogic `ephemeral_duration` (select : désactivé,
   24h, 7j, 90j). Si activée, tous les envois Jeedom (texte, reply, média, location,
   contact, sticker, forward) expirent automatiquement via l'option Baileys
