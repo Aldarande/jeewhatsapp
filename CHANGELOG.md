@@ -9,6 +9,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Compatibilité multi-plateforme** — `install_dep.sh` installe désormais **ffmpeg** (apt,
+  non bloquant) requis par la conversion audio (note vocale du widget, TTS, STT) ; Piper utilise
+  déjà `uname -m` pour le binaire adapté (x86_64 / aarch64 / armv7l). `validate.sh` gagne une
+  section **« 3b. Dépendances média/audio »** affichant l'architecture et l'état (présent/absent)
+  de ffmpeg, Piper, Tesseract, Vosk. Le cœur du traitement média (réception, affichage widget,
+  envoi) reste 100 % portable (Node/PHP pur) ; les fonctions IA se désactivent proprement si
+  leur binaire manque.
 - **Widget dashboard style WhatsApp** ⭐ (v0.6 #28) — tuile personnalisée (`toHtml()` +
   template `core/template/dashboard/jeewhatsapp.html` + CSS `desktop/css/jeewhatsapp.css`)
   reprenant la charte WhatsApp : en-tête teal avec avatar (icône du plugin) et **statut de

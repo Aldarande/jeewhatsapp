@@ -70,6 +70,33 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# 3b. Dépendances média / audio (optionnelles, dégradation gracieuse)
+# -----------------------------------------------------------------------------
+echo
+echo "── 3b. Dépendances média/audio (optionnelles) ──"
+echo "      Plateforme : $(uname -m)"
+if command -v ffmpeg &> /dev/null; then
+  pass "ffmpeg présent (conversion audio : note vocale widget, TTS, STT)"
+else
+  warn "ffmpeg absent — enregistrement vocal/TTS/STT indisponibles (apt-get install ffmpeg)"
+fi
+if [ -x "$PLUGIN_DIR/resources/piper/piper/piper" ]; then
+  pass "Piper TTS installé"
+else
+  warn "Piper TTS absent — réponses vocales en repli texte (optionnel)"
+fi
+if command -v tesseract &> /dev/null; then
+  pass "Tesseract OCR présent"
+else
+  warn "Tesseract OCR absent — OCR images désactivé (optionnel)"
+fi
+if command -v python3 &> /dev/null && python3 -c "import vosk" >/dev/null 2>&1 && [ -d "$PLUGIN_DIR/resources/stt/model-fr" ]; then
+  pass "Vosk STT installé"
+else
+  warn "Vosk STT absent — transcription notes vocales désactivée (optionnel)"
+fi
+
+# -----------------------------------------------------------------------------
 # 4. Daemon vivant
 # -----------------------------------------------------------------------------
 echo

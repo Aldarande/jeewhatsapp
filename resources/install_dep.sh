@@ -69,6 +69,28 @@ fi
 echo 92 > "$PROGRESS_FILE"
 
 # ---------------------------------------------------------------------------
+# ffmpeg — requis par la conversion audio (note vocale du widget, TTS, STT).
+# Paquet apt disponible sur toutes les plateformes Jeedom (x86_64 et ARM).
+# Non bloquant : si absent et non installable, les fonctions audio se
+# désactivent d'elles-mêmes (le reste du plugin fonctionne).
+# ---------------------------------------------------------------------------
+if command -v ffmpeg &> /dev/null; then
+  log "ffmpeg déjà présent ($(ffmpeg -version 2>/dev/null | head -1))"
+elif command -v apt-get &> /dev/null; then
+  log "Installation de ffmpeg (conversion audio)..."
+  SUDO=""
+  [ "$(id -u)" -ne 0 ] && command -v sudo &> /dev/null && SUDO="sudo"
+  if $SUDO apt-get update -qq >/dev/null 2>&1 \
+     && $SUDO apt-get install -y -qq ffmpeg >/dev/null 2>&1; then
+    log "ffmpeg installé"
+  else
+    log "AVERTISSEMENT : installation de ffmpeg échouée — fonctions audio (note vocale/TTS/STT) indisponibles"
+  fi
+else
+  log "AVERTISSEMENT : apt-get introuvable — ffmpeg non installé (fonctions audio indisponibles)"
+fi
+
+# ---------------------------------------------------------------------------
 # Piper TTS (v0.4 #18) — synthèse vocale française (optionnel, non bloquant)
 # Binaire + voix installés dans resources/piper/ (gitignorés). ffmpeg requis
 # pour la conversion WAV → Opus (.ogg PTT). Si l'installation échoue, le plugin
