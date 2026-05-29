@@ -23,9 +23,13 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   `title` = question, `message` = options séparées par `|` (2 à 12). Daemon :
   `sock.sendMessage(jid, { poll: { name, values, selectableCount } })`. Le message de
   création est mémorisé (`lastPollMsg[id]`) pour décrypter les votes. (v0.3 ROADMAP #9)
-- **Réception des votes de sondage** — listener daemon `messages.update` →
-  `getAggregateVotesInPollMessage()` agrège les votes (déchiffrés via le `messageSecret`
-  du sondage), callback `event_type: 'poll_vote'`. PHP `updateFromPollVote()` met à jour
+- **Réception des votes de sondage** — déchiffrement du `pollUpdateMessage` directement
+  dans `messages.upsert` (fonction `handlePollVote`). Baileys 6.7.x ayant **retiré** son
+  traitement interne des votes (bloc commenté dans `Utils/process-message.js`, plus aucun
+  `messages.update` émis), le daemon reproduit sa logique : `decryptPollVote()` avec le
+  `messageSecret` du sondage d'origine + `getKeyAuthor`/`jidNormalizedUser`, puis agrégation
+  via `getAggregateVotesInPollMessage()`. Cumul correct multi-votants (dernier vote conservé
+  par votant). Callback `event_type: 'poll_vote'` → PHP `updateFromPollVote()` met à jour
   3 cmds info : `poll_question`, `poll_results` (JSON `[{name,votes}]`), `poll_total`
   (historisée). Permet de déclencher des scénarios sur le résultat d'un vote.
 - **Messages éphémères** — config eqLogic `ephemeral_duration` (select : désactivé,
@@ -104,7 +108,24 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **Interactions depuis le compte WhatsApp lié** — la réception filtre désormais les
+  messages `fromMe` par **préfixe Jeedom** au lieu de les ignorer en bloc. Un message
+  `fromMe` est ignoré s'il est vide/non-texte OU s'il commence par le préfixe de
+  l'équipement (= envoi automatique de Jeedom, évite la boucle) ; un texte `fromMe`
+  **non préfixé** est traité comme une interaction humaine. Permet de piloter Jeedom en
+  tapant directement dans le groupe depuis le téléphone qui héberge le compte lié.
+
 ### Fixed
+
+- **Réception des messages entrants / votes inopérante (`Bad MAC`)** — diagnostic : une
+  session Signal corrompue (`Failed to decrypt message with any known session` / `Bad MAC`
+  en boucle dans les logs) fait silencieusement jeter tous les messages entrants par
+  Baileys avant l'émission de `messages.upsert`. Cause typique : usage concurrent de la
+  même session par deux connexions (redémarrages rapprochés). **Remède : ré-appairage**
+  (logout + nouveau QR) qui régénère des clés fraîches. Documenté dans la doc comme
+  procédure de dépannage.
+- **Votes de sondage non remontés** — voir entrée *Added* : le déchiffrement est désormais
+  fait par le daemon (Baileys 6.7.x ne le fait plus en interne).
 
 ### Security
 

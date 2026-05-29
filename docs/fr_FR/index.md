@@ -413,6 +413,24 @@ même avec une mention `@vous`. La seule solution est d'utiliser un deuxième co
 - Seuls les messages texte du groupe canal sont traités — les médias sont ignorés
 - Consultez le log `jeewhatsapp` pour vérifier que le daemon reçoit bien les messages
 
+### Aucun message reçu et le log est saturé de « Bad MAC »
+
+Si le log `jeewhatsapp` affiche en boucle `Failed to decrypt message with any known session`
+ou `Session error: Bad MAC`, c'est que la **session chiffrée (Signal) est corrompue** :
+WhatsApp envoie bien les messages mais le daemon ne peut plus les déchiffrer, ils sont donc
+silencieusement abandonnés. Cela arrive notamment après des redémarrages rapprochés du daemon
+ou un usage concurrent de la même session.
+
+**Solution : ré-appairer l'appareil.**
+
+1. Sur votre téléphone : **WhatsApp → Appareils connectés**, supprimez l'appareil « JeeWhatsApp ».
+2. Côté serveur, supprimez (ou renommez) le dossier de session de l'équipement :
+   `plugins/jeewhatsapp/resources/jeewhatsappd/auth/{ID_équipement}/`
+3. Redémarrez le daemon depuis la gestion du plugin.
+4. Un nouveau QR code s'affiche dans l'onglet **Connexion WhatsApp** — rescannez-le.
+
+Les clés de chiffrement sont régénérées et la réception refonctionne.
+
 ### L'envoi échoue
 
 - Vérifiez que le statut WhatsApp est **Connecté**

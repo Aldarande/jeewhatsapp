@@ -12,6 +12,9 @@ import makeWASocket, {
   isJidGroup,
   downloadMediaMessage,
   getAggregateVotesInPollMessage,
+  decryptPollVote,
+  getKeyAuthor,
+  jidNormalizedUser,
 } from '@whiskeysockets/baileys';
 import crypto from 'crypto';
 import pino          from 'pino';
@@ -258,6 +261,16 @@ async function connectInstance(instance) {
     printQRInTerminal: false,
     browser:           ['JeeWhatsApp', 'Chrome', '1.0.0'],
     generateHighQualityLinkPreview: false,
+    // v0.3 #9 — indispensable pour déchiffrer les votes de sondage : Baileys appelle
+    // getMessage(key) lorsqu'un pollUpdateMessage arrive, pour récupérer le sondage
+    // d'origine (contient le messageSecret). Sans ça, aucun 'messages.update' n'est émis.
+    getMessage: async (key) => {
+      const poll = lastPollMsg[id];
+      if (poll && poll.key && poll.key.id === key.id) {
+        return poll.message;
+      }
+      return undefined;
+    },
   });
 
   sockets[id] = sock;
@@ -352,6 +365,15 @@ async function connectInstance(instance) {
     for (const msg of messages) {
       const remoteJid = msg.key.remoteJid || '';
 
+      // ── Votes de sondage (v0.3 #9) ────────────────────────────────────────
+      // Baileys 6.7.x ne traite plus les pollUpdateMessage en interne (bloc
+      // commenté dans process-message.js) : aucun 'messages.update' n'est émis.
+      // On déchiffre donc le vote ici nous-mêmes, comme le faisait Baileys.
+      if (msg.message?.pollUpdateMessage) {
+        await handlePollVote(id, sock, msg);
+        continue;
+      }
+
       // Accepter uniquement les messages du groupe canal
       if (!isJidGroup(remoteJid)) {
         debug('[' + id + '] Ignoré (message direct, mode groupe actif)');
@@ -382,10 +404,21 @@ async function connectInstance(instance) {
         ? (instanceCfg[id]?.group_name || '')
         : (instanceCfg[id]?.extra || []).find(g => g.tag === groupTag)?.name || '';
 
-      // Ignorer les messages envoyés par Jeedom lui-même
+      // Gestion des messages fromMe (compte WhatsApp lié au daemon).
+      // Sur un appareil lié, les messages tapés par l'utilisateur ET les envois
+      // automatiques de Jeedom sont tous marqués fromMe. On les distingue par le
+      // PRÉFIXE Jeedom (ex « 🏠 ») : seul un message TEXTE non préfixé est considéré
+      // comme tapé par l'humain → traité (permet de piloter Jeedom depuis le compte lié).
+      // Tout le reste (envoi préfixé de Jeedom, écho, média/réaction, préfixe absent)
+      // est ignoré pour éviter les boucles d'auto-traitement.
       if (msg.key.fromMe) {
-        debug('[' + id + '] Ignoré (fromMe — message de Jeedom)');
-        continue;
+        const prefixSelf = (instanceCfg[id]?.prefix || '').trim();
+        const textSelf   = extractText(msg.message) || '';
+        if (textSelf === '' || prefixSelf === '' || textSelf.startsWith(prefixSelf)) {
+          debug('[' + id + '] Ignoré (fromMe : envoi Jeedom / non-texte / préfixe absent)');
+          continue;
+        }
+        debug('[' + id + '] fromMe humain (compte lié, texte non préfixé) → traité');
       }
 
       if (!msg.message) {
@@ -486,47 +519,73 @@ async function connectInstance(instance) {
     }
   });
 
-  // ── Réception des votes de sondage (v0.3 #9) ───────────────────────────
-  // Les votes arrivent via 'messages.update' avec un champ pollUpdates chiffré.
-  // On agrège avec getAggregateVotesInPollMessage à partir du message de création
-  // mémorisé (lastPollMsg[id]) qui contient le messageSecret nécessaire au déchiffrement.
-  sock.ev.on('messages.update', async (updates) => {
-    for (const { key, update } of updates) {
-      if (!update || !update.pollUpdates) { continue; }
-      const poll = lastPollMsg[id];
-      if (!poll || !poll.message) {
-        debug('[' + id + '] Vote reçu mais aucun sondage mémorisé');
-        continue;
-      }
-      // Ne traiter que les votes du sondage courant
-      if (key && key.id && poll.key && poll.key.id && key.id !== poll.key.id) { continue; }
-      try {
-        const aggregated = getAggregateVotesInPollMessage({
-          message:     poll.message,
-          pollUpdates: update.pollUpdates,
-        });
-        // aggregated = [{ name, voters: [jid, ...] }]
-        const results = (aggregated || []).map(o => ({
-          name:  o.name,
-          votes: Array.isArray(o.voters) ? o.voters.length : 0,
-        }));
-        const total = results.reduce((s, r) => s + r.votes, 0);
-        const question = poll.message?.pollCreationMessage?.name
-                      || poll.message?.pollCreationMessageV3?.name || '';
-        logMsg('info', '[' + id + '] 📊 Vote sondage — ' + total + ' vote(s) : '
-          + results.map(r => r.name + '=' + r.votes).join(', '));
-        await sendCallback(id, {
-          event_type:  'poll_vote',
-          poll_name:   question,
-          poll_results: JSON.stringify(results),
-          poll_total:  total,
-          received_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        });
-      } catch (e) {
-        logMsg('warning', '[' + id + '] Décryptage vote sondage échoué : ' + e.message);
-      }
+}
+
+// ---------------------------------------------------------------------------
+// Votes de sondage (v0.3 #9)
+// ---------------------------------------------------------------------------
+// Baileys 6.7.x a retiré (bloc commenté dans Utils/process-message.js) le
+// traitement interne des pollUpdateMessage : il n'émet plus de 'messages.update'
+// et n'appelle plus getMessage. On reproduit donc ici sa logique : déchiffrer le
+// vote avec le messageSecret du sondage d'origine, puis agréger les options.
+async function handlePollVote(id, sock, msg) {
+  const poll = lastPollMsg[id];
+  if (!poll || !poll.message) {
+    debug('[' + id + '] Vote reçu mais aucun sondage mémorisé');
+    return;
+  }
+  const creationKey = msg.message.pollUpdateMessage.pollCreationMessageKey;
+  // Ne traiter que les votes du sondage courant
+  if (creationKey && creationKey.id && poll.key && poll.key.id && creationKey.id !== poll.key.id) {
+    debug('[' + id + '] Vote ignoré (sondage différent du dernier mémorisé)');
+    return;
+  }
+  try {
+    const meId          = jidNormalizedUser(sock.user?.id || '');
+    const pollCreatorJid = getKeyAuthor(creationKey || poll.key, meId);
+    const voterJid       = getKeyAuthor(msg.key, meId);
+    const pollEncKey     = poll.message.messageContextInfo?.messageSecret;
+    if (!pollEncKey) {
+      logMsg('warning', '[' + id + '] Vote sondage : messageSecret absent, déchiffrement impossible');
+      return;
     }
-  });
+    const voteMsg = decryptPollVote(msg.message.pollUpdateMessage.vote, {
+      pollEncKey,
+      pollCreatorJid,
+      pollMsgId: (creationKey && creationKey.id) || poll.key.id,
+      voterJid,
+    });
+    // Un vote contient la sélection COURANTE complète du votant : on conserve le
+    // dernier vote par votant pour calculer un cumul correct sur tous les votants.
+    if (!poll.votes) { poll.votes = {}; }
+    poll.votes[voterJid] = {
+      pollUpdateMessageKey: msg.key,
+      vote: voteMsg,
+      senderTimestampMs: Date.now(),
+    };
+    const aggregated = getAggregateVotesInPollMessage({
+      message:     poll.message,
+      pollUpdates: Object.values(poll.votes),
+    }, meId);
+    const results = (aggregated || []).map(o => ({
+      name:  o.name,
+      votes: Array.isArray(o.voters) ? o.voters.length : 0,
+    }));
+    const total    = results.reduce((s, r) => s + r.votes, 0);
+    const question = poll.message?.pollCreationMessage?.name
+                  || poll.message?.pollCreationMessageV3?.name || '';
+    logMsg('info', '[' + id + '] 📊 Vote sondage — ' + total + ' vote(s) : '
+      + results.map(r => r.name + '=' + r.votes).join(', '));
+    await sendCallback(id, {
+      event_type:   'poll_vote',
+      poll_name:    question,
+      poll_results: JSON.stringify(results),
+      poll_total:   total,
+      received_at:  new Date().toISOString().replace('T', ' ').substring(0, 19),
+    });
+  } catch (e) {
+    logMsg('warning', '[' + id + '] Décryptage vote sondage échoué : ' + e.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
