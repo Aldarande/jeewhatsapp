@@ -120,7 +120,7 @@
       }
       jeedom.cmd.execute({
         id: cmdId,
-        options: { message: txt, title: '' },
+        value: { message: txt, title: '' },
         success: function () {
           input.disabled = false; input.focus();
           if (last) { var t = last.querySelector('.jwa-tick'); if (t) t.className = 'fas fa-check-double jwa-tick'; }
@@ -146,7 +146,7 @@
         muteBtn.classList.add('jwa-busy');
         jeedom.cmd.execute({
           id: '#cmd_mute_id#',
-          options: { title: '' },
+          value: { title: '' },
           success: function () { muteBtn.classList.remove('jwa-busy'); muteBtn.classList.add('jwa-active'); },
           error:   function () { muteBtn.classList.remove('jwa-busy'); }
         });
