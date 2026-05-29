@@ -84,6 +84,8 @@ class jeewhatsapp extends eqLogic {
         'id'         => $eqLogic->getId(),
         'prefix'     => $eqLogic->getConfiguration('interaction_prefix', '🏠 '),
         'group_name' => $eqLogic->getConfiguration('group_name', 'jeewhatsapp'),
+        // v0.3 #16 — groupes canaux additionnels (tag=NomDuGroupe, 1 par ligne)
+        'groups'     => self::parseExtraGroups($eqLogic->getConfiguration('extra_groups', '')),
       ];
     }
 
@@ -175,6 +177,9 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_sender',      $_data['sender']       ?? '');
     $this->checkAndUpdateCmd('last_sender_name', $_data['sender_name']  ?? '');
     $this->checkAndUpdateCmd('last_received_at', $_data['received_at']  ?? date('Y-m-d H:i:s'));
+    // v0.3 #16 — groupe d'origine ('' = groupe canal par défaut, sinon tag additionnel)
+    $this->checkAndUpdateCmd('last_group',       $_data['group_tag']    ?? '');
+    $this->checkAndUpdateCmd('last_group_name',  $_data['group_name']   ?? '');
 
     // Compteur messages reçus aujourd'hui (cache TTL jusqu'à minuit)
     $this->incrementMessagesTodayCounter();
@@ -251,7 +256,7 @@ class jeewhatsapp extends eqLogic {
   // $_skipPrefix    → true pour les tests (pas de préfixe 🏠)
   // -------------------------------------------------------------------------
 
-  public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false) {
+  public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false, $_tag = null) {
     $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
     $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
@@ -264,6 +269,10 @@ class jeewhatsapp extends eqLogic {
     }
     if ($_mention !== null && $_mention !== '') {
       $params['mention'] = $_mention;
+    }
+    // v0.3 #16 — ciblage d'un groupe additionnel par tag
+    if ($_tag !== null && $_tag !== '') {
+      $params['group_tag'] = $_tag;
     }
     if (($p = $this->presenceParam()) !== null) { $params['presence'] = $p; }
     if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
@@ -521,6 +530,32 @@ class jeewhatsapp extends eqLogic {
   private function ephemeralParam() {
     $secs = (int) $this->getConfiguration('ephemeral_duration', 0);
     return $secs > 0 ? $secs : null;
+  }
+
+  // v0.3 #16 — Parse la configuration textarea des groupes additionnels.
+  // Format attendu : une ligne par groupe « tag=Nom du groupe WhatsApp ».
+  // Les lignes vides ou sans « = » sont ignorées. Retourne [{tag, name}, …].
+  public static function parseExtraGroups($_raw) {
+    $groups = [];
+    if (!is_string($_raw) || trim($_raw) === '') { return $groups; }
+    foreach (preg_split('/\r\n|\r|\n/', $_raw) as $line) {
+      $line = trim($line);
+      if ($line === '' || strpos($line, '=') === false) { continue; }
+      list($tag, $name) = explode('=', $line, 2);
+      $tag  = trim($tag);
+      $name = trim($name);
+      if ($tag === '' || $name === '') { continue; }
+      $groups[] = ['tag' => $tag, 'name' => $name];
+    }
+    return $groups;
+  }
+
+  // v0.3 #16 — Envoi d'un message vers un groupe additionnel identifié par son tag.
+  public function sendGroup($_tag, $_message) {
+    if ($_tag === null || trim($_tag) === '') {
+      throw new Exception(__('Tag de groupe manquant pour send_group', __FILE__));
+    }
+    return $this->sendMessage($_message, null, null, false, trim($_tag));
   }
 
   // -------------------------------------------------------------------------
@@ -965,6 +1000,8 @@ class jeewhatsapp extends eqLogic {
       ['logicalId' => 'poll_question', 'name' => 'Sondage — question',          'subType' => 'string'],
       ['logicalId' => 'poll_results',  'name' => 'Sondage — résultats (JSON)',  'subType' => 'string'],
       ['logicalId' => 'poll_total',    'name' => 'Sondage — total votes',       'subType' => 'numeric', 'isHistorized' => 1],
+      ['logicalId' => 'last_group',      'name' => 'Dernier groupe — tag',      'subType' => 'string'],
+      ['logicalId' => 'last_group_name', 'name' => 'Dernier groupe — nom',      'subType' => 'string'],
     ];
 
     $order = 0;
@@ -1221,6 +1258,29 @@ class jeewhatsapp extends eqLogic {
       $forward->setDisplay('message_placeholder', 'Inutilisé (ignoré)');
       $forward->save();
     }
+
+    // Commande action : Envoyer dans un groupe additionnel (v0.3 #16)
+    // Convention : title = tag du groupe (cf config « Groupes additionnels »), message = texte
+    $sgroup = $this->getCmd('action', 'send_group');
+    if (!is_object($sgroup)) {
+      $sgroup = new jeewhatsappCmd();
+      $sgroup->setEqLogic_id($this->getId());
+      $sgroup->setLogicalId('send_group');
+      $sgroup->setType('action');
+      $sgroup->setSubType('message');
+      $sgroup->setName('Envoyer dans un groupe additionnel');
+      $sgroup->setIsVisible(1);
+      $sgroup->setOrder($order++);
+      $sgroup->save();
+    }
+    if ($sgroup->getDisplay('title_placeholder') !== 'Tag du groupe (cf Groupes additionnels)') {
+      $sgroup->setDisplay('title_placeholder', 'Tag du groupe (cf Groupes additionnels)');
+      $sgroup->save();
+    }
+    if ($sgroup->getDisplay('message_placeholder') !== 'Texte du message') {
+      $sgroup->setDisplay('message_placeholder', 'Texte du message');
+      $sgroup->save();
+    }
   }
 }
 
@@ -1241,6 +1301,16 @@ class jeewhatsappCmd extends cmd {
           ? trim($_options['title'])
           : null;
         $eqLogic->sendMessage($message, $phone);
+        break;
+
+      case 'send_group':
+        // title = tag du groupe additionnel ; message = texte
+        $tag = (isset($_options['title'])) ? trim($_options['title']) : '';
+        $message = $_options['message'] ?? '';
+        if ($tag === '') {
+          throw new Exception(__('Tag du groupe (champ Titre) obligatoire', __FILE__));
+        }
+        $eqLogic->sendGroup($tag, $message);
         break;
 
       case 'reply':

@@ -335,6 +335,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Groupes additionnels (v0.3 #16) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Groupes additionnels}}</label>
+								<div class="col-sm-7">
+									<textarea class="eqLogicAttr form-control" rows="3"
+										   data-l1key="configuration" data-l2key="extra_groups"
+										   placeholder="alertes=Alertes Maison&#10;famille=Groupe Famille&#10;(vide = un seul groupe canal)"></textarea>
+									<span class="help-block">
+										<small>{{Groupes WhatsApp supplémentaires que cet équipement peut écouter et cibler, en plus du groupe canal principal. Une ligne par groupe au format <strong>tag=Nom exact du groupe WhatsApp</strong>. Le « tag » sert à cibler le groupe via la commande « Envoyer dans un groupe additionnel » (champ Titre) et apparaît dans la commande info « Dernier groupe ».}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Préfixe Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>

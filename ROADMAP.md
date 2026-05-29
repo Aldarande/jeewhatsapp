@@ -63,7 +63,7 @@ Objectif : sortir du paradigme « bot one-way » et offrir des interactions rich
 | 13 | ✅ **Transfert (forward)** ⭐ | 🟡 | Cmd action `forward_to` — title = destinataire, transfère le dernier message reçu. |
 | 14 | ✅ **Présence typing/recording** | 🟢 | `sendPresenceUpdate('composing')` avant envoi auto. UX humanisée. Config eqLogic `presence_enabled`. |
 | 15 | ✅ **Messages éphémères** | 🟡 | Option par eqLogic `ephemeral_duration` : tous les envois disparaissent après 24h/7j/90j (Baileys `ephemeralExpiration`). |
-| 16 | **Multi-groupes par eqLogic** ⭐ | 🔴 | Aujourd'hui 1 groupe canal. Permettre N groupes (alertes, info, famille…) avec tag par défaut sur la commande action. |
+| 16 | ✅ **Multi-groupes par eqLogic** ⭐ | 🔴 | Config `extra_groups` (textarea `tag=Nom`). Écoute + ciblage de N groupes additionnels (couche `extraGroups[id]={tag:jid}`). Cmd action `send_group` (title=tag) + cmds info `last_group`/`last_group_name`. Rétrocompatible mono-groupe. |
 
 ---
 

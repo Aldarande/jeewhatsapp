@@ -183,6 +183,11 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Dernier média — type | `last_attachment_type` | string | non | `image` / `video` / `audio` / `document` / `sticker` |
 | Dernier média — mime | `last_attachment_mime` | string | non | Type MIME du dernier média reçu (`image/jpeg`, `audio/ogg; codecs=opus`, ...) |
 | Dernier média — taille | `last_attachment_size` | numeric | non | Taille en octets du dernier média reçu |
+| Sondage — question | `poll_question` | string | non | Question du dernier sondage dont un vote a été reçu |
+| Sondage — résultats | `poll_results` | string | non | Résultats au format JSON `[{name, votes}]` |
+| Sondage — total votes | `poll_total` | numeric | oui | Nombre total de votes reçus sur le dernier sondage |
+| Dernier groupe — tag | `last_group` | string | non | (v0.3) Tag du groupe d'origine du dernier message reçu (`` vide = groupe canal principal) |
+| Dernier groupe — nom | `last_group_name` | string | non | (v0.3) Nom du groupe WhatsApp d'origine du dernier message reçu |
 
 ### Commandes ACTION
 
@@ -199,6 +204,7 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Transférer le dernier message reçu | `forward_to` | message | (v0.3) Transfère le dernier message **reçu** vers un destinataire. Champ **Titre** = destinataire optionnel (vide = groupe canal). |
 | Envoyer un sticker | `send_sticker` | message | (v0.3) Envoie un sticker. Champ **Titre** = chemin absolu d'un `.webp` (ou `.png`/`.jpg` converti en WebP 512×512). |
 | Envoyer un sondage | `send_poll` | message | (v0.3) Envoie un sondage. Champ **Titre** = question, **Message** = options séparées par `\|` (ex: `Oui\|Non\|Peut-être`, 2 à 12 options). Les votes alimentent les commandes info `poll_*`. |
+| Envoyer dans un groupe additionnel | `send_group` | message | (v0.3) Envoie un message dans un groupe additionnel. Champ **Titre** = tag du groupe (cf config « Groupes additionnels »), **Message** = texte. |
 
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  
@@ -229,6 +235,22 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 > Format du champ **Titre** : numéro international sans `+` ni espaces (ex : `33612345678`).  
 > Format français accepté : `0612345678` (converti automatiquement en `33612345678`).  
 > Champ **Message** = nom affiché de la vCard (optionnel, sinon le numéro est utilisé).
+
+> **👥 Groupes additionnels (`send_group`) — v0.3**  
+> Par défaut, un équipement n'écoute et n'écrit que dans **un** groupe canal. Pour gérer
+> plusieurs groupes (alertes, info, famille…) avec le **même** compte WhatsApp, renseignez le
+> champ **Groupes additionnels** de l'équipement, une ligne par groupe au format
+> `tag=Nom exact du groupe WhatsApp` :
+> ```
+> alertes=Alertes Maison
+> famille=Groupe Famille
+> ```
+> - Le **tag** (`alertes`, `famille`…) sert à cibler le groupe via la commande
+>   **Envoyer dans un groupe additionnel** (`send_group`) : champ **Titre** = tag, **Message** = texte.
+> - Les messages **reçus** dans ces groupes alimentent aussi les commandes info,
+>   et le groupe d'origine est exposé via `last_group` (tag, vide = groupe principal) et `last_group_name`.
+> - Le groupe canal **principal** reste inchangé ; cette fonction est purement additive
+>   (rétrocompatible avec les configurations existantes).
 
 ---
 

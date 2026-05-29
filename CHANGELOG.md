@@ -9,6 +9,16 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Multi-groupes par équipement** ⭐ — config eqLogic `extra_groups` (textarea, une
+  ligne `tag=Nom du groupe WhatsApp`). Chaque équipement peut désormais écouter ET cibler
+  plusieurs groupes canaux en plus du groupe principal. Design **additif** : le groupe par
+  défaut (`groupJids[id]` / `group_jid.txt`) est inchangé, une couche `extraGroups[id] = {tag: jid}`
+  est résolue au `connection.open` via `findGroupByName`. Le filtre de réception calcule un
+  `group_tag` (`''` = groupe par défaut) propagé à tous les callbacks. Nouvelle cmd action
+  **`send_group`** (`title` = tag, `message` = texte) et 2 cmds info `last_group` (tag) /
+  `last_group_name` (nom). Helper PHP statique `parseExtraGroups()`, méthode `sendGroup()`,
+  `resolveJid(id, phone, tag)` étendu côté daemon. Rétrocompatible avec les setups
+  mono-groupe existants. (v0.3 ROADMAP #16)
 - **`send_poll`** ⭐ — cmd action (subType=message) pour envoyer un sondage WhatsApp.
   `title` = question, `message` = options séparées par `|` (2 à 12). Daemon :
   `sock.sendMessage(jid, { poll: { name, values, selectableCount } })`. Le message de

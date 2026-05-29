@@ -191,8 +191,9 @@ function extractText(m) {
 // ---------------------------------------------------------------------------
 
 const sockets         = {};  // id → sock
-const groupJids       = {};  // id → JID du groupe WhatsApp canal (@g.us)
-const instanceCfg     = {};  // id → { prefix, group_name }
+const groupJids       = {};  // id → JID du groupe WhatsApp canal par défaut (@g.us)
+const extraGroups     = {};  // id → { tag: jid } — groupes canaux additionnels (v0.3 #16)
+const instanceCfg     = {};  // id → { prefix, group_name, extra: [{tag,name}] }
 const lastIncomingMsg = {};  // id → dernier msg reçu (pour reply quoted / forward)
 const lastSentMsg     = {};  // id → clé du dernier msg envoyé (pour edit / revoke)
 const lastPollMsg     = {};  // id → message de création du dernier sondage (pour décrypter les votes)
@@ -231,8 +232,10 @@ async function connectInstance(instance) {
   const id         = String(instance.id);
   const prefix     = instance.prefix     || '';
   const group_name = instance.group_name || 'jeewhatsapp';
+  const extra      = Array.isArray(instance.groups) ? instance.groups : [];
 
-  instanceCfg[id] = { prefix, group_name };
+  instanceCfg[id] = { prefix, group_name, extra };
+  if (!extraGroups[id]) { extraGroups[id] = {}; }
   writeStatus(id, 'connecting');
 
   // Charger le JID de groupe depuis le cache fichier
@@ -300,6 +303,19 @@ async function connectInstance(instance) {
         } else {
           logMsg('warning', '[' + id + '] Groupe "' + group_name + '" introuvable — créez-le ou vérifiez le nom dans les paramètres');
         }
+
+        // Résolution des groupes canaux additionnels (v0.3 #16)
+        extraGroups[id] = {};
+        for (const g of (instanceCfg[id]?.extra || [])) {
+          if (!g || !g.tag || !g.name) { continue; }
+          const gj = await findGroupByName(sock, g.name);
+          if (gj) {
+            extraGroups[id][g.tag] = gj;
+            logMsg('info', '[' + id + '] ✓ Groupe additionnel [' + g.tag + '] "' + g.name + '" → ' + gj);
+          } else {
+            logMsg('warning', '[' + id + '] Groupe additionnel [' + g.tag + '] "' + g.name + '" introuvable');
+          }
+        }
       }, 2000);
     }
 
@@ -343,15 +359,28 @@ async function connectInstance(instance) {
       }
 
       const configuredJid = groupJids[id];
-      if (!configuredJid) {
-        debug('[' + id + '] Ignoré (groupe canal non configuré)');
+      if (!configuredJid && Object.keys(extraGroups[id] || {}).length === 0) {
+        debug('[' + id + '] Ignoré (aucun groupe canal configuré)');
         continue;
       }
 
-      if (remoteJid !== configuredJid) {
-        debug('[' + id + '] Ignoré (groupe ' + remoteJid + ' ≠ canal ' + configuredJid + ')');
+      // Identifie le tag du groupe : '' = groupe par défaut, sinon le tag additionnel.
+      // Un message d'un groupe non listé est ignoré (multi-groupes v0.3 #16).
+      let groupTag = null;
+      if (remoteJid === configuredJid) {
+        groupTag = '';
+      } else {
+        for (const [tag, gj] of Object.entries(extraGroups[id] || {})) {
+          if (gj === remoteJid) { groupTag = tag; break; }
+        }
+      }
+      if (groupTag === null) {
+        debug('[' + id + '] Ignoré (groupe ' + remoteJid + ' non listé)');
         continue;
       }
+      const groupName = groupTag === ''
+        ? (instanceCfg[id]?.group_name || '')
+        : (instanceCfg[id]?.extra || []).find(g => g.tag === groupTag)?.name || '';
 
       // Ignorer les messages envoyés par Jeedom lui-même
       if (msg.key.fromMe) {
@@ -406,6 +435,8 @@ async function connectInstance(instance) {
             sender,
             sender_name: senderName,
             received_at: ts,
+            group_tag:   groupTag,
+            group_name:  groupName,
           });
         } catch (e) {
           logMsg('error', '[' + id + '] Erreur téléchargement ' + mediaKind + ' : ' + e.message);
@@ -428,6 +459,8 @@ async function connectInstance(instance) {
           sender,
           sender_name: senderName,
           received_at: ts,
+          group_tag:   groupTag,
+          group_name:  groupName,
         });
         continue;
       }
@@ -447,6 +480,8 @@ async function connectInstance(instance) {
         sender,
         sender_name: senderName,
         received_at: ts,
+        group_tag:   groupTag,
+        group_name:  groupName,
       });
     }
   });
@@ -669,9 +704,17 @@ async function applyPresence(sock, jid, presence) {
   } catch (_) { /* présence non critique */ }
 }
 
-// Résolution du JID destinataire — facteur commun à toutes les actions d'envoi
-function resolveJid(id, phone) {
+// Résolution du JID destinataire — facteur commun à toutes les actions d'envoi.
+// tag (v0.3 #16) : '' ou absent = groupe par défaut ; sinon groupe additionnel ciblé.
+function resolveJid(id, phone, tag) {
   if (!phone || phone === '' || phone === 'group') {
+    // Ciblage d'un groupe additionnel par tag
+    if (tag && tag !== '' && extraGroups[id] && extraGroups[id][tag]) {
+      return extraGroups[id][tag];
+    }
+    if (tag && tag !== '') {
+      throw new Error('Groupe additionnel "' + tag + '" introuvable ou non résolu — vérifiez le nom du groupe dans les paramètres');
+    }
     const jid = groupJids[id];
     if (!jid) {
       throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
@@ -689,7 +732,7 @@ function resolveJid(id, phone) {
 async function handleAction({ action, instance_id, phone, message, mention, media_path,
                               latitude, longitude, location_name,
                               contact_phone, contact_name, presence, ephemeral,
-                              poll_question, poll_options, poll_selectable }) {
+                              poll_question, poll_options, poll_selectable, group_tag }) {
   const id = String(instance_id);
 
   // Messages éphémères (v0.3 #15) — si une durée est fournie (en secondes),
@@ -705,21 +748,9 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       const sock = sockets[id];
       if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
 
-      let jid;
-      if (!phone || phone === '' || phone === 'group') {
-        jid = groupJids[id];
-        if (!jid) {
-          throw new Error('Groupe canal non configuré — recherchez ou créez le groupe dans les paramètres de l\'équipement');
-        }
-      } else if (String(phone).includes('@')) {
-        // JID complet fourni directement (ex : 33612345678@s.whatsapp.net ou 120363…@g.us)
-        jid = String(phone).trim();
-      } else {
-        // Normalisation : supprime les non-chiffres et convertit le format français 06/07 → 336/337
-        const digits = String(phone).replace(/\D/g, '').replace(/^0([67]\d{8})$/, '33$1');
-        if (!digits) { throw new Error('Numéro de téléphone invalide (' + phone + ') — format attendu : indicatif + numéro, ex : 33612345678'); }
-        jid = digits + '@s.whatsapp.net';
-      }
+      // Résolution du destinataire — gère le groupe par défaut, les groupes
+      // additionnels (group_tag, v0.3 #16), un JID complet ou un numéro.
+      const jid = resolveJid(id, phone, group_tag);
 
       // Mention optionnelle — @numéro en tête de message
       const msgPayload = { text: message };
@@ -757,7 +788,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
         throw new Error('Coordonnées GPS hors plage (lat ∈ [-90,90], long ∈ [-180,180])');
       }
-      const jid = resolveJid(id, phone);
+      const jid = resolveJid(id, phone, group_tag);
       const loc = { degreesLatitude: lat, degreesLongitude: lng };
       if (location_name && String(location_name).trim() !== '') {
         loc.name = String(location_name).trim();
@@ -786,7 +817,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         'FN:' + cName + '\n' +
         'TEL;type=CELL;type=VOICE;waid=' + cDigits + ':+' + cDigits + '\n' +
         'END:VCARD';
-      const jid = resolveJid(id, phone);
+      const jid = resolveJid(id, phone, group_tag);
       logMsg('info', '[' + id + '] → ' + jid + ' : 👤 contact ' + cName + ' (' + cDigits + ')');
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi contact — délai dépassé')), 10000));
       const sentContact = await Promise.race([
@@ -890,7 +921,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         throw new Error('Type non supporté pour un sticker (.' + sExt + ') — attendu .webp, .png, .jpg, .gif, .bmp');
       }
 
-      const jid = resolveJid(id, phone);
+      const jid = resolveJid(id, phone, group_tag);
       logMsg('info', '[' + id + '] → ' + jid + ' : 🏷 sticker ' + path.basename(media_path)
         + ' (' + Math.round(stickerBuf.length / 1024) + 'KB)');
       const tSt = new Promise((_, r) => setTimeout(() => r(new Error('Envoi sticker — délai dépassé')), 30000));
@@ -910,7 +941,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         .split('|').map(s => s.trim()).filter(s => s !== '');
       if (options.length < 2) { throw new Error('Au moins 2 options requises (séparées par |)'); }
       if (options.length > 12) { throw new Error('12 options maximum (limite WhatsApp)'); }
-      const jid = resolveJid(id, phone);
+      const jid = resolveJid(id, phone, group_tag);
       const selectable = (parseInt(poll_selectable, 10) > 1) ? parseInt(poll_selectable, 10) : 1;
       logMsg('info', '[' + id + '] → ' + jid + ' : 📊 sondage "' + q + '" (' + options.length + ' options)');
       const tP = new Promise((_, r) => setTimeout(() => r(new Error('Envoi sondage — délai dépassé')), 15000));
@@ -975,7 +1006,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
       const src = lastIncomingMsg[id];
       if (!src) { throw new Error('Aucun message reçu à transférer — attendez un message dans le groupe canal'); }
-      const jid = resolveJid(id, phone);
+      const jid = resolveJid(id, phone, group_tag);
       logMsg('info', '[' + id + '] ⇪ Forward → ' + jid + ' (depuis ' + (src.key.id || '?') + ')');
       const t = new Promise((_, r) => setTimeout(() => r(new Error('Transfert — délai dépassé')), 15000));
       const fwd = await Promise.race([sock.sendMessage(jid, { forward: src }, sendOpts), t]);
