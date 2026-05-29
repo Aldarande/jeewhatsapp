@@ -293,6 +293,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Commandes shortcuts (v0.4 #19) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Commandes shortcuts}}</label>
+								<div class="col-sm-7">
+									<textarea class="eqLogicAttr form-control" rows="3"
+										   data-l1key="configuration" data-l2key="interaction_shortcuts"
+										   placeholder="/salon=#1234#&#10;/status=Maison : #5678# °C&#10;/scene=#9012#"></textarea>
+									<span class="help-block">
+										<small>{{Raccourcis rapides déclenchés par un message commençant par « / ». Une ligne par raccourci au format <strong>/déclencheur=cible</strong>. La cible peut être : une commande seule <strong>#id#</strong> (action → exécutée et confirmée ; info → sa valeur est renvoyée), ou un texte modèle contenant des tags <strong>#id#</strong> d'infos et les variables <strong>#args#</strong> (arguments) / <strong>#1#</strong>, <strong>#2#</strong>… (mots d'argument). Prioritaire sur le moteur d'interactions.}}</small>
+									</span>
+								</div>
+							</div>
+
 							<!-- Whitelist expéditeurs (v0.2, sécurité) -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Whitelist expéditeurs}}</label>

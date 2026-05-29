@@ -299,6 +299,40 @@ Exemples d'interactions configurables dans Jeedom :
 
 > Configurez vos interactions dans **Outils → Interactions** dans Jeedom.
 
+### Commandes shortcuts — « slash » (v0.4)
+
+Champ **« Commandes shortcuts »** : des raccourcis rapides déclenchés par un message
+commençant par `/`. Ils sont **prioritaires** sur le moteur d'interactions (NLP) et ne
+nécessitent aucune configuration dans *Outils → Interactions* — idéal pour les commandes
+fréquentes.
+
+**Format** : une ligne par raccourci, `/déclencheur=cible`. La cible peut être :
+
+| Type de cible | Exemple de ligne | Effet du message `/déclencheur` |
+|---|---|---|
+| **Commande action** `#id#` | `/scene=#9012#` | Exécute la commande action `9012`, répond `✅ Nom de la commande` |
+| **Commande info** `#id#` | `/temp=#1234#` | Répond la valeur courante : `Température salon : 21 °C` |
+| **Texte modèle** | `/bonjour=Salut #args# !` | `/bonjour Paul` → répond `Salut Paul !` |
+| **Modèle + tags Jeedom** | `/maison=Salon #1234# / Ext #5678#` | Remplace les `#id#` d'infos par leur valeur |
+
+**Variables disponibles dans un texte modèle** :
+- `#args#` : tous les arguments après le déclencheur (`/echo bonjour le monde` → `#args#` = `bonjour le monde`)
+- `#1#`, `#2#`, … : chaque mot d'argument pris séparément
+
+Pour une commande action de sous-type *message*, l'argument est passé comme texte du
+message ; pour un *slider*, comme valeur ; pour une *couleur*, comme code couleur.
+
+Un déclencheur inconnu renvoie `❓ Raccourci inconnu : /xxx`.
+
+> **Exemple complet** :
+> ```
+> /salon=#1234#
+> /allumer=#1057#
+> /statut=🏠 Salon : #1234# °C — Alarme : #1099#
+> /dis=Message reçu : #args#
+> ```
+> Puis dans le groupe : `/salon` → `Température salon : 21 °C`, `/dis Coucou` → `Message reçu : Coucou`.
+
 ---
 
 ## Scénarios

@@ -227,6 +227,22 @@ class jeewhatsapp extends eqLogic {
 
     log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::updateFromMessage() — Interaction de ' . $sender . ' : ' . $message);
 
+    // v0.4 #19 — Commandes shortcuts (slash) : prioritaires sur interactQuery.
+    // Si le message commence par '/' et qu'au moins un raccourci est configuré,
+    // on le traite directement (exécution cmd ou modèle texte) sans passer par le NLP.
+    $shortcut = $this->handleShortcut($message);
+    if ($shortcut !== null) {
+      if (isset($shortcut['reply']) && trim((string) $shortcut['reply']) !== '') {
+        log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::updateFromMessage() — réponse raccourci : ' . $shortcut['reply']);
+        try {
+          $this->sendMessage($shortcut['reply']);
+        } catch (Exception $e) {
+          log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__ . ' — Erreur envoi réponse raccourci : ' . $e->getMessage());
+        }
+      }
+      return;
+    }
+
     $reply = interactQuery::tryToReply($message, [
       'plugin'     => 'jeewhatsapp',
       'profile'    => $_data['sender_name'] ?? $sender,
@@ -548,6 +564,98 @@ class jeewhatsapp extends eqLogic {
       $groups[] = ['tag' => $tag, 'name' => $name];
     }
     return $groups;
+  }
+
+  // -------------------------------------------------------------------------
+  // v0.4 #19 — Commandes shortcuts (slash)
+  // Parse la config `interaction_shortcuts` (textarea, une ligne par raccourci) :
+  //   /trigger = cible
+  // La cible est soit :
+  //   - une commande unique `#id#`  (action → exécutée ; info → sa valeur est renvoyée)
+  //   - un texte modèle pouvant contenir des tags `#id#` d'infos et les placeholders
+  //     `#args#` (arguments complets) / `#1#`, `#2#`… (mots d'argument), évalué via
+  //     jeedom::evaluateExpression().
+  // Retourne une map [trigger_minuscule_sans_slash => cible].
+  // -------------------------------------------------------------------------
+  public static function parseShortcuts($_raw) {
+    $map = [];
+    if (!is_string($_raw) || trim($_raw) === '') { return $map; }
+    foreach (preg_split('/\r\n|\r|\n/', $_raw) as $line) {
+      $line = trim($line);
+      if ($line === '' || $line[0] !== '/' || strpos($line, '=') === false) { continue; }
+      list($trigger, $target) = explode('=', $line, 2);
+      $trigger = strtolower(ltrim(trim($trigger), '/'));
+      // un raccourci = un seul token (le premier mot)
+      $tokens  = preg_split('/\s+/', $trigger, -1, PREG_SPLIT_NO_EMPTY);
+      $trigger = $tokens[0] ?? '';
+      $target  = trim($target);
+      if ($trigger === '' || $target === '') { continue; }
+      $map[$trigger] = $target;
+    }
+    return $map;
+  }
+
+  // Tente de traiter $_message comme un raccourci slash.
+  // Retourne :
+  //   - null               → ce n'est pas un raccourci (laisser interactQuery gérer)
+  //   - ['reply' => texte] → raccourci traité, réponse à renvoyer dans le groupe
+  public function handleShortcut($_message) {
+    $msg = ltrim((string) $_message);
+    if ($msg === '' || $msg[0] !== '/') { return null; }
+    $map = self::parseShortcuts($this->getConfiguration('interaction_shortcuts', ''));
+    if (empty($map)) { return null; }
+
+    $parts   = preg_split('/\s+/', $msg, 2);
+    $trigger = strtolower(ltrim($parts[0], '/'));
+    $args    = isset($parts[1]) ? trim($parts[1]) : '';
+
+    if (!isset($map[$trigger])) {
+      return ['reply' => '❓ ' . __('Raccourci inconnu : ', __FILE__) . '/' . $trigger];
+    }
+    $target = $map[$trigger];
+
+    // Cas 1 : cible = une seule commande #id#
+    if (preg_match('/^#(\d+)#$/', $target, $m)) {
+      $cmd = cmd::byId((int) $m[1]);
+      if (!is_object($cmd)) {
+        return ['reply' => '⚠️ ' . __('Commande introuvable pour /', __FILE__) . $trigger];
+      }
+      try {
+        if ($cmd->getType() === 'action') {
+          $opts = [];
+          if ($args !== '') {
+            switch ($cmd->getSubType()) {
+              case 'message': $opts['message'] = $args; $opts['title'] = ''; break;
+              case 'slider':  $opts['slider']  = $args; break;
+              case 'color':   $opts['color']   = $args; break;
+            }
+          }
+          $cmd->execute($opts);
+          return ['reply' => '✅ ' . $cmd->getHumanName(true, true)];
+        }
+        // info → renvoie la valeur courante
+        $val  = $cmd->execCmd();
+        $unit = trim((string) $cmd->getUnite());
+        return ['reply' => $cmd->getName() . ' : ' . $val . ($unit !== '' ? ' ' . $unit : '')];
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::handleShortcut() l.' . __LINE__
+          . ' — Erreur exécution raccourci /' . $trigger . ' : ' . $e->getMessage());
+        return ['reply' => '⚠️ ' . __('Erreur sur le raccourci /', __FILE__) . $trigger];
+      }
+    }
+
+    // Cas 2 : cible = texte modèle (placeholders + tags #id#)
+    $tpl   = str_replace('#args#', $args, $target);
+    $words = ($args === '') ? [] : preg_split('/\s+/', $args);
+    foreach ($words as $i => $w) {
+      $tpl = str_replace('#' . ($i + 1) . '#', $w, $tpl);
+    }
+    try {
+      $resolved = jeedom::evaluateExpression($tpl);
+    } catch (Exception $e) {
+      $resolved = $tpl;
+    }
+    return ['reply' => (string) $resolved];
   }
 
   // v0.3 #16 — Envoi d'un message vers un groupe additionnel identifié par son tag.

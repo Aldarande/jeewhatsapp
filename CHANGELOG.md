@@ -9,6 +9,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Commandes shortcuts (slash)** ⭐ — config eqLogic `interaction_shortcuts` (textarea,
+  une ligne `/déclencheur=cible`). Un message reçu commençant par `/` est traité en
+  priorité sur le moteur d'interactions (NLP). La cible peut être : une commande seule
+  `#id#` (action → exécutée + confirmation `✅ Nom`, info → sa valeur `Nom : valeur unité`),
+  ou un **texte modèle** contenant des tags `#id#` d'infos et les placeholders `#args#`
+  (arguments complets) / `#1#`, `#2#`… (mots d'argument), évalué via
+  `jeedom::evaluateExpression()`. Raccourci inconnu → réponse explicite `❓`. Helpers PHP
+  `parseShortcuts()` (static) et `handleShortcut()`. Aucune dépendance externe.
+  (v0.4 ROADMAP #19)
 - **Multi-groupes par équipement** ⭐ — config eqLogic `extra_groups` (textarea, une
   ligne `tag=Nom du groupe WhatsApp`). Chaque équipement peut désormais écouter ET cibler
   plusieurs groupes canaux en plus du groupe principal. Design **additif** : le groupe par

@@ -75,7 +75,7 @@ Objectif : transformer WhatsApp en interface vocale et command-line de Jeedom.
 |---|---|---|---|
 | 17 | **STT sur notes vocales reçues** ⭐ | 🔴🧪 | Vocal entrant → transcription via Whisper (local, plugin tts existe ?) ou Vosk → traité comme texte par `interactQuery`. Permet "Allume la lumière du salon" en vocal. |
 | 18 | **TTS sur réponses** | 🟡 | Réponse Jeedom synthétisée en .ogg/.opus via Piper ou plugin TTS → envoi PTT. Mode "vocal-first" par eqLogic. |
-| 19 | **Commandes shortcuts** (slash) | 🟡 | `/temp salon`, `/lights off`, `/status` — mapping dans configuration eqLogic. Plus rapide que le parseur d'interactions natif. |
+| 19 | ✅ **Commandes shortcuts** (slash) | 🟡 | Config eqLogic `interaction_shortcuts` (`/déclencheur=cible`). Cible = commande `#id#` (action exécutée / info renvoyée) ou texte modèle avec tags `#id#` + placeholders `#args#`/`#1#`. Prioritaire sur le NLP, sans dépendance externe. Helpers `parseShortcuts()` / `handleShortcut()`. |
 | 20 | **OCR sur images reçues** | 🔴 | Image entrante → Tesseract → texte exposé en cmd info. Ex: capture compteur eau/gaz. |
 | 21 | **Reconnaissance utilisateur** | 🟡 | Mapping numéro/JID → profil Jeedom (compatible plugin profiles). Personnalise les réponses. |
 
