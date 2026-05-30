@@ -9,6 +9,14 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Sauvegarde / restauration de session** 🛡️ (v0.5 #26) — export **chiffré AES-256** du dossier
+  d'authentification Baileys (`auth/{id}/`) protégé par une **phrase de passe**, pour restaurer la
+  connexion **après une réinstallation sans re-scanner le QR code**. 100 % PHP natif
+  (`openssl_encrypt` + `PharData`, aucune dépendance externe → portable). Boutons « Sauvegarder »
+  (télécharge un fichier `.jwab`) et « Restaurer » (upload) dans la config de l'équipement.
+  Endpoints AJAX `backupSession`/`restoreSession`, méthodes PHP `backupSession()`/`restoreSession()`.
+  La restauration conserve l'ancienne session en `.bak` et redémarre le démon. Format du blob :
+  magic `JWAB1` + IV + données chiffrées.
 - **Compatibilité multi-plateforme** — `install_dep.sh` installe désormais **ffmpeg** (apt,
   non bloquant) requis par la conversion audio (note vocale du widget, TTS, STT) ; Piper utilise
   déjà `uname -m` pour le binaire adapté (x86_64 / aarch64 / armv7l). `validate.sh` gagne une

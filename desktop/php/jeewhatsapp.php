@@ -299,6 +299,29 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 							</div>
 
+							<!-- Sauvegarde de session (v0.5 #26) -->
+							<div class="form-group">
+								<label class="col-sm-4 control-label">{{Sauvegarde de session}}</label>
+								<div class="col-sm-7">
+									<div class="input-group" style="margin-bottom:6px;">
+										<input type="password" class="form-control" id="bk_pass" placeholder="{{Phrase de passe (6 caractères min.)}}" autocomplete="new-password">
+										<span class="input-group-btn">
+											<button class="btn btn-default" id="bk_backup" type="button" title="{{Télécharger une sauvegarde chiffrée de la session}}"><i class="fas fa-download"></i> {{Sauvegarder}}</button>
+										</span>
+									</div>
+									<div class="input-group">
+										<input type="file" class="form-control" id="bk_file" accept=".jwab">
+										<span class="input-group-btn">
+											<button class="btn btn-warning" id="bk_restore" type="button" title="{{Restaurer la session depuis un fichier}}"><i class="fas fa-upload"></i> {{Restaurer}}</button>
+										</span>
+									</div>
+									<span class="help-block">
+										<small>{{Sauvegarde chiffrée (AES-256) de la session WhatsApp pour la restaurer après une réinstallation, <strong>sans re-scanner le QR code</strong>. La même phrase de passe est requise pour restaurer. La restauration écrase la session actuelle (l'ancienne est conservée en <code>.bak</code>) et redémarre le démon.}}</small>
+									</span>
+									<span id="bk_result" class="help-block" style="display:none;"></span>
+								</div>
+							</div>
+
 							<!-- Interactions Jeedom -->
 							<div class="form-group">
 								<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
@@ -862,6 +885,71 @@ $('.grp-simple').on('click', function () {
   var op = $(this).data('op');
   if (op === 'leave' && !confirm('{{Quitter ce groupe WhatsApp ? Cette action est irréversible.}}')) { return; }
   doGroupAction(op, '', $(this));
+});
+
+// ── Sauvegarde / restauration de session (v0.5 #26) ──────────────────────────
+$('#bk_backup').on('click', function () {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  var $result = $('#bk_result');
+  if (!eqLogic_id) { $result.text('{{Sauvegardez l\'équipement d\'abord}}').css('color', 'red').show(); return; }
+  var pass = $('#bk_pass').val() || '';
+  if (pass.length < 6) { $result.text('{{Phrase de passe : 6 caractères minimum}}').css('color', 'red').show(); return; }
+  var $btn = $(this); $btn.prop('disabled', true);
+  $result.hide();
+  var fd = new FormData();
+  fd.append('action', 'backupSession');
+  fd.append('eqLogic_id', eqLogic_id);
+  fd.append('passphrase', pass);
+  fetch('plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+    .then(function (r) {
+      var ct = r.headers.get('Content-Type') || '';
+      if (ct.indexOf('application/json') !== -1) { return r.json().then(function (d) { throw new Error(d.result || d.error || 'erreur'); }); }
+      return r.blob();
+    })
+    .then(function (blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'jeewhatsapp-session-' + eqLogic_id + '.jwab';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      $btn.prop('disabled', false);
+      $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+        .append(' {{Sauvegarde téléchargée — conservez le fichier et la phrase de passe en lieu sûr}}')
+        .css('color', '#25D366').show();
+    })
+    .catch(function (e) { $btn.prop('disabled', false); $result.text('{{Erreur : }}' + e.message).css('color', 'red').show(); });
+});
+
+$('#bk_restore').on('click', function () {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  var $result = $('#bk_result');
+  if (!eqLogic_id) { $result.text('{{Sauvegardez l\'équipement d\'abord}}').css('color', 'red').show(); return; }
+  var pass = $('#bk_pass').val() || '';
+  var file = ($('#bk_file')[0].files || [])[0];
+  if (pass.length < 6) { $result.text('{{Phrase de passe : 6 caractères minimum}}').css('color', 'red').show(); return; }
+  if (!file) { $result.text('{{Sélectionnez un fichier de sauvegarde (.jwab)}}').css('color', 'red').show(); return; }
+  if (!confirm('{{Restaurer cette session écrasera la session actuelle et redémarrera le démon. Continuer ?}}')) { return; }
+  var $btn = $(this); $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Restauration…}}');
+  $result.hide();
+  var fd = new FormData();
+  fd.append('action', 'restoreSession');
+  fd.append('eqLogic_id', eqLogic_id);
+  fd.append('passphrase', pass);
+  fd.append('session', file, file.name);
+  $.ajax({
+    type: 'POST', url: 'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data: fd, processData: false, contentType: false, dataType: 'json',
+    success: function (data) {
+      $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}');
+      if (data.state === 'ok') {
+        $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
+          .append(' {{Session restaurée — démon redémarré. Vérifiez le statut de connexion.}}')
+          .css('color', '#25D366').show();
+      } else {
+        $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();
+      }
+    },
+    error: function () { $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}'); $result.text('{{Erreur de communication}}').css('color', 'red').show(); }
+  });
 });
 
 // ── Envoi de test ───────────────────────────────────────────────────────────

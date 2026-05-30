@@ -101,6 +101,36 @@ try {
       $eqLogic->streamIncomingMedia(trim(init('path', '')));
       exit(0); // contenu binaire déjà envoyé, pas de ajax::success()
 
+    // ── Sauvegarde chiffrée de la session (téléchargement binaire) ──────
+    case 'backupSession':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      $blob = $eqLogic->backupSession(init('passphrase', ''));
+      while (ob_get_level() > 0) { ob_end_clean(); }
+      header('Content-Type: application/octet-stream');
+      header('Content-Disposition: attachment; filename="jeewhatsapp-session-' . intval($eqLogic_id) . '.jwab"');
+      header('Content-Length: ' . strlen($blob));
+      echo $blob;
+      exit(0);
+
+    // ── Restauration de session depuis un fichier chiffré uploadé ───────
+    case 'restoreSession':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      if (!isset($_FILES['session']) || ($_FILES['session']['error'] ?? 1) !== UPLOAD_ERR_OK || !is_uploaded_file($_FILES['session']['tmp_name'])) {
+        throw new Exception(__('Aucun fichier de sauvegarde reçu', __FILE__));
+      }
+      if (($_FILES['session']['size'] ?? 0) > 5 * 1024 * 1024) {
+        throw new Exception(__('Fichier de sauvegarde trop volumineux', __FILE__));
+      }
+      $blob = file_get_contents($_FILES['session']['tmp_name']);
+      ajax::success($eqLogic->restoreSession(init('passphrase', ''), $blob));
+      break;
+
     // ── Statut de connexion WhatsApp ────────────────────────────────────
     case 'getStatus':
       $eqLogic_id = init('eqLogic_id');

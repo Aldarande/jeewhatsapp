@@ -516,6 +516,24 @@ dashboard.
 
 ---
 
+### Sauvegarde / restauration de session (v0.5)
+
+La connexion WhatsApp repose sur des identifiants stockés localement (`auth/{id}/`). Pour ne pas
+avoir à **re-scanner le QR code** après une réinstallation du serveur ou une migration, vous
+pouvez exporter une **sauvegarde chiffrée** de la session :
+
+- **Sauvegarder** : saisissez une **phrase de passe** (6 caractères minimum) puis cliquez sur
+  *Sauvegarder* → un fichier `.jwab` chiffré (AES-256) est téléchargé. Conservez le fichier **et**
+  la phrase de passe en lieu sûr (la phrase est indispensable pour restaurer).
+- **Restaurer** : sélectionnez le fichier `.jwab`, saisissez la **même phrase de passe**, puis
+  cliquez sur *Restaurer*. La session actuelle est écrasée (l'ancienne est conservée en `.bak`),
+  puis le démon redémarre automatiquement.
+
+> Le chiffrement est entièrement local (PHP natif, aucun service tiers). Sans la bonne phrase de
+> passe, le fichier de sauvegarde est inexploitable.
+
+---
+
 ## Scénarios
 
 ### Alerte intrus — message dans le groupe

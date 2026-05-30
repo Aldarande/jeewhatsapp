@@ -1190,6 +1190,107 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Sauvegarde/restauration chiffrée de la session Baileys (v0.5 #26)
+  // Permet de restaurer la connexion après réinstallation sans re-scanner le QR.
+  // Chiffrement AES-256-CBC (PHP natif), archive tar (PharData) → 100% portable.
+  // Format du blob : "JWAB1" (5o magic) + IV (16o) + données chiffrées.
+  // -------------------------------------------------------------------------
+
+  private function authDir() {
+    return __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId();
+  }
+
+  public function backupSession($_passphrase) {
+    $pass = (string) $_passphrase;
+    if (strlen($pass) < 6) {
+      throw new Exception(__('Phrase de passe trop courte (6 caractères minimum)', __FILE__));
+    }
+    $authDir = realpath($this->authDir());
+    if ($authDir === false || !is_dir($authDir)) {
+      throw new Exception(__('Aucune session à sauvegarder (équipement jamais connecté ?)', __FILE__));
+    }
+
+    $tmp = jeedom::getTmpFolder('jeewhatsapp');
+    if (!is_dir($tmp)) { @mkdir($tmp, 0775, true); }
+    $tarPath = $tmp . '/session_' . $this->getId() . '_' . uniqid() . '.tar';
+    @unlink($tarPath);
+
+    try {
+      $phar = new PharData($tarPath);
+      $phar->buildFromDirectory($authDir);
+      unset($phar);
+      $plain = file_get_contents($tarPath);
+    } finally {
+      @unlink($tarPath);
+    }
+    if ($plain === false || $plain === '') {
+      throw new Exception(__('Archive de session vide', __FILE__));
+    }
+
+    $iv     = random_bytes(16);
+    $key    = hash('sha256', $pass, true);
+    $cipher = openssl_encrypt($plain, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    if ($cipher === false) {
+      throw new Exception(__('Échec du chiffrement de la session', __FILE__));
+    }
+    return 'JWAB1' . $iv . $cipher;
+  }
+
+  public function restoreSession($_passphrase, $_blob) {
+    $pass = (string) $_passphrase;
+    if (strlen($pass) < 6) {
+      throw new Exception(__('Phrase de passe trop courte', __FILE__));
+    }
+    if (!is_string($_blob) || substr($_blob, 0, 5) !== 'JWAB1' || strlen($_blob) < 5 + 16 + 16) {
+      throw new Exception(__('Fichier de sauvegarde invalide', __FILE__));
+    }
+    $iv     = substr($_blob, 5, 16);
+    $cipher = substr($_blob, 21);
+    $key    = hash('sha256', $pass, true);
+    $plain  = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    if ($plain === false || $plain === '') {
+      throw new Exception(__('Déchiffrement impossible — phrase de passe incorrecte ou fichier corrompu', __FILE__));
+    }
+
+    $tmp = jeedom::getTmpFolder('jeewhatsapp');
+    if (!is_dir($tmp)) { @mkdir($tmp, 0775, true); }
+    $tarPath = $tmp . '/restore_' . $this->getId() . '_' . uniqid() . '.tar';
+    if (file_put_contents($tarPath, $plain) === false) {
+      throw new Exception(__('Écriture de l\'archive de restauration impossible', __FILE__));
+    }
+
+    try {
+      // Valide que c'est bien une archive tar
+      $phar = new PharData($tarPath);
+
+      $authDir = $this->authDir();
+      // Sauvegarde de l'éventuelle session existante avant écrasement
+      if (is_dir($authDir)) {
+        @rename($authDir, $authDir . '.bak_' . date('YmdHis'));
+      }
+      if (!is_dir($authDir)) { @mkdir($authDir, 0700, true); }
+
+      $phar->extractTo($authDir, null, true);
+      unset($phar);
+      @chmod($authDir, 0700);
+    } catch (Exception $e) {
+      @unlink($tarPath);
+      throw new Exception(__('Archive de restauration illisible : ', __FILE__) . $e->getMessage());
+    }
+    @unlink($tarPath);
+
+    // Redémarre le daemon pour recharger les credentials restaurés
+    try {
+      self::deamon_stop();
+      sleep(1);
+      self::deamon_start();
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning', 'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — redémarrage daemon : ' . $e->getMessage());
+    }
+    return ['restored' => true];
+  }
+
+  // -------------------------------------------------------------------------
   // Archive / épingle / met en sourdine la conversation du groupe canal (v0.5 #24)
   // $_op : archive|unarchive|pin|unpin|mute|unmute
   // $_value : pour mute, durée en heures (null = 8h par défaut)
