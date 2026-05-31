@@ -44,8 +44,14 @@ echo 30 > "$PROGRESS_FILE"
 # Installation des dépendances npm
 log "Installation des dépendances npm (@whiskeysockets/baileys, qrcode, pino, sharp)..."
 log "Cela peut prendre 2-5 minutes selon la connexion..."
-cd "$DAEMON_DIR" && npm install 2>&1
-if [ $? -ne 0 ]; then
+if ! cd "$DAEMON_DIR"; then
+  log "ERREUR : impossible d'accéder à $DAEMON_DIR"
+  echo "error" > "$PROGRESS_FILE"
+  exit 1
+fi
+# --omit=dev : ignore les devDependencies (build local plus rapide, moins de Mo)
+# --no-audit --no-fund : silencieux et plus rapide en CI/box Jeedom
+if ! npm install --omit=dev --no-audit --no-fund 2>&1; then
   log "ERREUR : npm install a échoué"
   echo "error" > "$PROGRESS_FILE"
   exit 1

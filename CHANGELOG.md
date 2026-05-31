@@ -7,6 +7,18 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Procédure d'installation** — passe de fiabilité :
+  - `pluginVersion` mis à jour de `0.1` à `0.5` (était faux depuis plusieurs versions).
+  - `maxDependancyInstallTime` passé de **60 → 600 secondes** (Piper + Vosk ne tiennent pas
+    dans 1 minute, surtout sur ARM).
+  - `install_dep.sh` : `cd && npm install` remplacé par bloc séparé (vrai code de retour de
+    npm), flags `--omit=dev --no-audit --no-fund` (plus rapide, moins de Mo).
+  - `install.php::jeewhatsapp_remove()` ne **supprime plus le dossier `auth/`** : les sessions
+    WhatsApp survivent à une désinstallation/réinstallation (plus besoin de re-scanner le QR).
+  - Doc : ajout d'une section **Installation** (prérequis, étapes, mise à jour, compat).
+
 ### Added
 
 - **Sauvegarde / restauration de session** 🛡️ (v0.5 #26) — export **chiffré AES-256** du dossier

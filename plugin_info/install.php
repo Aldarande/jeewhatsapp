@@ -82,9 +82,12 @@ function jeewhatsapp_remove() {
     $cron = cron::byClassAndFunction('jeewhatsapp', $fn);
     if (is_object($cron)) { $cron->remove(); }
   }
-  // Suppression du dossier d'authentification (sessions WhatsApp)
-  $authDir = dirname(__FILE__) . '/../resources/jeewhatsappd/auth';
-  if (is_dir($authDir)) {
-    shell_exec('rm -rf ' . escapeshellarg($authDir));
-  }
+  // IMPORTANT : on NE supprime PAS le dossier auth/ ici. Les credentials Baileys
+  // y sont stockés et permettent de reconnecter sans re-scanner le QR code après
+  // une réinstallation. Si l'utilisateur veut vraiment tout effacer, qu'il le
+  // supprime à la main : resources/jeewhatsappd/auth/
+  log::add('jeewhatsapp', 'info',
+    'install.php::jeewhatsapp_remove() — Plugin désinstallé. Le dossier auth/ '
+    . 'a été conservé (resources/jeewhatsappd/auth/) — supprimez-le manuellement '
+    . 'si vous voulez effacer les sessions WhatsApp.');
 }

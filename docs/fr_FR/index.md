@@ -5,6 +5,54 @@
 
 ---
 
+## Installation
+
+### Prérequis
+
+| Composant | Version | Obligatoire ? |
+|---|---|---|
+| Jeedom | ≥ 4.4.0 | ✅ |
+| Node.js | ≥ 18 | ✅ (déjà présent sur les box Jeedom récentes) |
+| `ffmpeg` | quelconque | ⚠️ optionnel (notes vocales/TTS/STT) — installé automatiquement |
+| `python3` + `pip3` | 3.8+ | ⚠️ optionnel (STT Vosk) — déjà présent sur Jeedom |
+| `tesseract-ocr` | 4+ | ⚠️ optionnel (OCR images) — installé automatiquement |
+
+> Compatibilité matérielle : x86_64 (VM/PC/NUC/Docker) et **ARM** (Raspberry Pi, box Jeedom
+> Smart/Atlas/Luna). Le binaire Piper est récupéré via `uname -m` pour l'architecture cible.
+
+### Étapes
+
+1. **Installer le plugin** via le market Jeedom (ou en upload manuel du zip) puis l'**activer**.
+2. **Installer les dépendances** : bouton « Installer les dépendances » de la page plugin —
+   cela installe Baileys + ffmpeg + Piper (TTS) + Tesseract (OCR) + Vosk (STT) en une fois.
+   - Compter **5 à 15 minutes** selon la connexion et la machine (téléchargements ~150 Mo).
+   - Les composants IA sont **non bloquants** : si l'un échoue, le plugin fonctionne sans cette fonction.
+3. **Créer un équipement** JeeWhatsApp (n'importe quel nom), puis le **sauvegarder**.
+4. **Démarrer le démon** : Jeedom le lance automatiquement après création de l'équipement.
+   En cas de souci, redémarrez-le manuellement via le bouton « Démarrer le démon ».
+5. **Scanner le QR code** : ouvrez l'équipement → onglet **Configuration** → un QR code
+   s'affiche. Sur votre téléphone : WhatsApp → **Paramètres → Appareils liés → Lier un appareil**,
+   puis scannez. Le statut passe à **« connecté »** sous 5 secondes.
+6. **Créer ou rechercher le groupe canal** : bouton « Créer » dans la section *Groupe lié*
+   (crée un groupe vide nommé `jeewhatsapp` par défaut), ou « Rechercher » si vous l'avez
+   déjà créé manuellement. Ajoutez ensuite vos contacts dans ce groupe WhatsApp.
+7. **Tester** : onglet **Test** → bouton « Envoyer dans le groupe canal ». Vous devez recevoir
+   `🏠 Test JeeWhatsApp 🚀` dans le groupe.
+
+### Mise à jour
+
+Le plugin gère l'update automatiquement via `jeewhatsapp_update()` (création des crons manquants
+si nouveaux). Après une mise à jour majeure, relancer **« Installer les dépendances »** si de
+nouveaux composants sont annoncés dans le changelog.
+
+### Désinstallation
+
+La désinstallation **conserve** le dossier `resources/jeewhatsappd/auth/` (sessions WhatsApp)
+pour éviter de devoir re-scanner le QR après une réinstallation. Pour tout effacer :
+supprimez ce dossier manuellement après désinstallation.
+
+---
+
 ## Présentation
 
 JeeWhatsApp intègre **WhatsApp** dans Jeedom via [Baileys](https://github.com/WhiskeySockets/Baileys),
