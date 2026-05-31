@@ -1,74 +1,242 @@
-# JeeWhatsApp — Plugin Jeedom pour WhatsApp
+﻿# JeeWhatsApp
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-Soutenir-FF5E5B?logo=kofi)](https://ko-fi.com/aldarande)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-EA4AAA?logo=githubsponsors)](https://github.com/sponsors/Aldarande)
-[![Licence](https://img.shields.io/badge/Licence-AGPL%20v3-blue)](LICENSE)
-[![Jeedom](https://img.shields.io/badge/Jeedom-4.4%2B-green)](https://www.jeedom.com)
+**Plugin Jeedom pour intégrer WhatsApp à votre domotique**
 
-**Plugin Jeedom pour intégrer WhatsApp à votre domotique.**
-Pilotez votre installation Jeedom via WhatsApp : recevez des alertes, contrôlez des scénarios, gérez des groupes, et utilisez des fonctionnalités avancées comme la **reconnaissance vocale (STT)** et la **synthèse vocale (TTS)**.
-
----
-
-## ✨ Fonctionnalités
-
-### 📱 Messagerie et contrôle
-- **Envoi/réception de messages** texte, médias (images, vidéos, audio), localisations GPS et contacts.
-- **Gestion des groupes WhatsApp** : Créer, modifier, ajouter/supprimer des participants, changer le sujet ou l’icône.
-- **Réactions emoji** : Envoyer et recevoir des réactions aux messages.
-- **Sondages** : Créer et gérer des sondages WhatsApp.
-- **Messages éphémères** : Configurer une durée d’expiration pour les messages envoyés (24h, 7j, 90j).
-
-### 🎤 Vocal et IA
-- **STT (Speech-to-Text)** : Transcription locale des notes vocales reçues via **Vosk** (modèle français).
-- **TTS (Text-to-Speech)** : Synthèse vocale locale via **Piper** (voix française).
-- **OCR** : Extraction de texte depuis les images reçues via **Tesseract**.
-
-### 🔄 Intégration Jeedom
-- **Interactions** : Répondre automatiquement aux messages via le moteur d’interactions Jeedom.
-- **Raccourcis clavier** : Utiliser des commandes préfixées (ex. : `/jeedom allume salon`).
-- **Whitelist des expéditeurs** : Restreindre les interactions aux numéros autorisés.
-- **Filtre par mot-clé** : Seuls les messages commençant par un mot-clé déclenchent des actions.
-
-### 📊 Widget et UX
-- **Widget dashboard** style WhatsApp : Affichage du statut de connexion, dernier message, compteurs, et envoi rapide.
-- **Zoom sur le QR code** pour faciliter le scan.
-- **Messages d’erreur clairs** pour le dépannage.
-
-### 🔒 Sécurité
-- **Backup chiffré** des sessions WhatsApp (AES-256-GCM).
-- **Authentification du daemon** via un secret partagé (`JEEDOM_DAEMON_SECRET`).
-- **Rate-limiting** sur les endpoints pour éviter les attaques par force brute.
-- **Validation des uploads** (MIME type, extensions) pour éviter les fichiers malveillants.
+[![License](https://img.shields.io/badge/licence-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
+[![Jeedom](https://img.shields.io/badge/Jeedom-4.4+-green.svg)](https://jeedom.com)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-brightgreen.svg)](https://nodejs.org)
+[![Security](https://img.shields.io/badge/sécurité-100%2F100-success.svg)](SECURITY-AUDIT.md)
 
 ---
 
-## 📋 Providers et dépendances
+## Description
 
-JeeWhatsApp utilise les bibliothèques suivantes pour fonctionner :
-   **Dépendance**       | **Type**       | **Licence**       | **Description**                                  |
- |----------------------|----------------|-------------------|--------------------------------------------------|
- | **Baileys**          | Node.js        | MIT               | Bibliothèque pour interagir avec WhatsApp.      |
- | **Vosk**             | Python         | Apache 2.0        | Reconnaissance vocale locale (STT).              |
- | **Piper**            | Binaire        | MIT               | Synthèse vocale locale (TTS).                     |
- | **Tesseract**        | Binaire        | Apache 2.0        | OCR pour extraire du texte des images.           |
- | **ffmpeg**           | Binaire        | LGPLv2.1+ / GPLv3 | Conversion audio/vidéo.                          |
-
-> **Note** : Toutes les dépendances sont **100% locales** (pas de service cloud tiers).
+JeeWhatsApp permet d'envoyer et recevoir des messages WhatsApp directement depuis Jeedom,
+**sans passer par un serveur tiers**. La connexion s'établit entre votre serveur Jeedom
+et les serveurs WhatsApp via [Baileys](https://github.com/WhiskeySockets/Baileys),
+une implémentation open-source du protocole WhatsApp Web.
 
 ---
 
-## 📥 Installation
+## Fonctionnalités
 
-### 1. Prérequis
-- **Jeedom** 4.4 ou supérieur.
-- **PHP** 8.0+.
-- **Node.js** 18+ (pour le daemon).
-- **Dépendances système** :
-  - `ffmpeg` (pour la gestion des médias).
-  - `git` (pour cloner le dépôt).
+- **Envoi/réception de messages texte** dans un groupe WhatsApp canal dédié
+- **Médias** — envoi d'images, vidéos, documents, notes vocales, stickers, localisations, contacts, sondages
+- **Réception de médias** — affichage inline dans le widget dashboard (image, audio, vidéo)
+- **Interactions Jeedom** — déclenchez des scénarios par message (whitelist + mot-clé)
+- **Raccourcis slash** — commandes courtes `/allume`, `/température`… → exécution directe
+- **TTS** (synthèse vocale) — réponses en note vocale via Piper (français)
+- **STT** (reconnaissance vocale) — transcription des notes vocales reçues via Vosk
+- **OCR** — extraction de texte des images reçues via Tesseract
+- **Gestion des groupes** — ajouter/retirer membres, changer sujet/description, lien d'invitation
+- **Sauvegarde chiffrée** de session (AES-256-GCM + PBKDF2) — restauration sans re-scanner le QR
+- **Multi-comptes** — un équipement Jeedom = un compte WhatsApp (instances parallèles)
+- **Widget dashboard** style WhatsApp — bulle de chat en direct, micro intégré, statut de connexion
+- **Statuts WhatsApp** — publication de statuts éphémères 24h
+- **100 % self-hosted** — aucune donnée ne transite par un serveur tiers
 
-### 2. Installer le plugin
-1. Cloner le dépôt dans le répertoire `plugins/` de Jeedom :
-   ```bash
-   git clone -b dev https://github.com/Aldarande/jeewhatsapp.git /var/www/html/plugins/jeewhatsapp
+---
+
+## Prérequis
+
+| Composant | Version minimale |
+|-----------|-----------------|
+| Jeedom | 4.4.0 |
+| PHP | 8.0 |
+| Node.js | **18+** (LTS recommandé) |
+
+Dépendances optionnelles (installées automatiquement par `install_dep.sh`) :
+
+| Outil | Fonction | Requis ? |
+|-------|----------|----------|
+| `ffmpeg` | Conversion audio (note vocale, TTS, STT) | Optionnel |
+| `Piper` | Synthèse vocale (TTS) — voix fr_FR-siwis-medium | Optionnel |
+| `Vosk` | Transcription vocale (STT) | Optionnel |
+| `Tesseract` | Extraction de texte des images (OCR) | Optionnel |
+
+> **Note :** Le plugin fonctionne sans les outils optionnels — les fonctions audio/IA
+> se désactivent proprement si leur dépendance est absente.
+
+---
+
+## Installation
+
+### 1. Via le market Jeedom (recommandé)
+
+Recherchez **JeeWhatsApp** dans le market Jeedom et cliquez sur « Installer ».
+
+### 2. Depuis GitHub (développement / beta)
+
+```bash
+cd /var/www/html/plugins
+git clone -b dev https://github.com/Aldarande/jeewhatsapp.git jeewhatsapp
+```
+
+### 3. Installer les dépendances
+
+Dans Jeedom : **Plugins → JeeWhatsApp → Gérer les dépendances → Installer**.
+
+Ou en ligne de commande :
+
+```bash
+bash /var/www/html/plugins/jeewhatsapp/resources/install_dep.sh /tmp/jwa_dep
+```
+
+### 4. Activer le plugin
+
+**Plugins → Gestion des plugins → JeeWhatsApp → Activer**.
+
+### 5. Créer un équipement et scanner le QR code
+
+1. **Plugins → Communication → JeeWhatsApp → Ajouter**
+2. Renseignez le **nom du groupe WhatsApp** canal (le groupe doit exister ou sera créé)
+3. Sauvegardez, le daemon démarre et génère un QR code
+4. Scannez avec l'application WhatsApp : **Paramètres → Appareils liés → Lier un appareil**
+
+---
+
+## Configuration
+
+### Paramètres de l'équipement
+
+| Paramètre | Description |
+|-----------|-------------|
+| `Nom du groupe` | Nom exact du groupe WhatsApp canal |
+| `Préfixe` | Préfixe ajouté à chaque message sortant (ex : `🏠 `) |
+| `Interactions` | Activer/désactiver les interactions Jeedom par message |
+| `Mot-clé` | Préfixe obligatoire pour déclencher une interaction (ex : `/jeedom`) |
+| `Whitelist` | Numéros autorisés à déclencher des interactions (1 par ligne) |
+| `TTS activé` | Réponses en note vocale (Piper requis) |
+| `STT activé` | Transcription des notes vocales reçues (Vosk requis) |
+| `OCR activé` | Extraction de texte des images (Tesseract requis) |
+| `Présence` | Afficher « en train d'écrire… » avant chaque envoi |
+| `Messages éphémères` | Durée d'expiration des messages (24h, 7j, 90j) |
+
+### Configuration globale plugin
+
+| Paramètre | Description |
+|-----------|-------------|
+| `Port daemon` | Port HTTP local du daemon (défaut : `55148`) |
+
+---
+
+## Commandes disponibles
+
+### Actions
+
+| logicalId | Description |
+|-----------|-------------|
+| `send_message` | Envoyer un message texte (vide = groupe canal) |
+| `reply` | Répondre (quoted) au dernier message reçu |
+| `send_media` | Envoyer un fichier (image, vidéo, audio, document) |
+| `send_location` | Envoyer une localisation GPS |
+| `send_contact` | Envoyer un contact vCard |
+| `send_voice` | Envoyer une note vocale (TTS) |
+| `send_poll` | Envoyer un sondage |
+| `send_sticker` | Envoyer un sticker |
+| `react` | Réagir avec un emoji au dernier message |
+| `mark_read` | Marquer le dernier message comme lu |
+| `post_status` | Publier un statut WhatsApp 24h |
+| `mute_chat` | Mettre en sourdine la conversation |
+
+### Infos
+
+| logicalId | Description |
+|-----------|-------------|
+| `last_message` | Dernier message texte reçu |
+| `last_sender` | Numéro de l'expéditeur |
+| `last_sender_name` | Nom WhatsApp de l'expéditeur |
+| `last_received_at` | Date/heure de réception |
+| `sent_hour` | Nombre de messages envoyés dans l'heure en cours |
+| `messages_today` | Nombre de messages reçus aujourd'hui |
+| `last_attachment_path` | Chemin du dernier média reçu |
+| `last_attachment_type` | Type du média (image, audio, video, document) |
+| `last_voice_text` | Transcription STT du dernier audio reçu |
+| `last_ocr_text` | Texte OCR de la dernière image reçue |
+| `last_reaction` | Dernière réaction emoji reçue |
+
+---
+
+## Exemples de scénarios
+
+### Alerte intrusion par WhatsApp
+
+```
+Déclencheur : [Capteur mouvement salon] = 1
+Action       : JeeWhatsApp → send_message
+               Message : "Alerte : mouvement détecté dans le salon à #time#"
+```
+
+### Contrôle de la domotique par message
+
+Configuration : `Mot-clé = /jeedom`, `Whitelist = 33612345678`
+
+```
+Depuis WhatsApp : "/jeedom allume le salon"
+→ Jeedom reçoit "allume le salon", interprète via InteractQuery
+→ Exécute le scénario correspondant, répond "Salon allumé"
+```
+
+### Raccourcis slash
+
+Configuration (champ `Raccourcis`) :
+
+```
+/temp = La température est de #1234# degrés
+/alarme = #5678#
+```
+
+### Réponse vocale (TTS + STT)
+
+Configuration : `TTS activé = oui`, `STT activé = oui`
+
+```
+Utilisateur envoie une note vocale : "Quelle est la température ?"
+→ STT transcrit → InteractQuery répond → TTS synthétise → note vocale envoyée
+```
+
+---
+
+## Sécurité
+
+| Mesure | Détail |
+|--------|--------|
+| **Aucun serveur tiers** | Connexion directe Jeedom ↔ WhatsApp via Baileys |
+| **API key hors CLI** | Passée via variable d'environnement uniquement |
+| **Secret daemon** | JEEDOM_DAEMON_SECRET régénéré à chaque démarrage |
+| **Callback restreint** | callback.php accepte uniquement 127.0.0.1 |
+| **Rate-limiting** | 60 requêtes/minute max sur le callback |
+| **Chiffrement session** | AES-256-GCM + PBKDF2-SHA256 (200k itérations) |
+| **Score audit** | 100/100 — tous les findings corrigés (voir SECURITY-AUDIT.md) |
+
+---
+
+## Architecture
+
+```
+Jeedom (PHP)
+├── eqLogic jeewhatsapp  ── commandes (send_message, last_message…)
+├── core/ajax/*.ajax.php  ── endpoints UI (getQR, getStatus, findGroup…)
+└── core/php/callback.php ← réception messages (POST depuis daemon)
+        ↕ HTTP 127.0.0.1:55148
+Daemon Node.js (ESM)
+└── jeewhatsappd.js       ── Baileys WebSocket ── WhatsApp
+    └── auth/{id}/        (sessions Baileys, permissions 0700)
+```
+
+---
+
+## Contribuer
+
+1. **Signaler un bug** : [ouvrir une issue](https://github.com/Aldarande/jeewhatsapp/issues)
+2. **Proposer une PR** : branche `dev` uniquement, respectez le [DEV-WORKFLOW.md](DEV-WORKFLOW.md)
+3. **Sécurité** : contactez [aldarande@gmail.com](mailto:aldarande@gmail.com)
+
+Si vous appréciez ce plugin (gratuit et open-source) :
+☕ [Ko-fi](https://ko-fi.com/aldarande) · 💙 [GitHub Sponsors](https://github.com/sponsors/Aldarande)
+
+---
+
+## Licence
+
+[AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html) — Aldarande

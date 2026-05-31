@@ -30,3 +30,25 @@ jeewhatsapp/
 
 # Logs
 *.log
+*.tmp
+
+# Sauvegardes de session chiffrées (générées par l'utilisateur, ne pas versionner)
+*.jwab
+*.jwab.gz
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build / dist
+dist/
+
+# Données Jeedom (médias entrants, non versionnés)
+data/
+
+# Fichiers swap / backup éditeur
+*.swp
+*.swo
+*~
+*.bak
