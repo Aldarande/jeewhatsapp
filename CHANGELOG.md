@@ -23,6 +23,24 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   téléchargés dans `install_dep.sh` : Piper (x86_64 / aarch64 / armv7l), voix française,
   modèle Vosk fr. Helper `check_sha256()`. Si le hash ne correspond pas, l'installation
   échoue proprement (TTS/STT désactivé, le plugin continue de fonctionner).
+- **F-005/F-006 (LOW, XSS)** — `htmlspecialchars(ENT_QUOTES, UTF-8)` ajouté sur
+  `getHumanName()` et `getImage()` dans `desktop/php/jeewhatsapp.php` : empêche l'injection
+  HTML/JS via un nom d'équipement malveillant (admin-to-admin, CWE-79).
+- **F-007 (LOW, AES-CBC non authentifié)** — `backupSession()` passe au format **JWAB3** :
+  AES-256-GCM (chiffrement authentifié, tag 16 o) + PBKDF2-SHA256 200k + IV 12 o (NIST).
+  `restoreSession()` reste rétrocompatible avec JWAB2 et JWAB1. Toute altération du fichier
+  `.jwab` est désormais détectée (CWE-353).
+- **F-008 (LOW, upload MIME)** — `sendVoiceRecording()` valide le type MIME réel via `finfo`
+  avant `ffmpeg` : types audio autorisés uniquement (webm, ogg, mp4, mpeg, aac, wav). Empêche
+  l'écriture de contenu arbitraire dans `tmp/` (CWE-434).
+- **F-009 (LOW, entropie)** — `bin2hex(random_bytes(8))` remplace `uniqid()` sur tous les
+  noms de fichiers temporaires (TTS, backup, restore, uploadVoice). Élimine les risques de
+  race condition et de prédiction de chemin (CWE-330).
+- **F-010 (LOW, rate-limit)** — `callback.php` limite à **60 requêtes/minute/IP** via cache
+  Jeedom (clé `jeewhatsapp::ratelimit::callback::{md5(ip)}`, TTL 60 s). Répond HTTP 429 au-delà.
+  Protège PHP-FPM contre un démon local compromis (CWE-770).
+- **F-011 (INFO, daemon secret)** — `jeewhatsappd.js` : si `JEEDOM_DAEMON_SECRET` est vide,
+  toutes les requêtes sont refusées avec HTTP 503 (plus de fallback "ouvert").
 
 ### Changed
 
