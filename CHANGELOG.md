@@ -41,6 +41,10 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
   Protège PHP-FPM contre un démon local compromis (CWE-770).
 - **F-011 (INFO, daemon secret)** — `jeewhatsappd.js` : si `JEEDOM_DAEMON_SECRET` est vide,
   toutes les requêtes sont refusées avec HTTP 503 (plus de fallback "ouvert").
+- **F-012 (INFO, headers daemon)** — toutes les réponses du daemon HTTP renvoient désormais
+  `X-Content-Type-Options: nosniff`, `Cache-Control: no-store`, `X-Frame-Options: DENY` et
+  `Content-Security-Policy: default-src 'none'`. Défense en profondeur même si le daemon est
+  bound `127.0.0.1` et ne renvoie que du JSON.
 
 ### Changed
 

@@ -3,13 +3,16 @@
 **Projet :** jeewhatsapp (Plugin Jeedom — WhatsApp via Baileys self-hosted)
 **Date :** 2026-05-31
 **Auditeur :** Claude Security Agent
-**Commit analysé :** fa507b6 (fix(security): F-005→F-011 — XSS, GCM, rate-limit, MIME, entropy, daemon)
+**Commit analysé :** fa507b6 + F-012 (headers daemon HTTP)
 **Branche :** dev
 **Fichiers analysés :** 14 (hors dossier-artefact `jeewhatsapp/` et `3rdparty/`)
 **Score de sécurité :** 78/100 (initial) → **100/100** ✅ (toutes les vulnérabilités corrigées)
 
-> Audit actualisé après application des correctifs F-001 à F-011 sur les versions v0.4–v0.6.
+> Audit actualisé après application des correctifs **F-001 à F-012** sur les versions v0.4–v0.6.
 > Tous les findings ont été corrigés et commités. Le plugin est prêt pour publication.
+>
+> Récap : 1 HIGH (Tar Slip), 3 MEDIUM (checksums, PBKDF2, pip pinning), 6 LOW (XSS, AES-GCM,
+> MIME, random_bytes, rate-limit), 2 INFO (daemon strict, headers HTTP).
 
 ---
 
