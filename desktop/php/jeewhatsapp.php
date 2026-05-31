@@ -204,7 +204,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									</div>
 									<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
 										<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
-										<span style="color:#d9534f;">{{Session expirée — redémarrez le daemon}}</span>
+										<span style="color:#d9534f;">{{Session expirée — un nouveau QR code apparaîtra automatiquement. Scannez-le pour reconnecter.}}</span>
 									</div>
 								</div>
 							</div>
@@ -217,10 +217,38 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}
 									</p>
 									<img id="wa_qr_img" src=""
-										style="width:180px;height:180px;border:3px solid #25D366;border-radius:10px;display:block;">
-									<p class="help-block" style="font-size:0.8em;margin-top:5px;">
-										{{QR code valide 30 s — se rafraîchit automatiquement}}
-									</p>
+										style="width:180px;height:180px;border:3px solid #25D366;border-radius:10px;display:block;cursor:zoom-in;"
+										title="{{Cliquez pour agrandir}}"
+										data-toggle="modal" data-target="#modal_qrZoom">
+									<div style="margin-top:7px;display:flex;align-items:center;gap:8px;">
+										<p class="help-block" style="font-size:0.8em;margin:0;">
+											{{QR code valide 30 s — se rafraîchit automatiquement}}
+										</p>
+										<button type="button" class="btn btn-xs btn-default" data-toggle="modal" data-target="#modal_qrZoom" title="{{Agrandir le QR code}}">
+											<i class="fas fa-search-plus"></i> {{Agrandir}}
+										</button>
+									</div>
+								</div>
+							</div>
+
+							<!-- Modal agrandissement QR code -->
+							<div class="modal fade" id="modal_qrZoom" tabindex="-1" role="dialog" aria-labelledby="modal_qrZoom_label">
+								<div class="modal-dialog modal-sm" role="document" style="max-width:340px;margin:60px auto;">
+									<div class="modal-content" style="border:3px solid #25D366;border-radius:12px;">
+										<div class="modal-header" style="background:#25D366;color:#fff;border-radius:9px 9px 0 0;padding:10px 16px;">
+											<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
+											<h5 class="modal-title" id="modal_qrZoom_label" style="color:#fff;margin:0;">
+												<i class="fab fa-whatsapp"></i> {{Scanner le QR code}}
+											</h5>
+										</div>
+										<div class="modal-body" style="text-align:center;padding:20px;">
+											<img id="wa_qr_img_zoom" src="" style="width:100%;max-width:280px;border:3px solid #25D366;border-radius:10px;">
+											<p class="text-muted" style="font-size:0.82em;margin-top:12px;margin-bottom:0;">
+												<i class="fas fa-mobile-alt"></i>
+												{{WhatsApp → Appareils liés → Lier un appareil}}
+											</p>
+										</div>
+									</div>
 								</div>
 							</div>
 
@@ -656,11 +684,16 @@ function refreshQRStatus() {
     data: { action: 'getQR', eqLogic_id: eqLogic_id },
     dataType: 'json',
     success: function (data) {
-      if (data.state !== 'ok') { showStatus('error', '{{Erreur daemon}}'); return; }
+      if (data.state !== 'ok') {
+        showStatus('error', '{{Erreur daemon — vérifiez l\'onglet Analyse → Logs → jeewhatsapp}}');
+        return;
+      }
       var r = data.result;
       applyStatus(r);
     },
-    error: function () { showStatus('error', '{{Impossible de contacter le daemon}}'); }
+    error: function () {
+      showStatus('error', '{{Impossible de joindre le daemon — relancez-le via Plugins → JeeWhatsApp → Démarrer le daemon}}');
+    }
   });
 }
 
@@ -671,6 +704,8 @@ function applyStatus(r) {
 
   if (r && r.qr) {
     $('#wa_qr_img').attr('src', r.qr);
+    // Synchronise le QR dans le modal de zoom
+    $('#wa_qr_img_zoom').attr('src', r.qr);
     $('#wa_qr_zone').show();
     showStatus('warning', '{{En attente du scan QR…}}');
   } else if (r && r.status === 'connected') {
