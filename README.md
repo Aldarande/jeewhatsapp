@@ -38,8 +38,3 @@ Idéal pour :
   - `Vosk` (STT)
   - `Tesseract` (OCR)
 
----
-## 📥 Installation
-1. **Cloner le dépôt** :
-   ```bash
-   git clone -b dev https://github.com/Aldarande/jeewhatsapp.git /var/www/html/plugins/jeewhatsapp
