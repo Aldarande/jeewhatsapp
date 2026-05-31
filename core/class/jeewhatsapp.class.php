@@ -2092,6 +2092,67 @@ class jeewhatsapp extends eqLogic {
       $sgroup->setDisplay('message_placeholder', 'Texte du message');
       $sgroup->save();
     }
+
+    // Commande action : Envoyer un template (#29)
+    // Convention : message = clé du template (ex: bienvenue), title = destinataire optionnel (vide = groupe canal)
+    $tmpl = $this->getCmd('action', 'send_template');
+    if (!is_object($tmpl)) {
+      $tmpl = new jeewhatsappCmd();
+      $tmpl->setEqLogic_id($this->getId());
+      $tmpl->setLogicalId('send_template');
+      $tmpl->setType('action');
+      $tmpl->setSubType('message');
+      $tmpl->setName('Envoyer un template');
+      $tmpl->setIsVisible(1);
+      $tmpl->setOrder($order++);
+      $tmpl->save();
+    }
+    if ($tmpl->getDisplay('title_placeholder') !== 'Destinataire optionnel (vide = groupe canal)') {
+      $tmpl->setDisplay('title_placeholder', 'Destinataire optionnel (vide = groupe canal)');
+      $tmpl->save();
+    }
+    if ($tmpl->getDisplay('message_placeholder') !== 'Clé du template (ex: bienvenue)') {
+      $tmpl->setDisplay('message_placeholder', 'Clé du template (ex: bienvenue)');
+      $tmpl->save();
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Templates messages (#29)
+  // Pool de messages réutilisables, configurés par équipement.
+  //
+  // Format de stockage (configuration eqLogic 'message_templates') :
+  //   une ligne par template : cle=Texte du message avec des #tags# ou du texte libre
+  //   Les lignes vides ou sans '=' sont ignorées.
+  //   La clé est insensible à la casse lors de la recherche.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Retourne tous les templates de cet équipement sous forme de tableau associatif
+   * key (minuscule) => texte.
+   */
+  public function getTemplates() {
+    $raw       = $this->getConfiguration('message_templates', '');
+    $templates = [];
+    if (trim($raw) === '') { return $templates; }
+    foreach (preg_split('/\r\n|\r|\n/', $raw) as $line) {
+      $line = trim($line);
+      if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) { continue; }
+      [$key, $text] = explode('=', $line, 2);
+      $key  = strtolower(trim($key));
+      $text = trim($text);
+      if ($key !== '' && $text !== '') {
+        $templates[$key] = $text;
+      }
+    }
+    return $templates;
+  }
+
+  /**
+   * Retourne le texte d'un template par sa clé (insensible à la casse), ou null si introuvable.
+   */
+  public function getTemplate($_key) {
+    return $this->getTemplates()[strtolower(trim($_key))] ?? null;
   }
 
   // -------------------------------------------------------------------------
@@ -2344,6 +2405,30 @@ class jeewhatsappCmd extends cmd {
           ? trim($_options['title'])
           : null;
         $eqLogic->forwardLastTo($dest);
+        break;
+
+      case 'send_template':
+        // message = clé du template ; title = destinataire optionnel (vide = groupe canal)
+        $key   = trim($_options['message'] ?? '');
+        $phone = (isset($_options['title']) && trim($_options['title']) !== '')
+               ? trim($_options['title'])
+               : null;
+        if ($key === '') {
+          throw new Exception(__('Clé de template manquante (champ Message)', __FILE__));
+        }
+        $text = $eqLogic->getTemplate($key);
+        if ($text === null) {
+          throw new Exception(__('Template introuvable : ', __FILE__) . $key);
+        }
+        // Substitution des tags Jeedom #[Objet][Équipement][Commande]# si présents
+        try {
+          $text = jeedom::toHumanReadable($text);
+        } catch (Exception $e) {
+          log::add('jeewhatsapp', 'warning',
+            'jeewhatsapp.class.php::execute(send_template) l.' . __LINE__
+            . ' — toHumanReadable impossible : ' . $e->getMessage());
+        }
+        $eqLogic->sendMessage($text, $phone);
         break;
     }
   }

@@ -126,6 +126,11 @@ sendVarToJS('eqType', 'jeewhatsapp');
 					<i class="fas fa-paper-plane"></i> {{Test}}
 				</a>
 			</li>
+			<li role="presentation">
+				<a href="#templatestab" role="tab" data-toggle="tab">
+					<i class="fas fa-bookmark"></i> {{Templates}}
+				</a>
+			</li>
 		</ul>
 
 		<div class="tab-content">
@@ -634,6 +639,52 @@ sendVarToJS('eqType', 'jeewhatsapp');
 				</div><!-- /max-width -->
 			</div><!-- /#testtab -->
 
+			<!-- ── Onglet Templates (#29) ────────────────────────────────────── -->
+			<div role="tabpanel" class="tab-pane" id="templatestab">
+				<div style="max-width:700px;margin:24px auto;">
+
+					<div style="background:#25D366;color:#fff;padding:13px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:10px;">
+						<i class="fas fa-bookmark" style="font-size:1.4em;"></i>
+						<span style="font-size:1.05em;font-weight:600;">{{Messages templates}}</span>
+					</div>
+
+					<div style="border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;padding:22px 24px;background:#fff;">
+
+						<p style="color:#555;margin-bottom:14px;font-size:0.9em;">
+							<i class="fas fa-info-circle" style="color:#2196f3;margin-right:5px;"></i>
+							{{Définissez ici des messages réutilisables. Une ligne par template au format}} <code>clé=Texte du message</code>.<br>
+							{{Dans un scénario, utilisez la commande}} <strong>{{Envoyer un template}}</strong> {{et saisissez la clé dans le champ "Message".}}<br>
+							{{Les tags Jeedom}} <code>#[Objet][Équipement][Commande]#</code> {{sont résolus automatiquement à l'envoi.}}
+						</p>
+
+						<div class="form-group">
+							<label style="font-weight:600;margin-bottom:6px;display:block;">
+								<i class="fas fa-list-ul" style="color:#25D366;margin-right:6px;"></i>
+								{{Templates}}
+							</label>
+							<textarea class="eqLogicAttr form-control" rows="10"
+								data-l1key="configuration" data-l2key="message_templates"
+								placeholder="bienvenue=Bienvenue chez vous ! 🏠&#10;alerte=⚠️ Alerte : #[Maison][Détecteur][Présence]# !&#10;nuit=🌙 Bonne nuit — fermeture automatique des volets&#10;# Les lignes commençant par # sont des commentaires"></textarea>
+							<span class="help-block" style="font-size:0.82em;margin-top:6px;">
+								<strong>{{Format :}}</strong> <code>clé=texte</code> — {{une ligne par template, clé insensible à la casse}}<br>
+								{{Les lignes vides et celles commençant par}} <code>#</code> {{sont ignorées.}}
+							</span>
+						</div>
+
+						<!-- Aperçu dynamique -->
+						<div style="border-top:1px solid #f0f0f0;margin:16px 0 14px;"></div>
+						<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+							<button class="btn btn-default btn-sm" id="btn_preview_templates" type="button">
+								<i class="fas fa-eye"></i> {{Aperçu des templates}}
+							</button>
+							<span class="text-muted" style="font-size:0.85em;">{{(sans sauvegarder)}}</span>
+						</div>
+						<div id="templates_preview" style="display:none;margin-top:14px;"></div>
+
+					</div>
+				</div>
+			</div><!-- /#templatestab -->
+
 		</div><!-- /.tab-content -->
 	</div><!-- /.eqLogic -->
 
@@ -645,6 +696,34 @@ var _waQRInterval = null;
 // ── Bouton don ──────────────────────────────────────────────────────────────
 $('#bt_donJeeWhatsApp').on('click', function () {
   $('#modal_donJeeWhatsApp').modal('show');
+});
+
+// ── Aperçu templates (#29) ──────────────────────────────────────────────────
+$('#btn_preview_templates').on('click', function () {
+  var raw = $('textarea[data-l2key="message_templates"]').val() || '';
+  var lines = raw.split('\n');
+  var html = '';
+  var count = 0;
+  lines.forEach(function (line) {
+    line = line.trim();
+    if (line === '' || line[0] === '#') { return; }
+    var eq = line.indexOf('=');
+    if (eq === -1) { return; }
+    var key  = line.substring(0, eq).trim();
+    var text = line.substring(eq + 1).trim();
+    if (key === '' || text === '') { return; }
+    html += '<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">'
+          + '<code style="min-width:120px;background:#e8f5e9;color:#2e7d32;padding:3px 7px;border-radius:4px;font-size:0.88em;flex-shrink:0;">' + $('<div>').text(key).html() + '</code>'
+          + '<span style="color:#333;word-break:break-word;">' + $('<div>').text(text).html() + '</span>'
+          + '</div>';
+    count++;
+  });
+  var $box = $('#templates_preview');
+  if (count === 0) {
+    $box.html('<p class="text-muted" style="font-size:0.9em;margin:0;">{{Aucun template valide trouvé.}}</p>').show();
+  } else {
+    $box.html('<p style="font-size:0.85em;color:#888;margin-bottom:10px;">{{' + count + ' template(s) défini(s) :}}</p>' + html).show();
+  }
 });
 
 // ── Polling statut connexion — démarre quand l'équipement s'ouvre, s'arrête quand caché ────

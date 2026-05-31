@@ -1,54 +1,71 @@
-# Claude Code
+# =============================================================================
+# .gitignore — Plugin JeeWhatsApp
+# Ne versionner que ce qui est nécessaire au fonctionnement du plugin.
+# =============================================================================
+
+# ── Fichiers Claude Code (développement) ─────────────────────────────────────
 CLAUDE.md
 .claude/
 
-# IDE
+# ── Fichiers de planification / développement (non publiés) ──────────────────
+ROADMAP.md
+SECURITY-AUDIT.md
+DEV-WORKFLOW.md
+
+# ── Scripts de test / validation internes ────────────────────────────────────
+tools/
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.code-workspace
 
-# Dépendances Node.js — installées par install_dep.sh
+# ── Dépendances Node.js — installées par install_dep.sh ──────────────────────
+# Ne pas versionner node_modules : npm install les reconstruit à partir de package.json
 resources/jeewhatsappd/node_modules/
-
-# Fichiers générés à l'exécution
 resources/jeewhatsappd/package-lock.json
 
-# Credentials Baileys (générés à l'exécution, sensibles)
+# ── Credentials Baileys (générés à l'exécution, SENSIBLES) ───────────────────
+# Contient les clés de session WhatsApp — jamais dans le dépôt
 resources/jeewhatsappd/auth/
 
-# Piper TTS — binaire + modèles de voix installés par install_dep.sh (lourds, non versionnés)
+# ── Piper TTS — binaire et modèles vocaux (lourds, installés par install_dep.sh) ──
 resources/piper/piper/
 resources/piper/voices/
 resources/piper/*.tar.gz
+resources/piper/*.gz
 
-# Vosk STT — modèle de langue installé par install_dep.sh (lourd, non versionné)
-resources/stt/model-fr/
+# ── Vosk STT — modèles de langue (lourds, installés par install_dep.sh) ──────
+resources/stt/model-*/
 resources/stt/*.zip
 resources/stt/__pycache__/
+resources/stt/*.pyc
 
-# Artefacts locaux
+# ── Dossier parasite (doublon généré par erreur) ──────────────────────────────
 jeewhatsapp/
 
-# Logs
-*.log
-*.tmp
-
-# Sauvegardes de session chiffrées (générées par l'utilisateur, ne pas versionner)
+# ── Sauvegardes de session chiffrées (générées par l'utilisateur) ────────────
 *.jwab
+*.jwab.bak
 *.jwab.gz
 
-# OS
+# ── Logs et fichiers temporaires ─────────────────────────────────────────────
+*.log
+*.tmp
+*.pid
+
+# ── Données Jeedom (médias entrants — non versionnés) ────────────────────────
+data/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
+ehthumbs.db
 
-# Build / dist
-dist/
-
-# Données Jeedom (médias entrants, non versionnés)
-data/
-
-# Fichiers swap / backup éditeur
+# ── Éditeur ───────────────────────────────────────────────────────────────────
 *.swp
 *.swo
 *~
 *.bak
+*.orig
