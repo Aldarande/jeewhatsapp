@@ -9,7 +9,7 @@
   "hasDependency": true,
   "hasOwnDeamon": true,
   "maxDependancyInstallTime": 600,
-  "pluginVersion": "0.5",
+  "pluginVersion": "0.6",
   "documentation": "https://aldarande.github.io/jeewhatsapp/#language#/index.html",
   "changelog": "https://aldarande.github.io/jeewhatsapp/#language#/index.html#changelog",
   "language": [
