@@ -75,10 +75,10 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			<div class="eqLogicThumbnailContainer">
 				<?php foreach ($eqLogics as $eqLogic) : ?>
 					<?php $opacity = $eqLogic->getIsEnable() ? '' : 'disableCard'; ?>
-					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo $eqLogic->getId(); ?>">
-						<img src="<?php echo $eqLogic->getImage(); ?>"/>
+					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo (int) $eqLogic->getId(); ?>">
+						<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
 						<br>
-						<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
+						<span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
 					</div>
 				<?php endforeach; ?>
 			</div>

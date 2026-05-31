@@ -30,6 +30,20 @@ if (!hash_equals(jeedom::getApiKey('jeewhatsapp'), (string)$api_key)) {
   die(json_encode(['error' => 'Forbidden']));
 }
 
+// SECURITY (F-010, CWE-770) : rate-limiting simple (60 req/min/IP). Le callback
+// est appelé par le daemon local pour chaque message reçu ; au-delà de ~1/sec
+// soutenu sur la minute, on coupe pour éviter qu'un processus malveillant local
+// (qui aurait obtenu la clé API) saturent le PHP-FPM avec des callbacks bidons.
+$rlKey = 'jeewhatsapp::ratelimit::callback::' . md5($remote);
+$rlCount = (int) cache::byKey($rlKey)->getValue(0);
+if ($rlCount > 60) {
+  http_response_code(429);
+  log::add('jeewhatsapp', 'warning', 'callback.php l.' . __LINE__
+    . ' — Rate-limit atteint (' . $rlCount . ' req/min) depuis ' . $remote);
+  die(json_encode(['error' => 'Too Many Requests']));
+}
+cache::set($rlKey, $rlCount + 1, 60);
+
 // Lecture du corps JSON
 $body = file_get_contents('php://input');
 $data = json_decode($body, true);

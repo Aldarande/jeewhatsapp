@@ -674,35 +674,52 @@ function safeStringEquals(a, b) {
   }
 }
 
+// SECURITY (F-012) : en-têtes de sécurité par défaut sur toutes les réponses HTTP
+// du daemon. Le serveur est bound 127.0.0.1 et ne renvoie que du JSON, donc le
+// risque est faible — mais en défense en profondeur on durcit quand même.
+const jsonHeaders = {
+  'Content-Type': 'application/json',
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'no-store',
+  'X-Frame-Options': 'DENY',
+  'Content-Security-Policy': "default-src 'none'",
+};
+
 http.createServer(async (req, res) => {
   if (req.method !== 'POST' || req.url !== '/action') {
-    res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
+    res.writeHead(404, jsonHeaders); res.end(JSON.stringify({ error: 'Not found' })); return;
   }
-  // SECURITY (F-004): authentification par secret partagé
-  // Si DAEMON_SECRET est configuré côté daemon, le header X-Daemon-Secret est obligatoire.
-  // Si DAEMON_SECRET est vide (cas migration/dev), on accepte mais on warn.
-  if (DAEMON_SECRET !== '') {
-    const provided = req.headers['x-daemon-secret'] || '';
-    if (!safeStringEquals(provided, DAEMON_SECRET)) {
-      logMsg('warning', 'Daemon HTTP : requête refusée (X-Daemon-Secret manquant ou invalide) depuis ' + req.socket.remoteAddress);
-      res.writeHead(401); res.end(JSON.stringify({ error: 'Unauthorized' })); return;
-    }
+  // SECURITY (F-004 + F-011) : authentification stricte par secret partagé.
+  // Si DAEMON_SECRET est vide (mauvaise config), on refuse toutes les requêtes —
+  // plus de fallback "ouvert" (le PHP doit toujours fournir JEEDOM_DAEMON_SECRET).
+  if (DAEMON_SECRET === '') {
+    logMsg('error', 'Daemon HTTP : JEEDOM_DAEMON_SECRET non fourni — toutes les requêtes sont refusées');
+    res.writeHead(503, jsonHeaders);
+    res.end(JSON.stringify({ error: 'Daemon misconfigured: missing JEEDOM_DAEMON_SECRET' }));
+    return;
+  }
+  const provided = req.headers['x-daemon-secret'] || '';
+  if (!safeStringEquals(provided, DAEMON_SECRET)) {
+    logMsg('warning', 'Daemon HTTP : requête refusée (X-Daemon-Secret manquant ou invalide) depuis ' + req.socket.remoteAddress);
+    res.writeHead(401, jsonHeaders);
+    res.end(JSON.stringify({ error: 'Unauthorized' }));
+    return;
   }
   let body = '';
   req.on('data', chunk => { body += chunk; });
   req.on('end', async () => {
     let payload;
     try { payload = JSON.parse(body); }
-    catch (e) { res.writeHead(400); res.end(JSON.stringify({ error: 'Invalid JSON' })); return; }
+    catch (e) { res.writeHead(400, jsonHeaders); res.end(JSON.stringify({ error: 'Invalid JSON' })); return; }
 
     debug('Action : ' + JSON.stringify(payload));
     try {
       const result = await handleAction(payload);
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, jsonHeaders);
       res.end(JSON.stringify({ status: 'ok', result }));
     } catch (e) {
       logMsg('error', 'Action [' + payload?.action + '] : ' + e.message);
-      res.writeHead(500);
+      res.writeHead(500, jsonHeaders);
       res.end(JSON.stringify({ error: e.message }));
     }
   });
