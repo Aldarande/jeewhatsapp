@@ -61,37 +61,82 @@ Dépendances optionnelles (installées automatiquement par `install_dep.sh`) :
 
 ## Installation
 
-### 1. Via le market Jeedom (recommandé)
+### Méthode 1 — Via le market Jeedom ⭐ (recommandée)
 
-Recherchez **JeeWhatsApp** dans le market Jeedom et cliquez sur « Installer ».
+C'est la méthode officielle : mises à jour automatiques, installation en un clic.
 
-### 2. Depuis GitHub (développement / beta)
+1. Dans Jeedom, ouvrez le menu **Plugins → Gestion des plugins**
+2. Cliquez sur l'icône **Market** (panier en haut à droite)
+3. Dans le champ de recherche, tapez **JeeWhatsApp**
+4. Cliquez sur la fiche du plugin puis sur **Installer stable** (ou *beta* pour la dernière version de développement)
+5. Confirmez — Jeedom télécharge et installe le plugin automatiquement
+6. De retour dans **Gestion des plugins**, cliquez sur **Activer** sur la ligne JeeWhatsApp
+7. Cliquez sur **Sauvegarder**
+
+> Le plugin apparaît ensuite dans **Plugins → Communication → JeeWhatsApp**.
+
+### Méthode 2 — Depuis GitHub (beta / développement)
+
+Réservée aux contributeurs ou aux utilisateurs qui souhaitent tester la branche `dev`.
 
 ```bash
 cd /var/www/html/plugins
 git clone -b dev https://github.com/Aldarande/jeewhatsapp.git jeewhatsapp
+chown -R www-data:www-data jeewhatsapp/
 ```
 
-### 3. Installer les dépendances
+Puis activez le plugin dans **Plugins → Gestion des plugins → JeeWhatsApp → Activer**.
 
-Dans Jeedom : **Plugins → JeeWhatsApp → Gérer les dépendances → Installer**.
+---
 
-Ou en ligne de commande :
+### Étapes communes (après toute méthode d'installation)
 
-```bash
-bash /var/www/html/plugins/jeewhatsapp/resources/install_dep.sh /tmp/jwa_dep
+#### Étape A — Installer les dépendances
+
+Les dépendances (Baileys, ffmpeg, Piper, Vosk, Tesseract) doivent être installées
+**une seule fois** après la première installation, et après chaque mise à jour majeure.
+
+1. Allez dans **Plugins → Communication → JeeWhatsApp**
+2. Cliquez sur l'icône ⚙️ (roue dentée en haut à droite) → **Gestion des dépendances**
+3. Cliquez sur **Installer** et attendez la fin (5 à 15 minutes selon la connexion)
+
+> En ligne de commande (accès SSH) :
+> ```bash
+> bash /var/www/html/plugins/jeewhatsapp/resources/install_dep.sh /tmp/jwa_dep
+> ```
+
+#### Étape B — Créer un équipement
+
+1. **Plugins → Communication → JeeWhatsApp → + Ajouter**
+2. Donnez un nom à l'équipement (ex : *Mon WhatsApp*)
+3. Dans la section **Groupe canal**, renseignez le nom exact du groupe WhatsApp
+   qui servira de canal de communication (sera créé s'il n'existe pas)
+4. Cliquez **Sauvegarder** — le daemon démarre automatiquement
+
+#### Étape C — Scanner le QR code
+
+Un QR code apparaît dans l'onglet **Équipement** après quelques secondes.
+
+Sur votre téléphone :
+
+```
+WhatsApp → ⋮ (Android) ou ⚙ (iOS) → Appareils liés → Lier un appareil → Scanner
 ```
 
-### 4. Activer le plugin
+Le statut passe à **Connecté ✓** dès que le scan est réussi.
+Le QR code expire après 30 secondes — cliquez **Rafraîchir** si besoin, ou **Agrandir** pour faciliter le scan.
 
-**Plugins → Gestion des plugins → JeeWhatsApp → Activer**.
+#### Étape D — Créer ou lier le groupe WhatsApp
 
-### 5. Créer un équipement et scanner le QR code
+Dans l'onglet **Équipement** :
 
-1. **Plugins → Communication → JeeWhatsApp → Ajouter**
-2. Renseignez le **nom du groupe WhatsApp** canal (le groupe doit exister ou sera créé)
-3. Sauvegardez, le daemon démarre et génère un QR code
-4. Scannez avec l'application WhatsApp : **Paramètres → Appareils liés → Lier un appareil**
+- **Bouton « Rechercher »** — si le groupe existe déjà parmi vos groupes WhatsApp
+- **Bouton « Créer »** — crée un nouveau groupe vide avec le nom configuré, puis ajoutez-y vos contacts
+
+#### Étape E — Tester
+
+Onglet **Test** → **Envoyer dans le groupe canal**.  
+Vous devez recevoir `🏠 Test JeeWhatsApp 🚀` dans le groupe WhatsApp.
 
 ---
 
