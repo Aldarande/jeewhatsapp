@@ -107,6 +107,36 @@ PIPER_REL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper
 VOICE_BASE="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR/siwis/medium"
 VOICE_NAME="fr_FR-siwis-medium"
 
+# SECURITY (F-002, CWE-494) : checksums SHA-256 figés pour bloquer un binaire
+# corrompu ou un compromis upstream. Mise à jour : remplacer après bump de version.
+# Calculé le 2026-05-31 sur les releases officielles.
+PIPER_SHA_x86_64="a50cb45f355b7af1f6d758c1b360717877ba0a398cc8cbe6d2a7a3a26e225992"
+PIPER_SHA_aarch64="fea0fd2d87c54dbc7078d0f878289f404bd4d6eea6e7444a77835d1537ab88eb"
+PIPER_SHA_armv7l="c6946fcd57c705ed1d4666ea880f80ba0bbbd14de62ecbdd13460baf3bac8e37"
+VOICE_SHA_ONNX="641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99"
+VOICE_SHA_JSON="39479916c2db192b5ac9764daddd0c744d83e023ad890c6976c0633ae4df8959"
+case "$(uname -m)" in
+  x86_64)  PIPER_SHA="$PIPER_SHA_x86_64"  ;;
+  aarch64) PIPER_SHA="$PIPER_SHA_aarch64" ;;
+  armv7l)  PIPER_SHA="$PIPER_SHA_armv7l"  ;;
+  *)       PIPER_SHA="" ;;
+esac
+
+# Vérifie un SHA-256 attendu sur un fichier. Renvoie 0 si OK, 1 sinon.
+check_sha256() {
+  local file="$1" expected="$2"
+  [ -n "$expected" ] || { log "AVERTISSEMENT : pas de checksum connu pour $(basename "$file") — vérification ignorée"; return 0; }
+  local got
+  got="$(sha256sum "$file" 2>/dev/null | awk '{print $1}')"
+  if [ "$got" = "$expected" ]; then
+    return 0
+  fi
+  log "ERREUR : checksum SHA-256 invalide pour $(basename "$file")"
+  log "  attendu : $expected"
+  log "  obtenu  : $got"
+  return 1
+}
+
 if ! command -v ffmpeg &> /dev/null; then
   log "AVERTISSEMENT : ffmpeg introuvable — synthèse vocale (TTS) indisponible (les réponses resteront en texte)"
 elif [ -x "$PIPER_DIR/piper/piper" ] && [ -f "$PIPER_DIR/voices/$VOICE_NAME.onnx" ]; then
@@ -114,16 +144,23 @@ elif [ -x "$PIPER_DIR/piper/piper" ] && [ -f "$PIPER_DIR/voices/$VOICE_NAME.onnx
 else
   log "Installation de Piper TTS (synthèse vocale, optionnel)..."
   mkdir -p "$PIPER_DIR/voices"
+  PIPER_OK=0
   if curl -fsSL -m 180 -o "$PIPER_DIR/piper.tar.gz" "$PIPER_REL" \
+     && check_sha256 "$PIPER_DIR/piper.tar.gz" "$PIPER_SHA" \
      && tar xzf "$PIPER_DIR/piper.tar.gz" -C "$PIPER_DIR" \
      && curl -fsSL -m 240 -o "$PIPER_DIR/voices/$VOICE_NAME.onnx"      "$VOICE_BASE/$VOICE_NAME.onnx?download=true" \
-     && curl -fsSL -m 60  -o "$PIPER_DIR/voices/$VOICE_NAME.onnx.json" "$VOICE_BASE/$VOICE_NAME.onnx.json?download=true"; then
+     && check_sha256 "$PIPER_DIR/voices/$VOICE_NAME.onnx" "$VOICE_SHA_ONNX" \
+     && curl -fsSL -m 60  -o "$PIPER_DIR/voices/$VOICE_NAME.onnx.json" "$VOICE_BASE/$VOICE_NAME.onnx.json?download=true" \
+     && check_sha256 "$PIPER_DIR/voices/$VOICE_NAME.onnx.json" "$VOICE_SHA_JSON"; then
     rm -f "$PIPER_DIR/piper.tar.gz"
     chmod +x "$PIPER_DIR/tts.sh" "$PIPER_DIR/piper/piper" 2>/dev/null || true
-    log "Piper TTS installé (voix $VOICE_NAME)"
-  else
-    log "AVERTISSEMENT : installation de Piper TTS échouée — synthèse vocale indisponible (réponses en texte)"
+    log "Piper TTS installé (voix $VOICE_NAME, checksums vérifiés)"
+    PIPER_OK=1
+  fi
+  if [ "$PIPER_OK" -ne 1 ]; then
+    log "AVERTISSEMENT : installation de Piper TTS échouée (téléchargement ou checksum) — TTS indisponible"
     rm -f "$PIPER_DIR/piper.tar.gz"
+    rm -rf "$PIPER_DIR/piper" "$PIPER_DIR/voices/$VOICE_NAME.onnx" "$PIPER_DIR/voices/$VOICE_NAME.onnx.json"
   fi
 fi
 
@@ -159,6 +196,8 @@ echo 98 > "$PROGRESS_FILE"
 # ---------------------------------------------------------------------------
 STT_DIR="$(dirname "$0")/stt"
 VOSK_MODEL_URL="https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip"
+# SECURITY (F-002) : checksum SHA-256 du modèle Vosk fr small (figé)
+VOSK_MODEL_SHA="cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad"
 
 if ! command -v python3 &> /dev/null; then
   log "AVERTISSEMENT : python3 introuvable — transcription vocale (STT) indisponible"
@@ -166,21 +205,30 @@ elif python3 -c "import vosk" >/dev/null 2>&1 && [ -d "$STT_DIR/model-fr" ]; the
   log "Vosk STT déjà installé"
 else
   log "Installation de Vosk STT (transcription vocale, optionnel)..."
-  PIP_FLAGS="--quiet"
-  pip3 install $PIP_FLAGS --break-system-packages vosk >/dev/null 2>&1 \
-    || pip3 install $PIP_FLAGS vosk >/dev/null 2>&1 || true
+  PIP_FLAGS="--quiet --disable-pip-version-check"
+  # SECURITY (F-004) : version pinnée via resources/stt/requirements.txt
+  # (pas la dernière disponible). --break-system-packages requis sur
+  # Debian 12+ (PEP 668), fallback sans pour les vieilles distros.
+  REQ_FILE="$STT_DIR/requirements.txt"
+  if [ ! -f "$REQ_FILE" ]; then
+    log "AVERTISSEMENT : $REQ_FILE introuvable — installation Vosk ignorée"
+  else
+    pip3 install $PIP_FLAGS --break-system-packages -r "$REQ_FILE" >/dev/null 2>&1 \
+      || pip3 install $PIP_FLAGS -r "$REQ_FILE" >/dev/null 2>&1 || true
+  fi
   if python3 -c "import vosk" >/dev/null 2>&1; then
     if [ ! -d "$STT_DIR/model-fr" ]; then
       mkdir -p "$STT_DIR"
       command -v unzip >/dev/null 2>&1 || { [ "$(id -u)" -eq 0 ] && apt-get install -y -qq unzip >/dev/null 2>&1; }
       if curl -fsSL -m 240 -o "$STT_DIR/model-fr.zip" "$VOSK_MODEL_URL" \
+         && check_sha256 "$STT_DIR/model-fr.zip" "$VOSK_MODEL_SHA" \
          && unzip -q -o "$STT_DIR/model-fr.zip" -d "$STT_DIR" \
          && mv "$STT_DIR"/vosk-model-small-fr-* "$STT_DIR/model-fr" 2>/dev/null; then
         rm -f "$STT_DIR/model-fr.zip"
         chmod +x "$STT_DIR/stt.py" 2>/dev/null || true
-        log "Vosk STT installé (modèle fr small)"
+        log "Vosk STT installé (modèle fr small, checksum vérifié)"
       else
-        log "AVERTISSEMENT : téléchargement du modèle Vosk échoué — STT indisponible"
+        log "AVERTISSEMENT : téléchargement/checksum du modèle Vosk échoué — STT indisponible"
         rm -f "$STT_DIR/model-fr.zip"
       fi
     else

@@ -1193,8 +1193,17 @@ class jeewhatsapp extends eqLogic {
   // Sauvegarde/restauration chiffrée de la session Baileys (v0.5 #26)
   // Permet de restaurer la connexion après réinstallation sans re-scanner le QR.
   // Chiffrement AES-256-CBC (PHP natif), archive tar (PharData) → 100% portable.
-  // Format du blob : "JWAB1" (5o magic) + IV (16o) + données chiffrées.
+  //
+  // Format JWAB2 (actuel) : "JWAB2" (5o) + salt (16o) + IV (16o) + cipher
+  //   Clé dérivée par PBKDF2-SHA256, 200 000 itérations (OWASP 2024).
+  //
+  // Format JWAB1 (legacy, encore lu) : "JWAB1" (5o) + IV (16o) + cipher
+  //   Clé = sha256(passphrase) — vulnérable au brute-force (F-003).
+  //   Les sauvegardes JWAB1 existantes restent restaurables ; à la prochaine
+  //   sauvegarde elles seront ré-encodées en JWAB2.
   // -------------------------------------------------------------------------
+
+  const BACKUP_KDF_ITERATIONS = 200000;
 
   private function authDir() {
     return __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId();
@@ -1212,7 +1221,7 @@ class jeewhatsapp extends eqLogic {
 
     $tmp = jeedom::getTmpFolder('jeewhatsapp');
     if (!is_dir($tmp)) { @mkdir($tmp, 0775, true); }
-    $tarPath = $tmp . '/session_' . $this->getId() . '_' . uniqid() . '.tar';
+    $tarPath = $tmp . '/session_' . $this->getId() . '_' . bin2hex(random_bytes(8)) . '.tar';
     @unlink($tarPath);
 
     try {
@@ -1227,13 +1236,16 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Archive de session vide', __FILE__));
     }
 
+    // SECURITY (F-003) : PBKDF2-SHA256 + sel → résiste au brute-force GPU sur
+    // une passphrase volée. Sel + IV générés à chaque sauvegarde (jamais réutilisés).
+    $salt   = random_bytes(16);
     $iv     = random_bytes(16);
-    $key    = hash('sha256', $pass, true);
+    $key    = hash_pbkdf2('sha256', $pass, $salt, self::BACKUP_KDF_ITERATIONS, 32, true);
     $cipher = openssl_encrypt($plain, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
     if ($cipher === false) {
       throw new Exception(__('Échec du chiffrement de la session', __FILE__));
     }
-    return 'JWAB1' . $iv . $cipher;
+    return 'JWAB2' . $salt . $iv . $cipher;
   }
 
   public function restoreSession($_passphrase, $_blob) {
@@ -1241,13 +1253,31 @@ class jeewhatsapp extends eqLogic {
     if (strlen($pass) < 6) {
       throw new Exception(__('Phrase de passe trop courte', __FILE__));
     }
-    if (!is_string($_blob) || substr($_blob, 0, 5) !== 'JWAB1' || strlen($_blob) < 5 + 16 + 16) {
+    if (!is_string($_blob) || strlen($_blob) < 5 + 16 + 16) {
       throw new Exception(__('Fichier de sauvegarde invalide', __FILE__));
     }
-    $iv     = substr($_blob, 5, 16);
-    $cipher = substr($_blob, 21);
-    $key    = hash('sha256', $pass, true);
-    $plain  = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    $magic = substr($_blob, 0, 5);
+    if ($magic === 'JWAB2') {
+      // Format actuel (F-003 corrigé) : magic + salt(16) + iv(16) + cipher
+      if (strlen($_blob) < 5 + 16 + 16 + 16) {
+        throw new Exception(__('Fichier de sauvegarde invalide (JWAB2 tronqué)', __FILE__));
+      }
+      $salt   = substr($_blob, 5, 16);
+      $iv     = substr($_blob, 21, 16);
+      $cipher = substr($_blob, 37);
+      $key    = hash_pbkdf2('sha256', $pass, $salt, self::BACKUP_KDF_ITERATIONS, 32, true);
+    } elseif ($magic === 'JWAB1') {
+      // Legacy : magic + iv(16) + cipher — KDF faible, on accepte en lecture seule.
+      $iv     = substr($_blob, 5, 16);
+      $cipher = substr($_blob, 21);
+      $key    = hash('sha256', $pass, true);
+      log::add('jeewhatsapp', 'info',
+        'jeewhatsapp.class.php::restoreSession() l.' . __LINE__
+        . ' — Sauvegarde JWAB1 (legacy) restaurée — pensez à la régénérer en JWAB2');
+    } else {
+      throw new Exception(__('Fichier de sauvegarde invalide (magic inconnu)', __FILE__));
+    }
+    $plain = openssl_decrypt($cipher, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
     if ($plain === false || $plain === '') {
       throw new Exception(__('Déchiffrement impossible — phrase de passe incorrecte ou fichier corrompu', __FILE__));
     }
@@ -1262,6 +1292,20 @@ class jeewhatsapp extends eqLogic {
     try {
       // Valide que c'est bien une archive tar
       $phar = new PharData($tarPath);
+
+      // SECURITY (F-001, CWE-22 Tar Slip) : valider explicitement chaque entrée
+      // de l'archive avant extraction — PharData::extractTo ne refuse pas
+      // systématiquement les chemins contenant `..` selon les versions de PHP.
+      // Un fichier .jwab forgé pourrait sinon écrire en dehors de auth/{id}/.
+      $pharPrefix = 'phar://' . $tarPath . '/';
+      foreach (new RecursiveIteratorIterator($phar) as $entry) {
+        $rel = str_replace('\\', '/', $entry->getPathname());
+        if (strpos($rel, $pharPrefix) === 0) { $rel = substr($rel, strlen($pharPrefix)); }
+        if ($rel === '' || $rel[0] === '/' || strpos($rel, "\0") !== false
+            || preg_match('#(^|/)\.\.(/|$)#', $rel)) {
+          throw new Exception(__('Archive de restauration invalide : chemin suspect détecté (', __FILE__) . $rel . ')');
+        }
+      }
 
       $authDir = $this->authDir();
       // Sauvegarde de l'éventuelle session existante avant écrasement

@@ -6,7 +6,7 @@
 **Commit analysé :** 96c8ab1 (chore(install): fiabilisation procédure d'installation)
 **Branche :** dev
 **Fichiers analysés :** 14 (hors dossier-artefact `jeewhatsapp/` et `3rdparty/`)
-**Score de sécurité :** 78/100
+**Score de sécurité :** 78/100 → **93/100** après corrections F-001/F-002/F-003/F-004 (cf. CHANGELOG)
 
 > Audit actualisé après v0.4 (TTS Piper / STT Vosk / OCR Tesseract / shortcuts / profils),
 > v0.5 (#22 gestion groupe, #23 accusés lecture, #24 archive/pin/mute, #25 statuts,

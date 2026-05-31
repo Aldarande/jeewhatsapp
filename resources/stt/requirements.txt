@@ -1,0 +1,8 @@
+# JeeWhatsApp STT — dépendances Python pinnées (F-004)
+# Mise à jour : générer les hashes avec
+#   pip3 hash $(pip3 download --no-deps -d /tmp/dl vosk==0.3.45 | grep Saved | awk '{print $2}')
+# puis remplacer la ligne ci-dessous par :
+#   vosk==0.3.45 \
+#     --hash=sha256:<hash>
+# et passer --require-hashes à pip install.
+vosk==0.3.45

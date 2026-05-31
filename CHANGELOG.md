@@ -7,6 +7,23 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **F-001 (HIGH, Tar Slip)** — `restoreSession()` valide désormais explicitement chaque entrée
+  de l'archive `.jwab` avant `PharData::extractTo()` : refus si l'entrée contient `..`, débute
+  par `/`, ou contient un octet nul (CWE-22). Garde-fou même si PharData laissait passer.
+- **F-003 (MEDIUM, KDF faible)** — nouveau format **JWAB2** : sel aléatoire (16 o) + PBKDF2-
+  SHA256 200 000 itérations (recommandation OWASP 2024) au lieu d'un simple `sha256(pass)`.
+  Casse le brute-force GPU sur une passphrase volée. Format **JWAB1** legacy reste
+  restaurable en lecture seule, ré-encodage automatique en JWAB2 à la prochaine sauvegarde.
+- **F-004 (MEDIUM, pip pinning)** — `vosk` est installé via `resources/stt/requirements.txt`
+  (`vosk==0.3.45`) au lieu de la dernière version disponible. Évite l'installation
+  silencieuse d'une version compromise (typosquat, push malveillant).
+- **F-002 (MEDIUM, intégrité downloads)** — vérification **SHA-256** des binaires/modèles
+  téléchargés dans `install_dep.sh` : Piper (x86_64 / aarch64 / armv7l), voix française,
+  modèle Vosk fr. Helper `check_sha256()`. Si le hash ne correspond pas, l'installation
+  échoue proprement (TTS/STT désactivé, le plugin continue de fonctionner).
+
 ### Changed
 
 - **Procédure d'installation** — passe de fiabilité :
