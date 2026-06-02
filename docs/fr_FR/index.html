@@ -290,6 +290,7 @@
     <li><a href="#commandes">Commandes</a></li>
     <li><a href="#interactions">Interactions</a></li>
     <li><a href="#scenarios">Scénarios</a></li>
+    <li><a href="#templates">Templates</a></li>
 
     <li class="section-title">Référence</li>
     <li><a href="#limitation-notifications">⚠️ Notifications</a></li>
@@ -725,6 +726,51 @@
     <div class="sc-row"><span class="sc-label">Déclencheur</span><span class="sc-val">Tous les jours à 8h00</span></div>
     <div class="sc-row"><span class="sc-label">Action</span><span class="sc-val"><code>[Mon WhatsApp][Envoyer un message]</code></span></div>
     <div class="sc-row"><span class="sc-label">Message</span><span class="sc-val">☀️ Bonjour ! Salon : <code>#[Salon][Température]#</code>°C — Porte : <code>#[Entrée][Ouverture]#</code></span></div>
+  </div>
+
+  <!-- ── Templates ───────────────────────────────────────────────────────── -->
+  <h2 id="templates">Templates de messages</h2>
+
+  <p>L'onglet <strong>Templates</strong> permet de définir des messages réutilisables avec des variables
+  Jeedom. Plutôt que de réécrire le même texte dans chaque scénario, vous définissez un template une fois
+  et vous l'appelez par sa clé.</p>
+
+  <h3>Format</h3>
+  <p>Un template par ligne, au format <code>clé=Texte du message</code> :</p>
+  <pre><code>bienvenue=Bienvenue chez vous !
+alerte=⚠️ Alerte : #[Maison][Détecteur][Présence]# !
+nuit=Bonne nuit — fermeture automatique des volets
+rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée][Ouverture][Valeur]#
+# Les lignes commençant par # sont des commentaires</code></pre>
+
+  <ul>
+    <li>La <strong>clé</strong> est insensible à la casse (<code>Alerte</code> = <code>alerte</code>)</li>
+    <li>Les <strong>tags Jeedom</strong> <code>#[Objet][Équipement][Commande]#</code> sont résolus automatiquement à l'envoi</li>
+    <li>Les lignes vides et celles commençant par <code>#</code> sont ignorées</li>
+  </ul>
+
+  <h3>Utilisation dans un scénario</h3>
+  <p>Utilisez la commande action <strong>Envoyer un template</strong> et saisissez la clé dans le champ <em>Message</em> :</p>
+
+  <div class="scenario">
+    <h4>📋 Envoyer un template depuis un scénario</h4>
+    <div class="sc-row"><span class="sc-label">Action</span><span class="sc-val"><code>[Mon WhatsApp][Envoyer un template]</code></span></div>
+    <div class="sc-row"><span class="sc-label">Message</span><span class="sc-val"><code>alerte</code> <span style="color:#888;font-size:0.9em;">(clé du template)</span></span></div>
+    <div class="sc-row"><span class="sc-label">Titre</span><span class="sc-val"><em>(vide = groupe canal)</em></span></div>
+  </div>
+
+  <div class="callout tip">
+    <strong>💡 Aperçu sans sauvegarder</strong>
+    Le bouton <strong>Aperçu des templates</strong> dans l'onglet affiche la liste des templates reconnus
+    en temps réel, sans avoir à sauvegarder — pratique pour valider la syntaxe avant d'enregistrer.
+  </div>
+
+  <div class="callout info">
+    <strong>ℹ️ Différence avec Envoyer un message</strong>
+    <strong>Envoyer un message</strong> envoie le texte saisi directement.<br>
+    <strong>Envoyer un template</strong> résout d'abord la clé pour récupérer le texte du template,
+    puis résout les tags Jeedom avant l'envoi. Cela permet de centraliser vos messages et de les
+    modifier en un seul endroit sans toucher aux scénarios.
   </div>
 
   <!-- ── Dépannage ─────────────────────────────────────────────────────── -->
