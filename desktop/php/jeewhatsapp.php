@@ -170,417 +170,440 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			<div role="tabpanel" class="tab-pane active" id="eqlogictab">
 				<form class="form-horizontal">
 					<fieldset>
-						<div class="col-lg-6">
-							<legend><i class="fas fa-wrench"></i> {{Paramètres généraux}}</legend>
 
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Nom}}</label>
-								<div class="col-sm-7">
-									<input type="text" class="eqLogicAttr form-control" data-l1key="id" style="display:none;">
-									<input type="text" class="eqLogicAttr form-control" data-l1key="name" placeholder="Mon WhatsApp">
+						<!-- ── Ligne 1 : Paramètres généraux | Connexion ──────── -->
+						<div class="row">
+
+							<div class="col-lg-6">
+								<legend><i class="fas fa-wrench"></i> {{Paramètres généraux}}</legend>
+
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Nom}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control" data-l1key="id" style="display:none;">
+										<input type="text" class="eqLogicAttr form-control" data-l1key="name" placeholder="Mon WhatsApp">
+									</div>
 								</div>
-							</div>
 
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Objet parent}}</label>
-								<div class="col-sm-7">
-									<select class="eqLogicAttr form-control" data-l1key="object_id">
-										<option value="">{{Aucun}}</option>
-										<?php foreach (jeeObject::buildTree(null, false) as $object) : ?>
-											<option value="<?php echo (int) $object->getId(); ?>">
-												<?php echo str_repeat('&nbsp;&nbsp;', (int) $object->getConfiguration('parentNumber')); ?>
-												<?php echo htmlspecialchars($object->getName(), ENT_QUOTES, 'UTF-8'); ?>
-											</option>
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Objet parent}}</label>
+									<div class="col-sm-7">
+										<select class="eqLogicAttr form-control" data-l1key="object_id">
+											<option value="">{{Aucun}}</option>
+											<?php foreach (jeeObject::buildTree(null, false) as $object) : ?>
+												<option value="<?php echo (int) $object->getId(); ?>">
+													<?php echo str_repeat('&nbsp;&nbsp;', (int) $object->getConfiguration('parentNumber')); ?>
+													<?php echo htmlspecialchars($object->getName(), ENT_QUOTES, 'UTF-8'); ?>
+												</option>
+											<?php endforeach; ?>
+										</select>
+									</div>
+								</div>
+
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Catégorie}}</label>
+									<div class="col-sm-7">
+										<?php foreach (jeedom::getConfiguration('eqLogic:category') as $key => $value) : ?>
+											<label class="checkbox-inline">
+												<input type="checkbox" class="eqLogicAttr" data-l1key="category" data-l2key="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>">
+												<?php echo htmlspecialchars($value['name'], ENT_QUOTES, 'UTF-8'); ?>
+											</label>
 										<?php endforeach; ?>
-									</select>
+									</div>
 								</div>
-							</div>
 
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Catégorie}}</label>
-								<div class="col-sm-7">
-									<?php foreach (jeedom::getConfiguration('eqLogic:category') as $key => $value) : ?>
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Options}}</label>
+									<div class="col-sm-7">
 										<label class="checkbox-inline">
-											<input type="checkbox" class="eqLogicAttr" data-l1key="category" data-l2key="<?php echo htmlspecialchars($key, ENT_QUOTES, 'UTF-8'); ?>">
-											<?php echo htmlspecialchars($value['name'], ENT_QUOTES, 'UTF-8'); ?>
+											<input type="checkbox" class="eqLogicAttr" data-l1key="isEnable" checked> {{Activer}}
 										</label>
-									<?php endforeach; ?>
-								</div>
-							</div>
-
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Options}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="isEnable" checked> {{Activer}}
-									</label>
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="isVisible" checked> {{Visible}}
-									</label>
-								</div>
-							</div>
-
-							<!-- ── Connexion WhatsApp ──────────────────────────────── -->
-							<legend style="margin-top:10px;"><i class="fab fa-whatsapp" style="color:#25D366;"></i> {{Connexion}}</legend>
-
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Statut}}</label>
-								<div class="col-sm-7">
-									<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-										<span id="wa_status_badge" class="label label-default" style="font-size:0.9em;padding:6px 14px;">
-											<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
-										</span>
-										<button class="btn btn-xs btn-default" id="btn_refresh_qr" type="button">
-											<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
-										</button>
-									</div>
-									<div id="wa_connected_zone" style="display:none;margin-top:6px;">
-										<i class="fas fa-check-circle" style="color:#25D366;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
-										<span style="color:#25D366;font-weight:600;">{{Connecté à WhatsApp ✓}}</span>
-										<p class="text-muted" style="font-size:0.8em;margin:6px 0 0;">
-											<i class="fas fa-bell-slash"></i> {{Pas de notification sur votre téléphone ? C'est normal : WhatsApp n'envoie pas de notification pour vos propres messages. Ajoutez un contact dans le groupe pour en recevoir.}}
-										</p>
-									</div>
-									<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
-										<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
-										<span style="color:#d9534f;">{{Session expirée — un nouveau QR code apparaîtra automatiquement. Scannez-le pour reconnecter.}}</span>
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="isVisible" checked> {{Visible}}
+										</label>
 									</div>
 								</div>
-							</div>
+							</div><!-- /.col-lg-6 Paramètres généraux -->
 
-							<div class="form-group" id="wa_qr_zone" style="display:none;">
-								<label class="col-sm-4 control-label">{{QR Code}}</label>
-								<div class="col-sm-7">
-									<p class="text-muted" style="font-size:0.83em;margin-bottom:7px;">
-										<i class="fas fa-mobile-alt"></i>
-										{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}
-									</p>
-									<img id="wa_qr_img" src=""
-										style="width:180px;height:180px;border:3px solid #25D366;border-radius:10px;display:block;cursor:zoom-in;"
-										title="{{Cliquez pour agrandir}}"
-										data-toggle="modal" data-target="#modal_qrZoom">
-									<div style="margin-top:7px;display:flex;align-items:center;gap:8px;">
-										<p class="help-block" style="font-size:0.8em;margin:0;">
-											{{QR code valide 30 s — se rafraîchit automatiquement}}
-										</p>
-										<button type="button" class="btn btn-xs btn-default" data-toggle="modal" data-target="#modal_qrZoom" title="{{Agrandir le QR code}}">
-											<i class="fas fa-search-plus"></i> {{Agrandir}}
-										</button>
-									</div>
-								</div>
-							</div>
+							<div class="col-lg-6">
+								<legend><i class="fab fa-whatsapp" style="color:#25D366;"></i> {{Connexion}}</legend>
 
-							<!-- Modal agrandissement QR code -->
-							<div class="modal fade" id="modal_qrZoom" tabindex="-1" role="dialog" aria-labelledby="modal_qrZoom_label">
-								<div class="modal-dialog modal-sm" role="document" style="max-width:340px;margin:60px auto;">
-									<div class="modal-content" style="border:3px solid #25D366;border-radius:12px;">
-										<div class="modal-header" style="background:#25D366;color:#fff;border-radius:9px 9px 0 0;padding:10px 16px;">
-											<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
-											<h5 class="modal-title" id="modal_qrZoom_label" style="color:#fff;margin:0;">
-												<i class="fab fa-whatsapp"></i> {{Scanner le QR code}}
-											</h5>
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Statut}}</label>
+									<div class="col-sm-7">
+										<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+											<span id="wa_status_badge" class="label label-default" style="font-size:0.9em;padding:6px 14px;">
+												<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
+											</span>
+											<button class="btn btn-xs btn-default" id="btn_refresh_qr" type="button">
+												<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
+											</button>
 										</div>
-										<div class="modal-body" style="text-align:center;padding:20px;">
-											<img id="wa_qr_img_zoom" src="" style="width:100%;max-width:280px;border:3px solid #25D366;border-radius:10px;">
-											<p class="text-muted" style="font-size:0.82em;margin-top:12px;margin-bottom:0;">
-												<i class="fas fa-mobile-alt"></i>
-												{{WhatsApp → Appareils liés → Lier un appareil}}
+										<div id="wa_connected_zone" style="display:none;margin-top:6px;">
+											<i class="fas fa-check-circle" style="color:#25D366;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
+											<span style="color:#25D366;font-weight:600;">{{Connecté à WhatsApp ✓}}</span>
+											<p class="text-muted" style="font-size:0.8em;margin:6px 0 0;">
+												<i class="fas fa-bell-slash"></i> {{Pas de notification sur votre téléphone ? C'est normal : WhatsApp n'envoie pas de notification pour vos propres messages. Ajoutez un contact dans le groupe pour en recevoir.}}
 											</p>
 										</div>
+										<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
+											<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
+											<span style="color:#d9534f;">{{Session expirée — un nouveau QR code apparaîtra automatiquement. Scannez-le pour reconnecter.}}</span>
+										</div>
 									</div>
 								</div>
+
+								<div class="form-group" id="wa_qr_zone" style="display:none;">
+									<label class="col-sm-4 control-label">{{QR Code}}</label>
+									<div class="col-sm-7">
+										<p class="text-muted" style="font-size:0.83em;margin-bottom:7px;">
+											<i class="fas fa-mobile-alt"></i>
+											{{WhatsApp → ⋮ → Appareils liés → Lier un appareil}}
+										</p>
+										<img id="wa_qr_img" src=""
+											style="width:180px;height:180px;border:3px solid #25D366;border-radius:10px;display:block;cursor:zoom-in;"
+											title="{{Cliquez pour agrandir}}"
+											data-toggle="modal" data-target="#modal_qrZoom">
+										<div style="margin-top:7px;display:flex;align-items:center;gap:8px;">
+											<p class="help-block" style="font-size:0.8em;margin:0;">
+												{{QR code valide 30 s — se rafraîchit automatiquement}}
+											</p>
+											<button type="button" class="btn btn-xs btn-default" data-toggle="modal" data-target="#modal_qrZoom" title="{{Agrandir le QR code}}">
+												<i class="fas fa-search-plus"></i> {{Agrandir}}
+											</button>
+										</div>
+									</div>
+								</div>
+							</div><!-- /.col-lg-6 Connexion -->
+
+						</div><!-- /.row ligne 1 -->
+
+						<!-- ── Ligne 2 : Paramètres WhatsApp (2 colonnes) ─────── -->
+						<div class="row">
+							<div class="col-xs-12">
+								<legend><i class="fas fa-sliders-h"></i> {{Paramètres WhatsApp}}</legend>
 							</div>
-
 						</div>
+						<div class="row">
 
-						<div class="col-lg-6">
-							<legend><i class="fas fa-sliders-h"></i> {{Paramètres WhatsApp}}</legend>
+							<!-- Colonne gauche : groupe & session ────────────────── -->
+							<div class="col-lg-6">
 
-							<!-- Nom du groupe canal -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Groupe canal}}</label>
-								<div class="col-sm-7">
-									<div class="input-group">
+								<!-- Nom du groupe canal -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Groupe canal}}</label>
+									<div class="col-sm-7">
+										<div class="input-group">
+											<input type="text" class="eqLogicAttr form-control"
+												   data-l1key="configuration" data-l2key="group_name"
+												   placeholder="jeewhatsapp">
+											<span class="input-group-btn">
+												<button class="btn btn-default" type="button" id="btn_find_group" title="{{Rechercher ce groupe dans vos groupes WhatsApp}}">
+													<i class="fas fa-search"></i> {{Rechercher}}
+												</button>
+												<button class="btn btn-default" type="button" id="btn_create_group" title="{{Créer ce groupe sur WhatsApp}}">
+													<i class="fab fa-whatsapp"></i> {{Créer}}
+												</button>
+												<button class="btn btn-default" type="button" id="btn_set_group_icon" title="{{Utiliser l'icône du plugin comme photo du groupe (le compte doit être admin du groupe)}}">
+													<i class="fas fa-image"></i> {{Icône}}
+												</button>
+											</span>
+										</div>
+										<span class="help-block">
+											<small>{{Nom exact du groupe WhatsApp utilisé comme canal de communication. Le bouton « Icône » définit l'icône du plugin comme photo du groupe (nécessite que le compte WhatsApp lié soit administrateur du groupe).}}</small>
+										</span>
+									</div>
+								</div>
+
+								<!-- JID du groupe lié (readonly) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Groupe lié}}</label>
+									<div class="col-sm-7">
 										<input type="text" class="eqLogicAttr form-control"
-											   data-l1key="configuration" data-l2key="group_name"
-											   placeholder="jeewhatsapp">
-										<span class="input-group-btn">
-											<button class="btn btn-default" type="button" id="btn_find_group" title="{{Rechercher ce groupe dans vos groupes WhatsApp}}">
-												<i class="fas fa-search"></i> {{Rechercher}}
-											</button>
-											<button class="btn btn-default" type="button" id="btn_create_group" title="{{Créer ce groupe sur WhatsApp}}">
-												<i class="fab fa-whatsapp"></i> {{Créer}}
-											</button>
-											<button class="btn btn-default" type="button" id="btn_set_group_icon" title="{{Utiliser l'icône du plugin comme photo du groupe (le compte doit être admin du groupe)}}">
-												<i class="fas fa-image"></i> {{Icône}}
-											</button>
+											   data-l1key="configuration" data-l2key="group_jid"
+											   placeholder="{{Aucun groupe lié}}"
+											   readonly style="background:#f5f5f5;cursor:default;">
+										<span class="help-block">
+											<small>{{JID renseigné automatiquement après recherche ou création. Sauvegardez après.}}</small>
+										</span>
+										<span id="group_link_result" class="help-block" style="display:none;"></span>
+									</div>
+								</div>
+
+								<!-- Groupes additionnels (v0.3 #16) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Groupes additionnels}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="3"
+											   data-l1key="configuration" data-l2key="extra_groups"
+											   placeholder="alertes=Alertes Maison&#10;famille=Groupe Famille&#10;(vide = un seul groupe canal)"></textarea>
+										<span class="help-block">
+											<small>{{Groupes WhatsApp supplémentaires que cet équipement peut écouter et cibler, en plus du groupe canal principal. Une ligne par groupe au format <strong>tag=Nom exact du groupe WhatsApp</strong>. Le « tag » sert à cibler le groupe via la commande « Envoyer dans un groupe additionnel » (champ Titre) et apparaît dans la commande info « Dernier groupe ».}}</small>
 										</span>
 									</div>
-									<span class="help-block">
-										<small>{{Nom exact du groupe WhatsApp utilisé comme canal de communication. Le bouton « Icône » définit l'icône du plugin comme photo du groupe (nécessite que le compte WhatsApp lié soit administrateur du groupe).}}</small>
-									</span>
 								</div>
-							</div>
 
-							<!-- JID du groupe lié (readonly) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Groupe lié}}</label>
-								<div class="col-sm-7">
-									<input type="text" class="eqLogicAttr form-control"
-										   data-l1key="configuration" data-l2key="group_jid"
-										   placeholder="{{Aucun groupe lié}}"
-										   readonly style="background:#f5f5f5;cursor:default;">
-									<span class="help-block">
-										<small>{{JID renseigné automatiquement après recherche ou création. Sauvegardez après.}}</small>
-									</span>
-									<span id="group_link_result" class="help-block" style="display:none;"></span>
+								<!-- Gestion du groupe (v0.5 #22) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Gestion du groupe}}</label>
+									<div class="col-sm-7">
+										<div class="input-group" style="margin-bottom:6px;">
+											<input type="text" class="form-control" id="grp_participant" placeholder="{{Numéro participant (ex : 33612345678)}}">
+											<span class="input-group-btn">
+												<button class="btn btn-default grp-action" data-op="add" type="button" title="{{Ajouter au groupe}}"><i class="fas fa-user-plus"></i></button>
+												<button class="btn btn-default grp-action" data-op="remove" type="button" title="{{Retirer du groupe}}"><i class="fas fa-user-minus"></i></button>
+												<button class="btn btn-default grp-action" data-op="promote" type="button" title="{{Promouvoir admin}}"><i class="fas fa-user-shield"></i></button>
+												<button class="btn btn-default grp-action" data-op="demote" type="button" title="{{Rétrograder}}"><i class="fas fa-user"></i></button>
+											</span>
+										</div>
+										<div class="input-group" style="margin-bottom:6px;">
+											<input type="text" class="form-control" id="grp_subject" placeholder="{{Nouveau sujet / nom du groupe}}">
+											<span class="input-group-btn">
+												<button class="btn btn-default" id="grp_set_subject" type="button" title="{{Changer le sujet}}"><i class="fas fa-edit"></i> {{Sujet}}</button>
+											</span>
+										</div>
+										<button class="btn btn-default grp-simple" data-op="inviteLink" type="button"><i class="fas fa-link"></i> {{Lien d'invitation}}</button>
+										<button class="btn btn-default grp-simple" data-op="revokeInvite" type="button"><i class="fas fa-unlink"></i> {{Révoquer le lien}}</button>
+										<button class="btn btn-danger grp-simple" data-op="leave" type="button" title="{{Quitter le groupe}}"><i class="fas fa-sign-out-alt"></i> {{Quitter}}</button>
+										<span class="help-block">
+											<small>{{Opérations d'administration sur le groupe canal. Le compte WhatsApp lié doit être <strong>administrateur</strong> du groupe. Le changement d'icône se fait via le bouton « Icône » ci-dessus.}}</small>
+										</span>
+										<span id="grp_result" class="help-block" style="display:none;"></span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Gestion du groupe (v0.5 #22) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Gestion du groupe}}</label>
-								<div class="col-sm-7">
-									<div class="input-group" style="margin-bottom:6px;">
-										<input type="text" class="form-control" id="grp_participant" placeholder="{{Numéro participant (ex : 33612345678)}}">
-										<span class="input-group-btn">
-											<button class="btn btn-default grp-action" data-op="add" type="button" title="{{Ajouter au groupe}}"><i class="fas fa-user-plus"></i></button>
-											<button class="btn btn-default grp-action" data-op="remove" type="button" title="{{Retirer du groupe}}"><i class="fas fa-user-minus"></i></button>
-											<button class="btn btn-default grp-action" data-op="promote" type="button" title="{{Promouvoir admin}}"><i class="fas fa-user-shield"></i></button>
-											<button class="btn btn-default grp-action" data-op="demote" type="button" title="{{Rétrograder}}"><i class="fas fa-user"></i></button>
+								<!-- Sauvegarde de session (v0.5 #26) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Sauvegarde de session}}</label>
+									<div class="col-sm-7">
+										<div class="input-group" style="margin-bottom:6px;">
+											<input type="password" class="form-control" id="bk_pass" placeholder="{{Phrase de passe (6 caractères min.)}}" autocomplete="new-password">
+											<span class="input-group-btn">
+												<button class="btn btn-default" id="bk_backup" type="button" title="{{Télécharger une sauvegarde chiffrée de la session}}"><i class="fas fa-download"></i> {{Sauvegarder}}</button>
+											</span>
+										</div>
+										<div class="input-group">
+											<input type="file" class="form-control" id="bk_file" accept=".jwab">
+											<span class="input-group-btn">
+												<button class="btn btn-warning" id="bk_restore" type="button" title="{{Restaurer la session depuis un fichier}}"><i class="fas fa-upload"></i> {{Restaurer}}</button>
+											</span>
+										</div>
+										<span class="help-block">
+											<small>{{Sauvegarde chiffrée (AES-256) de la session WhatsApp pour la restaurer après une réinstallation, <strong>sans re-scanner le QR code</strong>. La même phrase de passe est requise pour restaurer. La restauration écrase la session actuelle (l'ancienne est conservée en <code>.bak</code>) et redémarre le démon.}}</small>
+										</span>
+										<span id="bk_result" class="help-block" style="display:none;"></span>
+									</div>
+								</div>
+
+								<!-- Préfixe Jeedom -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control"
+											   data-l1key="configuration" data-l2key="interaction_prefix"
+											   placeholder="(vide = prefixe maison par defaut)">
+										<span class="help-block">
+											<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
+											<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
 										</span>
 									</div>
-									<div class="input-group" style="margin-bottom:6px;">
-										<input type="text" class="form-control" id="grp_subject" placeholder="{{Nouveau sujet / nom du groupe}}">
-										<span class="input-group-btn">
-											<button class="btn btn-default" id="grp_set_subject" type="button" title="{{Changer le sujet}}"><i class="fas fa-edit"></i> {{Sujet}}</button>
+								</div>
+
+								<!-- Messages éphémères (v0.3 #15) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Messages éphémères}}</label>
+									<div class="col-sm-7">
+										<select class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="ephemeral_duration">
+											<option value="0">{{Désactivé (messages permanents)}}</option>
+											<option value="86400">{{24 heures}}</option>
+											<option value="604800">{{7 jours}}</option>
+											<option value="7776000">{{90 jours}}</option>
+										</select>
+										<span class="help-block">
+											<small>{{Si activé, tous les messages envoyés par Jeedom disparaissent automatiquement après la durée choisie (fonction "messages éphémères" de WhatsApp).}}</small>
 										</span>
 									</div>
-									<button class="btn btn-default grp-simple" data-op="inviteLink" type="button"><i class="fas fa-link"></i> {{Lien d'invitation}}</button>
-									<button class="btn btn-default grp-simple" data-op="revokeInvite" type="button"><i class="fas fa-unlink"></i> {{Révoquer le lien}}</button>
-									<button class="btn btn-danger grp-simple" data-op="leave" type="button" title="{{Quitter le groupe}}"><i class="fas fa-sign-out-alt"></i> {{Quitter}}</button>
-									<span class="help-block">
-										<small>{{Opérations d'administration sur le groupe canal. Le compte WhatsApp lié doit être <strong>administrateur</strong> du groupe. Le changement d'icône se fait via le bouton « Icône » ci-dessus.}}</small>
-									</span>
-									<span id="grp_result" class="help-block" style="display:none;"></span>
 								</div>
-							</div>
 
-							<!-- Sauvegarde de session (v0.5 #26) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Sauvegarde de session}}</label>
-								<div class="col-sm-7">
-									<div class="input-group" style="margin-bottom:6px;">
-										<input type="password" class="form-control" id="bk_pass" placeholder="{{Phrase de passe (6 caractères min.)}}" autocomplete="new-password">
-										<span class="input-group-btn">
-											<button class="btn btn-default" id="bk_backup" type="button" title="{{Télécharger une sauvegarde chiffrée de la session}}"><i class="fas fa-download"></i> {{Sauvegarder}}</button>
+								<!-- Message de soutien mensuel -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Message de soutien}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="donation_enabled" value="1"> {{Envoyer 1 message par mois}}
+										</label>
+										<span class="help-block">
+											<small>{{Une fois par mois, à un jour et une heure aléatoires (entre 10h et 19h), un rappel discret de soutien est envoyé dans le groupe canal. Tirage parmi un pool de 12 messages préparés par l'auteur. Désactivé par défaut.}}</small>
 										</span>
 									</div>
-									<div class="input-group">
-										<input type="file" class="form-control" id="bk_file" accept=".jwab">
-										<span class="input-group-btn">
-											<button class="btn btn-warning" id="bk_restore" type="button" title="{{Restaurer la session depuis un fichier}}"><i class="fas fa-upload"></i> {{Restaurer}}</button>
+								</div>
+
+							</div><!-- /.col-lg-6 gauche -->
+
+							<!-- Colonne droite : interactions & fonctions avancées ── -->
+							<div class="col-lg-6">
+
+								<!-- Interactions Jeedom -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="interactions_enabled" value="1"> {{Activer}}
+										</label>
+										<span class="help-block">
+											<small>{{Répond automatiquement aux messages reçus dans le groupe via le moteur d'interactions Jeedom}}</small>
 										</span>
 									</div>
-									<span class="help-block">
-										<small>{{Sauvegarde chiffrée (AES-256) de la session WhatsApp pour la restaurer après une réinstallation, <strong>sans re-scanner le QR code</strong>. La même phrase de passe est requise pour restaurer. La restauration écrase la session actuelle (l'ancienne est conservée en <code>.bak</code>) et redémarre le démon.}}</small>
-									</span>
-									<span id="bk_result" class="help-block" style="display:none;"></span>
 								</div>
-							</div>
 
-							<!-- Interactions Jeedom -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="interactions_enabled" value="1"> {{Activer}}
-									</label>
-									<span class="help-block">
-										<small>{{Répond automatiquement aux messages reçus dans le groupe via le moteur d'interactions Jeedom}}</small>
-									</span>
+								<!-- Filtre mot-clé (v0.2) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Mot-clé déclencheur}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control"
+											   data-l1key="configuration" data-l2key="interaction_keyword"
+											   placeholder="ex: !jeedom (vide = tout message)">
+										<span class="help-block">
+											<small>{{Si renseigné, seuls les messages commençant par ce mot-clé déclenchent les interactions. Le mot-clé est ensuite retiré du message avant traitement. Insensible à la casse.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Filtre mot-clé (v0.2) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Mot-clé déclencheur}}</label>
-								<div class="col-sm-7">
-									<input type="text" class="eqLogicAttr form-control"
-										   data-l1key="configuration" data-l2key="interaction_keyword"
-										   placeholder="ex: !jeedom (vide = tout message)">
-									<span class="help-block">
-										<small>{{Si renseigné, seuls les messages commençant par ce mot-clé déclenchent les interactions. Le mot-clé est ensuite retiré du message avant traitement. Insensible à la casse.}}</small>
-									</span>
+								<!-- Commandes shortcuts (v0.4 #19) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Commandes shortcuts}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="3"
+											   data-l1key="configuration" data-l2key="interaction_shortcuts"
+											   placeholder="/salon=#1234#&#10;/status=Maison : #5678# °C&#10;/scene=#9012#"></textarea>
+										<span class="help-block">
+											<small>{{Raccourcis rapides déclenchés par un message commençant par « / ». Une ligne par raccourci au format <strong>/déclencheur=cible</strong>. La cible peut être : une commande seule <strong>#id#</strong> (action → exécutée et confirmée ; info → sa valeur est renvoyée), ou un texte modèle contenant des tags <strong>#id#</strong> d'infos et les variables <strong>#args#</strong> (arguments) / <strong>#1#</strong>, <strong>#2#</strong>… (mots d'argument). Prioritaire sur le moteur d'interactions.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Commandes shortcuts (v0.4 #19) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Commandes shortcuts}}</label>
-								<div class="col-sm-7">
-									<textarea class="eqLogicAttr form-control" rows="3"
-										   data-l1key="configuration" data-l2key="interaction_shortcuts"
-										   placeholder="/salon=#1234#&#10;/status=Maison : #5678# °C&#10;/scene=#9012#"></textarea>
-									<span class="help-block">
-										<small>{{Raccourcis rapides déclenchés par un message commençant par « / ». Une ligne par raccourci au format <strong>/déclencheur=cible</strong>. La cible peut être : une commande seule <strong>#id#</strong> (action → exécutée et confirmée ; info → sa valeur est renvoyée), ou un texte modèle contenant des tags <strong>#id#</strong> d'infos et les variables <strong>#args#</strong> (arguments) / <strong>#1#</strong>, <strong>#2#</strong>… (mots d'argument). Prioritaire sur le moteur d'interactions.}}</small>
-									</span>
+								<!-- Whitelist expéditeurs (v0.2, sécurité) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Whitelist expéditeurs}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="3"
+											   data-l1key="configuration" data-l2key="interaction_whitelist"
+											   placeholder="33612345678&#10;0698765432&#10;(vide = tout le monde)"></textarea>
+										<span class="help-block">
+											<small>{{Si renseignée, seuls les numéros listés peuvent déclencher des interactions Jeedom. Un numéro par ligne (ou séparés par virgule). Formats acceptés : 0612345678, 33612345678, +33 6 12 34 56 78 — tous normalisés au format international.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Whitelist expéditeurs (v0.2, sécurité) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Whitelist expéditeurs}}</label>
-								<div class="col-sm-7">
-									<textarea class="eqLogicAttr form-control" rows="3"
-										   data-l1key="configuration" data-l2key="interaction_whitelist"
-										   placeholder="33612345678&#10;0698765432&#10;(vide = tout le monde)"></textarea>
-									<span class="help-block">
-										<small>{{Si renseignée, seuls les numéros listés peuvent déclencher des interactions Jeedom. Un numéro par ligne (ou séparés par virgule). Formats acceptés : 0612345678, 33612345678, +33 6 12 34 56 78 — tous normalisés au format international.}}</small>
-									</span>
+								<!-- Reconnaissance utilisateur (v0.4 #21) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Reconnaissance utilisateur}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="3"
+											   data-l1key="configuration" data-l2key="user_mapping"
+											   placeholder="33612345678=Papa&#10;0698765432=Maman&#10;33700000000=Enfant"></textarea>
+										<span class="help-block">
+											<small>{{Associe un numéro d'expéditeur à un profil Jeedom. Une ligne par correspondance au format <strong>numéro=profil</strong>. Le profil résolu est exposé dans la commande info « Expéditeur — profil » et transmis au moteur d'interactions (compatible avec le plugin Profils). Numéros normalisés au format international.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Reconnaissance utilisateur (v0.4 #21) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Reconnaissance utilisateur}}</label>
-								<div class="col-sm-7">
-									<textarea class="eqLogicAttr form-control" rows="3"
-										   data-l1key="configuration" data-l2key="user_mapping"
-										   placeholder="33612345678=Papa&#10;0698765432=Maman&#10;33700000000=Enfant"></textarea>
-									<span class="help-block">
-										<small>{{Associe un numéro d'expéditeur à un profil Jeedom. Une ligne par correspondance au format <strong>numéro=profil</strong>. Le profil résolu est exposé dans la commande info « Expéditeur — profil » et transmis au moteur d'interactions (compatible avec le plugin Profils). Numéros normalisés au format international.}}</small>
-									</span>
+								<!-- Présence typing (v0.3 #14) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Présence "en train d'écrire"}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="presence_enabled" value="1"> {{Activer}}
+										</label>
+										<span class="help-block">
+											<small>{{Affiche "en train d'écrire…" (ou "enregistre…" pour l'audio) pendant ~1s avant chaque envoi automatique. Rend les messages de Jeedom plus naturels.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Présence typing (v0.3 #14) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Présence "en train d'écrire"}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="presence_enabled" value="1"> {{Activer}}
-									</label>
-									<span class="help-block">
-										<small>{{Affiche "en train d'écrire…" (ou "enregistre…" pour l'audio) pendant ~1s avant chaque envoi automatique. Rend les messages de Jeedom plus naturels.}}</small>
-									</span>
+								<!-- Réponses vocales / TTS (v0.4 #18) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Réponses vocales (TTS)}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="tts_enabled" value="1"> {{Activer le mode vocal}}
+										</label>
+										<span class="help-block">
+											<small>{{Si activé, les réponses automatiques aux interactions et aux raccourcis sont envoyées sous forme de note vocale synthétisée (Piper). Repli automatique sur le texte si la synthèse échoue. La commande action « Envoyer une note vocale » reste disponible indépendamment de cette case.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Réponses vocales / TTS (v0.4 #18) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Réponses vocales (TTS)}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="tts_enabled" value="1"> {{Activer le mode vocal}}
-									</label>
-									<span class="help-block">
-										<small>{{Si activé, les réponses automatiques aux interactions et aux raccourcis sont envoyées sous forme de note vocale synthétisée (Piper). Repli automatique sur le texte si la synthèse échoue. La commande action « Envoyer une note vocale » reste disponible indépendamment de cette case.}}</small>
-									</span>
+								<!-- Voix TTS optionnelle (v0.4 #18) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Voix de synthèse}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control"
+											   data-l1key="configuration" data-l2key="tts_voice"
+											   placeholder="fr_FR-siwis-medium.onnx (défaut)">
+										<span class="help-block">
+											<small>{{Optionnel. Nom d'un modèle de voix Piper présent dans <strong>resources/piper/voices/</strong>, ou chemin absolu d'un fichier <strong>.onnx</strong>. Laisser vide pour utiliser la voix française par défaut.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- Voix TTS optionnelle (v0.4 #18) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Voix de synthèse}}</label>
-								<div class="col-sm-7">
-									<input type="text" class="eqLogicAttr form-control"
-										   data-l1key="configuration" data-l2key="tts_voice"
-										   placeholder="fr_FR-siwis-medium.onnx (défaut)">
-									<span class="help-block">
-										<small>{{Optionnel. Nom d'un modèle de voix Piper présent dans <strong>resources/piper/voices/</strong>, ou chemin absolu d'un fichier <strong>.onnx</strong>. Laisser vide pour utiliser la voix française par défaut.}}</small>
-									</span>
+								<!-- OCR sur images reçues (v0.4 #20) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{OCR images reçues}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="ocr_enabled" value="1"> {{Activer}}
+										</label>
+										<input type="text" class="eqLogicAttr form-control" style="margin-top:6px;"
+											   data-l1key="configuration" data-l2key="ocr_lang"
+											   placeholder="fra (défaut) — ex: fra+eng">
+										<span class="help-block">
+											<small>{{Si activé, le texte des images reçues est extrait automatiquement via Tesseract et exposé dans la commande info « OCR — texte image » (<code>last_ocr_text</code>). Pratique pour lire un compteur, un ticket, un panneau… Langue Tesseract : <strong>fra</strong> par défaut, combinable (<strong>fra+eng</strong>). Échec silencieux si Tesseract est absent.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- OCR sur images reçues (v0.4 #20) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{OCR images reçues}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="ocr_enabled" value="1"> {{Activer}}
-									</label>
-									<input type="text" class="eqLogicAttr form-control" style="margin-top:6px;"
-										   data-l1key="configuration" data-l2key="ocr_lang"
-										   placeholder="fra (défaut) — ex: fra+eng">
-									<span class="help-block">
-										<small>{{Si activé, le texte des images reçues est extrait automatiquement via Tesseract et exposé dans la commande info « OCR — texte image » (<code>last_ocr_text</code>). Pratique pour lire un compteur, un ticket, un panneau… Langue Tesseract : <strong>fra</strong> par défaut, combinable (<strong>fra+eng</strong>). Échec silencieux si Tesseract est absent.}}</small>
-									</span>
+								<!-- STT sur notes vocales reçues (v0.4 #17) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Transcription vocale (STT)}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="stt_enabled" value="1"> {{Activer}}
+										</label>
+										<span class="help-block">
+											<small>{{Si activé, les notes vocales reçues sont transcrites en texte (Vosk, hors-ligne) et exposées dans la commande info « STT — note vocale » (<code>last_voice_text</code>). Le texte est aussi réinjecté comme un message : il déclenche les raccourcis et les interactions Jeedom — vous pouvez piloter Jeedom à la voix. Combiné au mode « Réponses vocales », vous obtenez un assistant vocal complet.}}</small>
+										</span>
+									</div>
 								</div>
-							</div>
 
-							<!-- STT sur notes vocales reçues (v0.4 #17) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Transcription vocale (STT)}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="stt_enabled" value="1"> {{Activer}}
-									</label>
-									<span class="help-block">
-										<small>{{Si activé, les notes vocales reçues sont transcrites en texte (Vosk, hors-ligne) et exposées dans la commande info « STT — note vocale » (<code>last_voice_text</code>). Le texte est aussi réinjecté comme un message : il déclenche les raccourcis et les interactions Jeedom — vous pouvez piloter Jeedom à la voix. Combiné au mode « Réponses vocales », vous obtenez un assistant vocal complet.}}</small>
-									</span>
-								</div>
-							</div>
+							</div><!-- /.col-lg-6 droite -->
 
-							<!-- Messages éphémères (v0.3 #15) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Messages éphémères}}</label>
-								<div class="col-sm-7">
-									<select class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="ephemeral_duration">
-										<option value="0">{{Désactivé (messages permanents)}}</option>
-										<option value="86400">{{24 heures}}</option>
-										<option value="604800">{{7 jours}}</option>
-										<option value="7776000">{{90 jours}}</option>
-									</select>
-									<span class="help-block">
-										<small>{{Si activé, tous les messages envoyés par Jeedom disparaissent automatiquement après la durée choisie (fonction "messages éphémères" de WhatsApp).}}</small>
-									</span>
-								</div>
-							</div>
+						</div><!-- /.row ligne 2 -->
 
-							<!-- Groupes additionnels (v0.3 #16) -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Groupes additionnels}}</label>
-								<div class="col-sm-7">
-									<textarea class="eqLogicAttr form-control" rows="3"
-										   data-l1key="configuration" data-l2key="extra_groups"
-										   placeholder="alertes=Alertes Maison&#10;famille=Groupe Famille&#10;(vide = un seul groupe canal)"></textarea>
-									<span class="help-block">
-										<small>{{Groupes WhatsApp supplémentaires que cet équipement peut écouter et cibler, en plus du groupe canal principal. Une ligne par groupe au format <strong>tag=Nom exact du groupe WhatsApp</strong>. Le « tag » sert à cibler le groupe via la commande « Envoyer dans un groupe additionnel » (champ Titre) et apparaît dans la commande info « Dernier groupe ».}}</small>
-									</span>
-								</div>
-							</div>
-
-							<!-- Préfixe Jeedom -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
-								<div class="col-sm-7">
-									<input type="text" class="eqLogicAttr form-control"
-										   data-l1key="configuration" data-l2key="interaction_prefix"
-										   placeholder="(vide = prefixe maison par defaut)">
-									<span class="help-block">
-										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
-										<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
-									</span>
-								</div>
-							</div>
-
-							<!-- Message de soutien mensuel -->
-							<div class="form-group">
-								<label class="col-sm-4 control-label">{{Message de soutien}}</label>
-								<div class="col-sm-7">
-									<label class="checkbox-inline">
-										<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="donation_enabled" value="1"> {{Envoyer 1 message par mois}}
-									</label>
-									<span class="help-block">
-										<small>{{Une fois par mois, à un jour et une heure aléatoires (entre 10h et 19h), un rappel discret de soutien est envoyé dans le groupe canal. Tirage parmi un pool de 12 messages préparés par l'auteur. Désactivé par défaut.}}</small>
-									</span>
-								</div>
-							</div>
-
-						</div>
 					</fieldset>
 				</form>
+
+				<!-- Modal agrandissement QR code -->
+				<div class="modal fade" id="modal_qrZoom" tabindex="-1" role="dialog" aria-labelledby="modal_qrZoom_label">
+					<div class="modal-dialog modal-sm" role="document" style="max-width:340px;margin:60px auto;">
+						<div class="modal-content" style="border:3px solid #25D366;border-radius:12px;">
+							<div class="modal-header" style="background:#25D366;color:#fff;border-radius:9px 9px 0 0;padding:10px 16px;">
+								<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
+								<h5 class="modal-title" id="modal_qrZoom_label" style="color:#fff;margin:0;">
+									<i class="fab fa-whatsapp"></i> {{Scanner le QR code}}
+								</h5>
+							</div>
+							<div class="modal-body" style="text-align:center;padding:20px;">
+								<img id="wa_qr_img_zoom" src="" style="width:100%;max-width:280px;border:3px solid #25D366;border-radius:10px;">
+								<p class="text-muted" style="font-size:0.82em;margin-top:12px;margin-bottom:0;">
+									<i class="fas fa-mobile-alt"></i>
+									{{WhatsApp → Appareils liés → Lier un appareil}}
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
 			</div><!-- /#eqlogictab -->
 
 			<!-- ── Onglet Commandes ───────────────────────────────────────── -->
