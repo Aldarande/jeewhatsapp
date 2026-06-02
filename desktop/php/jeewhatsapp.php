@@ -35,6 +35,37 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			</div>
 		</div>
 
+		<!-- Modal Nouvel équipement -->
+		<div class="modal fade" id="modal_newJeeWhatsApp" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-sm" role="document">
+				<div class="modal-content">
+					<div class="modal-header" style="background:linear-gradient(135deg,#075e54,#128c7e);border-radius:5px 5px 0 0;">
+						<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
+						<h4 class="modal-title" style="color:#fff;">
+							<i class="fab fa-whatsapp"></i> {{Nouveau compte WhatsApp}}
+						</h4>
+					</div>
+					<div class="modal-body" style="padding:20px 24px;">
+						<div class="form-group" style="margin:0;">
+							<label style="font-weight:600;margin-bottom:8px;display:block;">{{Nom de l'équipement}}</label>
+							<input type="text" id="in_newJeeWhatsAppName" class="form-control"
+								placeholder="{{ex : WhatsApp maison, Bot Jeedom…}}"
+								maxlength="64" autocomplete="off">
+							<p class="help-block" style="margin-top:6px;font-size:0.85em;">
+								{{Ce nom identifie le compte dans Jeedom. Il peut être modifié plus tard.}}
+							</p>
+						</div>
+					</div>
+					<div class="modal-footer" style="border-top:1px solid #e8e8e8;padding:12px 16px;">
+						<button type="button" class="btn btn-default" data-dismiss="modal">{{Annuler}}</button>
+						<button type="button" class="btn btn-success" id="btn_confirmNewJeeWhatsApp">
+							<i class="fas fa-plus-circle"></i> {{Créer}}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Modal Don -->
 		<div class="modal fade" id="modal_donJeeWhatsApp" tabindex="-1" role="dialog">
 			<div class="modal-dialog" role="document">
@@ -78,7 +109,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo (int) $eqLogic->getId(); ?>">
 						<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
 						<br>
-						<span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
+						<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
 					</div>
 				<?php endforeach; ?>
 			</div>
@@ -206,6 +237,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									<div id="wa_connected_zone" style="display:none;margin-top:6px;">
 										<i class="fas fa-check-circle" style="color:#25D366;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
 										<span style="color:#25D366;font-weight:600;">{{Connecté à WhatsApp ✓}}</span>
+										<p class="text-muted" style="font-size:0.8em;margin:6px 0 0;">
+											<i class="fas fa-bell-slash"></i> {{Pas de notification sur votre téléphone ? C'est normal : WhatsApp n'envoie pas de notification pour vos propres messages. Ajoutez un contact dans le groupe pour en recevoir.}}
+										</p>
 									</div>
 									<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
 										<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
@@ -523,9 +557,10 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								<div class="col-sm-7">
 									<input type="text" class="eqLogicAttr form-control"
 										   data-l1key="configuration" data-l2key="interaction_prefix"
-										   placeholder="🏠  (défaut si vide)">
+										   placeholder="(vide = prefixe maison par defaut)">
 									<span class="help-block">
-										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small>
+										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
+										<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
 									</span>
 								</div>
 							</div>
@@ -606,7 +641,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								{{Message}} <span class="text-danger" title="{{Champ obligatoire}}">*</span>
 							</label>
 							<input type="text" id="test_message" class="form-control"
-								value="Test depuis JeeWhatsApp 🚀">
+								value="Test depuis JeeWhatsApp">
 						</div>
 
 						<!-- Séparateur optionnel -->
@@ -664,7 +699,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 							</label>
 							<textarea class="eqLogicAttr form-control" rows="10"
 								data-l1key="configuration" data-l2key="message_templates"
-								placeholder="bienvenue=Bienvenue chez vous ! 🏠&#10;alerte=⚠️ Alerte : #[Maison][Détecteur][Présence]# !&#10;nuit=🌙 Bonne nuit — fermeture automatique des volets&#10;# Les lignes commençant par # sont des commentaires"></textarea>
+								placeholder="bienvenue=Bienvenue chez vous !&#10;alerte=Alerte : #[Maison][Detecteur][Presence]# !&#10;nuit=Bonne nuit - fermeture automatique des volets&#10;# Les lignes commencant par # sont des commentaires"></textarea>
 							<span class="help-block" style="font-size:0.82em;margin-top:6px;">
 								<strong>{{Format :}}</strong> <code>clé=texte</code> — {{une ligne par template, clé insensible à la casse}}<br>
 								{{Les lignes vides et celles commençant par}} <code>#</code> {{sont ignorées.}}
@@ -791,15 +826,17 @@ function applyStatus(r) {
     $('#wa_connected_zone').show();
     showStatus('success', '{{Connecté}}');
     if (_waQRInterval) { clearInterval(_waQRInterval); _waQRInterval = null; }
-  } else if (r && (r.status === 'logged_out' || r.status === 'unknown')) {
+  } else if (r && r.status === 'logged_out') {
     $('#wa_disconnected_zone').show();
-    showStatus('danger', '{{Déconnecté}}');
+    showStatus('danger', '{{Session expirée — redémarrez le daemon pour obtenir un nouveau QR}}');
+  } else if (r && r.status === 'unknown') {
+    showStatus('warning', '{{Instance non démarrée — redémarrez le daemon pour inclure cet équipement}}');
   } else {
     var statusMap = {
-      'connecting':   '{{Connexion en cours…}}',
+      'connecting':   '{{Connexion en cours… (QR dans quelques secondes)}}',
       'reconnecting': '{{Reconnexion en cours…}}',
     };
-    showStatus('info', statusMap[r && r.status] || '{{Connexion en cours…}}');
+    showStatus('info', statusMap[r && r.status] || '{{Connexion en cours… (QR dans quelques secondes)}}');
   }
 }
 

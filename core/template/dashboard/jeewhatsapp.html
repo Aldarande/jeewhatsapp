@@ -52,6 +52,7 @@
     var sender   = #sender_js#;
     var lastTime = #time_js#;
     var attPath  = #att_path_js#;
+    var history  = #history_js#;
 
     var chat = document.getElementById('jwa-chat-' + EQ);
 
@@ -118,9 +119,27 @@
     var curSender = sender, curTime = lastTime;
     var lastShownKey = '';
 
-    // ── Rendu initial ───────────────────────────────────────────────────
+    // ── Rendu initial depuis l'historique ──────────────────────────────
     if (chat) {
-      if (hasMsg && isKindTag(lastMsg) && attPath) {
+      if (history && history.length > 0) {
+        var html = '';
+        history.forEach(function (m) {
+          if (m.dir === 'out') {
+            html += bubble('out', '', m.text, m.time, false);
+          } else {
+            html += bubble('in', m.sender, prettyKind(m.text), m.time, false);
+          }
+        });
+        chat.innerHTML = html;
+        // Trouver le dernier message entrant pour initialiser lastShownKey
+        // et éviter de l'afficher en double lors de la prochaine mise à jour live
+        for (var _i = history.length - 1; _i >= 0; _i--) {
+          if (history[_i].dir === 'in') {
+            lastShownKey = prettyKind(history[_i].text) + '|' + history[_i].time;
+            break;
+          }
+        }
+      } else if (hasMsg && isKindTag(lastMsg) && attPath) {
         lastShownKey = 'ATT|' + attPath;
         appendMedia(typeFromPath(attPath), attPath, sender, lastTime);
       } else if (hasMsg) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JeeWhatsApp — Documentation</title>
+<title>JeeWhatsApp — Documentation Beta</title>
 <style>
   /* ── Reset & base ─────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,7 +37,7 @@
     margin-bottom: 16px;
   }
   nav .logo h1 { font-size: 1.3em; font-weight: 900; color: #fff; letter-spacing: 1px; }
-  nav .logo .version { font-size: 0.75em; color: #888; margin-top: 2px; }
+  nav .logo .version { font-size: 0.75em; color: #f0a500; margin-top: 2px; font-weight: 700; }
   nav ul { list-style: none; }
   nav ul li a {
     display: block;
@@ -49,7 +49,7 @@
   }
   nav ul li a:hover, nav ul li a.active {
     color: #fff;
-    border-left-color: #25d366;
+    border-left-color: #f0a500;
     background: rgba(255,255,255,.05);
     text-decoration: none;
   }
@@ -70,7 +70,7 @@
     font-size: 1.4em; font-weight: 800; color: #2d2d2d;
     margin: 40px 0 16px;
     padding-bottom: 8px;
-    border-bottom: 2px solid #25d366;
+    border-bottom: 2px solid #f0a500;
   }
   h3 { font-size: 1.1em; font-weight: 700; color: #414141; margin: 28px 0 10px; }
   h4 { font-size: 0.95em; font-weight: 700; color: #555; margin: 20px 0 8px; }
@@ -80,7 +80,7 @@
 
   /* ── Page header ─────────────────────────────────────────── */
   .page-header {
-    background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
+    background: linear-gradient(135deg, #5a3800 0%, #a06000 100%);
     color: #fff;
     padding: 32px 40px;
     border-radius: 12px;
@@ -98,11 +98,12 @@
     border-radius: 20px;
     font-size: 0.75em;
     font-weight: 700;
-    background: #25d366;
+    background: #f0a500;
     color: #fff;
     margin-left: 8px;
     vertical-align: middle;
   }
+  .badge.stable { background: #25d366; }
 
   /* ── Callouts ─────────────────────────────────────────────── */
   .callout {
@@ -115,6 +116,7 @@
   .callout.info    { background: #e8f4fd; border-color: #2196f3; color: #1a4a6b; }
   .callout.tip     { background: #e8f8e8; border-color: #4caf50; color: #1a4a1a; }
   .callout.warning { background: #fff8e1; border-color: #ff9800; color: #5a3800; }
+  .callout.beta    { background: #fff3cd; border-color: #f0a500; color: #5a3800; }
   .callout strong  { display: block; margin-bottom: 4px; }
 
   /* ── Tables ───────────────────────────────────────────────── */
@@ -130,7 +132,7 @@
   }
   td { padding: 9px 14px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
   tr:nth-child(even) td { background: #fafafa; }
-  tr:hover td { background: #f0fff4; }
+  tr:hover td { background: #fffbf0; }
   td code { background: #eef; padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
 
   /* ── Code ─────────────────────────────────────────────────── */
@@ -161,7 +163,7 @@
     flex-shrink: 0;
     width: 28px; height: 28px;
     border-radius: 50%;
-    background: #075e54;
+    background: #a06000;
     color: #fff;
     font-weight: 900;
     font-size: 0.85em;
@@ -274,7 +276,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.6</div>
+    <div class="version">Plugin Jeedom — v0.6 BETA</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -295,6 +297,7 @@
     <li><a href="#limitation-notifications">⚠️ Notifications</a></li>
     <li><a href="#depannage">Dépannage</a></li>
     <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#beta-nouveautes">Nouveautés beta</a></li>
     <li><a href="#changelog">Changelog</a></li>
 
     <li class="section-title">Projet</li>
@@ -310,10 +313,17 @@
   <div class="page-header">
     <div class="icon">💬</div>
     <div>
-      <h1>JeeWhatsApp <span class="badge">Self-hosted</span></h1>
+      <h1>JeeWhatsApp <span class="badge">BETA</span></h1>
       <p>Intégration WhatsApp bidirectionnelle pour Jeedom via Baileys.<br>
          Canal de communication dédié — 100&nbsp;% local, aucune donnée chez un tiers.</p>
     </div>
+  </div>
+
+  <div class="callout beta">
+    <strong>⚠️ Version bêta</strong>
+    Cette documentation décrit la version bêta du plugin. Les fonctionnalités en cours de développement
+    peuvent changer avant la sortie de la version stable.
+    Pour la version stable, consultez la <a href="index.html">documentation principale</a>.
   </div>
 
   <!-- ── Présentation ─────────────────────────────────────────────────── -->
@@ -857,11 +867,25 @@
     </tbody>
   </table>
 
+  <!-- ── Nouveautés beta ───────────────────────────────────────────────── -->
+  <h2 id="beta-nouveautes">Nouveautés beta</h2>
+
+  <div class="callout beta">
+    <strong>🧪 En cours de développement</strong>
+    Cette section liste les fonctionnalités en cours de développement dans la branche beta,
+    non encore disponibles dans la version stable.
+  </div>
+
+  <p>Aucune nouveauté beta en cours pour le moment. Les prochaines fonctionnalités planifiées :</p>
+  <ul>
+    <li>Envoi de médias (images)</li>
+    <li>Support des réactions WhatsApp</li>
+  </ul>
 
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.6 <span class="badge">stable</span></h3>
+  <h3>v0.6 <span class="badge stable">stable</span></h3>
   <ul>
     <li>Audit de sécurité complet — score 100/100</li>
     <li>Renforcement de l'authentification du callback (vérification IP locale, headers)</li>
@@ -903,7 +927,7 @@
   <h2 id="apropos">À propos</h2>
 
   <ul>
-    <li><strong>Plugin :</strong> JeeWhatsApp v0.6 — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin :</strong> JeeWhatsApp v0.6 BETA — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend :</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — open-source, licence MIT</li>
     <li><strong>Jeedom</strong> est une marque déposée de Jeedom SAS. Ce plugin est un développement communautaire indépendant, non affilié à Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> est une marque déposée de Meta Platforms, Inc. Ce plugin n'est pas affilié à Meta.</li>

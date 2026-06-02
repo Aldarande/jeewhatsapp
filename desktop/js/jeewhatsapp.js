@@ -1,5 +1,60 @@
 /* jeewhatsapp — desktop JS */
 
+$(document).ready(function () {
+
+  // ── Surcharge addEqLogic : demande le nom avant de créer l'équipement ────────
+  // Jeedom appelle jeeFrontEnd.pluginTemplate.addEqLogic() quand l'utilisateur
+  // clique sur "Ajouter". On intercepte pour afficher un modal de saisie du nom.
+  if (typeof jeeFrontEnd !== 'undefined' && jeeFrontEnd.pluginTemplate) {
+    jeeFrontEnd.pluginTemplate.addEqLogic = function () {
+      $('#in_newJeeWhatsAppName').val('');
+      $('#modal_newJeeWhatsApp').modal('show');
+      setTimeout(function () { $('#in_newJeeWhatsAppName').trigger('focus'); }, 400);
+    };
+  }
+
+  // Validation avec Entrée dans le champ nom
+  $('#in_newJeeWhatsAppName').on('keydown', function (e) {
+    if (e.key === 'Enter') { $('#btn_confirmNewJeeWhatsApp').trigger('click'); }
+    $(this).removeClass('jwa-input-error');
+  });
+
+  // Bouton Créer → sauvegarde et redirection vers la page de l'équipement
+  $('#btn_confirmNewJeeWhatsApp').on('click', function () {
+    var name = $('#in_newJeeWhatsAppName').val().trim();
+    if (!name) {
+      $('#in_newJeeWhatsAppName').addClass('jwa-input-error').trigger('focus');
+      return;
+    }
+    var $btn = $(this).prop('disabled', true)
+                      .html('<i class="fas fa-spinner fa-spin"></i>');
+
+    jeedom.eqLogic.save({
+      type: eqType,
+      eqLogics: [{ name: name, isEnable: '1', isVisible: '1' }],
+      error: function (error) {
+        $btn.prop('disabled', false).html('<i class="fas fa-plus-circle"></i> {{Créer}}');
+        jeedomUtils.showAlert({ message: error.message, level: 'danger' });
+      },
+      success: function (_data) {
+        $('#modal_newJeeWhatsApp').modal('hide');
+        jeeFrontEnd.modifyWithoutSave = false;
+        if (typeof modifyWithoutSave !== 'undefined') { modifyWithoutSave = false; }
+        var vars = getUrlVars();
+        var url  = 'index.php?';
+        for (var k in vars) {
+          if (k !== 'id' && k !== 'saveSuccessFull' && k !== 'removeSuccessFull') {
+            url += k + '=' + vars[k].replace('#', '') + '&';
+          }
+        }
+        url += 'id=' + _data.id + '&saveSuccessFull=1';
+        jeedomUtils.loadPage(url);
+      }
+    });
+  });
+
+});
+
 function addCmdToTable(cmdParam) {
     const cmd = (isset(cmdParam) ? cmdParam : {});
     if (!isset(cmd.id)) { cmd.id = ''; }
