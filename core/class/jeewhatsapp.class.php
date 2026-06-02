@@ -82,7 +82,7 @@ class jeewhatsapp extends eqLogic {
       if (!$eqLogic->getIsEnable()) { continue; }
       $instances[] = [
         'id'         => $eqLogic->getId(),
-        'prefix'     => $eqLogic->getConfiguration('interaction_prefix', ''),
+        'prefix'     => $eqLogic->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 "),
         'group_name' => $eqLogic->getConfiguration('group_name', 'jeewhatsapp'),
         // v0.3 #16 — groupes canaux additionnels (tag=NomDuGroupe, 1 par ligne)
         'groups'     => self::parseExtraGroups($eqLogic->getConfiguration('extra_groups', '')),
@@ -198,6 +198,10 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_group',       $_data['group_tag']    ?? '');
     $this->checkAndUpdateCmd('last_group_name',  $_data['group_name']   ?? '');
 
+    // Historique widget : ajoute le message entrant
+    $senderLabel = $resolvedProfile ?? ($_data['sender_name'] ?? ($_data['sender'] ?? ''));
+    $this->appendHistory('in', $_data['message'] ?? '', $senderLabel);
+
     // Compteur messages reçus aujourd'hui (cache TTL jusqu'à minuit)
     $this->incrementMessagesTodayCounter();
 
@@ -291,7 +295,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false, $_tag = null) {
-    $prefix  = $this->getConfiguration('interaction_prefix', '');
+    $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
     $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
     $params = [
@@ -313,6 +317,10 @@ class jeewhatsapp extends eqLogic {
 
     $result = $this->sendToDaemon('send', $params);
     $this->incrementSentCounters();
+    // Historique widget : ajoute le message sortant (sans préfixe dans l'historique)
+    if (!$_skipPrefix) {
+      $this->appendHistory('out', $_message);
+    }
     return $result;
   }
 
@@ -513,7 +521,7 @@ class jeewhatsapp extends eqLogic {
     // Préfixe Jeedom appliqué uniquement si une caption non vide est fournie
     $caption = '';
     if ($_caption !== null && trim($_caption) !== '') {
-      $prefix  = $this->getConfiguration('interaction_prefix', '');
+      $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
       $caption = $prefix !== '' ? $prefix . $_caption : $_caption;
     }
 
@@ -604,7 +612,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function replyToLast($_message) {
-    $prefix  = $this->getConfiguration('interaction_prefix', '');
+    $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
     $message = $prefix !== '' ? $prefix . $_message : $_message;
 
     $params = [
@@ -836,6 +844,8 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_sender_name', $name);
     $this->checkAndUpdateCmd('last_received_at', $at);
     $this->incrementMessagesTodayCounter();
+    // Historique widget : média reçu (on stocke le tag type pour l'affichage)
+    $this->appendHistory('in', $cap !== '' ? $cap : '[' . $kind . ']', $name !== '' ? $name : $from, $kind);
 
     log::add('jeewhatsapp', 'info',
       'jeewhatsapp.class.php::updateFromAttachment() l.' . __LINE__
@@ -1004,7 +1014,7 @@ class jeewhatsapp extends eqLogic {
   public function reactToLast($_emoji) {
     $emoji = trim((string) $_emoji);
     if ($emoji === '') {
-      throw new Exception(__('Emoji obligatoire (ex: ❤️ 👍 🎉)', __FILE__));
+      throw new Exception(__('Emoji obligatoire (ex: coeur, pouce, tada)', __FILE__));
     }
     return $this->sendToDaemon('reactLast', [
       'instance_id' => $this->getId(),
@@ -1463,7 +1473,7 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Nouveau texte obligatoire', __FILE__));
     }
     // Réapplique le préfixe Jeedom comme pour un envoi normal
-    $prefix = $this->getConfiguration('interaction_prefix', '');
+    $prefix = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
     $text   = $prefix !== '' ? $prefix . $text : $text;
     return $this->sendToDaemon('editLast', [
       'instance_id' => $this->getId(),
@@ -1597,6 +1607,47 @@ class jeewhatsapp extends eqLogic {
         log::add('jeewhatsapp', 'debug', 'jeewhatsapp.class.php::cronRefreshStatus() l.' . __LINE__ . ' — Daemon indisponible pour eqLogic #' . $eqLogic->getId());
       }
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Historique de conversation pour le widget (50 messages max)
+  // Fichier : resources/jeewhatsappd/auth/{id}/history.json
+  // Chaque entrée : {dir:'in'|'out', text, sender, time, kind}
+  // -------------------------------------------------------------------------
+
+  private function historyFile() {
+    return __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId() . '/history.json';
+  }
+
+  public function appendHistory($_dir, $_text, $_sender = '', $_kind = 'text') {
+    $file = $this->historyFile();
+    $dir  = dirname($file);
+    if (!is_dir($dir)) { @mkdir($dir, 0700, true); }
+
+    $history = [];
+    if (is_file($file)) {
+      $raw = @file_get_contents($file);
+      if ($raw) {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) { $history = $decoded; }
+      }
+    }
+
+    $history[] = [
+      'dir'    => $_dir,
+      'text'   => (string) $_text,
+      'sender' => (string) $_sender,
+      'time'   => date('H:i'),
+      'date'   => date('Y-m-d H:i:s'),
+      'kind'   => $_kind,
+    ];
+
+    // Conserver les 50 derniers messages uniquement
+    if (count($history) > 50) {
+      $history = array_slice($history, -50);
+    }
+
+    @file_put_contents($file, json_encode($history, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
   }
 
   // -------------------------------------------------------------------------
@@ -1872,8 +1923,8 @@ class jeewhatsapp extends eqLogic {
       $react->setDisplay('title_placeholder', 'Inutilisé');
       $react->save();
     }
-    if ($react->getDisplay('message_placeholder') !== 'Emoji (ex: ❤️ 👍 🎉 — chaîne vide pour retirer la réaction)') {
-      $react->setDisplay('message_placeholder', 'Emoji (ex: ❤️ 👍 🎉 — chaîne vide pour retirer la réaction)');
+    if ($react->getDisplay('message_placeholder') !== 'Emoji UTF-8 (ex: coeur, pouce) — vide pour retirer') {
+      $react->setDisplay('message_placeholder', 'Emoji UTF-8 (ex: coeur, pouce) — vide pour retirer');
       $react->save();
     }
 
@@ -2115,6 +2166,19 @@ class jeewhatsapp extends eqLogic {
       $tmpl->setDisplay('message_placeholder', 'Clé du template (ex: bienvenue)');
       $tmpl->save();
     }
+
+    // Si le daemon tourne déjà, on le redémarre pour qu'il prenne en compte
+    // le nouvel équipement (ou les changements de config comme group_name, extra_groups…).
+    // Fait après la sauvegarde des commandes pour avoir un état cohérent.
+    if ($this->getIsEnable() && self::deamon_info()['state'] === 'ok') {
+      try {
+        self::deamon_start();
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'warning',
+          'jeewhatsapp.class.php::postSave() l.' . __LINE__
+          . ' — Redémarrage daemon impossible : ' . $e->getMessage());
+      }
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -2208,6 +2272,18 @@ class jeewhatsapp extends eqLogic {
     $replace['#msg_js#']       = json_encode($lastMessage);
     $replace['#sender_js#']    = json_encode($lastSender !== '' ? $lastSender : 'Inconnu');
     $replace['#time_js#']      = json_encode($lastTime);
+
+    // Historique de conversation (50 messages max, fichier local)
+    $historyFile = $this->historyFile();
+    $history     = [];
+    if (is_file($historyFile)) {
+      $raw = @file_get_contents($historyFile);
+      if ($raw) {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) { $history = $decoded; }
+      }
+    }
+    $replace['#history_js#'] = json_encode($history, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     // Pièce jointe courante (pour le rendu média initial) + transcription STT
     $replace['#att_path_js#']  = json_encode($info('last_attachment_path'));

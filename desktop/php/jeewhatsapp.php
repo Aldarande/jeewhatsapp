@@ -526,10 +526,10 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								<div class="col-sm-7">
 									<input type="text" class="eqLogicAttr form-control"
 										   data-l1key="configuration" data-l2key="interaction_prefix"
-										   placeholder="ex: [Jeedom] ou (vide = pas de prefixe)">
+										   placeholder="(vide = prefixe maison par defaut)">
 									<span class="help-block">
 										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
-										<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> {{Les emoji (ex: 🏠) peuvent provoquer une erreur SQL sur les Jeedom anciens (MySQL utf8 au lieu de utf8mb4). En cas d'erreur à la sauvegarde, utilisez du texte simple ([Jeedom]).}}</small>
+										<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
 									</span>
 								</div>
 							</div>
@@ -795,15 +795,17 @@ function applyStatus(r) {
     $('#wa_connected_zone').show();
     showStatus('success', '{{Connecté}}');
     if (_waQRInterval) { clearInterval(_waQRInterval); _waQRInterval = null; }
-  } else if (r && (r.status === 'logged_out' || r.status === 'unknown')) {
+  } else if (r && r.status === 'logged_out') {
     $('#wa_disconnected_zone').show();
-    showStatus('danger', '{{Déconnecté}}');
+    showStatus('danger', '{{Session expirée — redémarrez le daemon pour obtenir un nouveau QR}}');
+  } else if (r && r.status === 'unknown') {
+    showStatus('warning', '{{Instance non démarrée — redémarrez le daemon pour inclure cet équipement}}');
   } else {
     var statusMap = {
-      'connecting':   '{{Connexion en cours…}}',
+      'connecting':   '{{Connexion en cours… (QR dans quelques secondes)}}',
       'reconnecting': '{{Reconnexion en cours…}}',
     };
-    showStatus('info', statusMap[r && r.status] || '{{Connexion en cours…}}');
+    showStatus('info', statusMap[r && r.status] || '{{Connexion en cours… (QR dans quelques secondes)}}');
   }
 }
 

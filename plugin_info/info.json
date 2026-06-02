@@ -11,9 +11,15 @@
   "maxDependancyInstallTime": 600,
   "pluginVersion": "0.6",
   "documentation": "https://aldarande.github.io/jeewhatsapp/#language#/index.html",
+  "documentation_beta": "https://aldarande.github.io/jeewhatsapp/#language#/beta.html",
   "changelog": "https://aldarande.github.io/jeewhatsapp/#language#/index.html#changelog",
+  "changelog_beta": "https://aldarande.github.io/jeewhatsapp/#language#/beta.html#beta-nouveautes",
   "language": [
-    "fr_FR"
+    "fr_FR",
+    "en_US",
+    "de_DE",
+    "it_IT",
+    "es_ES"
   ],
   "compatibility": [
     "smart",
