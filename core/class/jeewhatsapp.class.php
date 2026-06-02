@@ -82,7 +82,7 @@ class jeewhatsapp extends eqLogic {
       if (!$eqLogic->getIsEnable()) { continue; }
       $instances[] = [
         'id'         => $eqLogic->getId(),
-        'prefix'     => $eqLogic->getConfiguration('interaction_prefix', '🏠 '),
+        'prefix'     => $eqLogic->getConfiguration('interaction_prefix', ''),
         'group_name' => $eqLogic->getConfiguration('group_name', 'jeewhatsapp'),
         // v0.3 #16 — groupes canaux additionnels (tag=NomDuGroupe, 1 par ligne)
         'groups'     => self::parseExtraGroups($eqLogic->getConfiguration('extra_groups', '')),
@@ -291,7 +291,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false, $_tag = null) {
-    $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
+    $prefix  = $this->getConfiguration('interaction_prefix', '');
     $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
     $params = [
@@ -513,7 +513,7 @@ class jeewhatsapp extends eqLogic {
     // Préfixe Jeedom appliqué uniquement si une caption non vide est fournie
     $caption = '';
     if ($_caption !== null && trim($_caption) !== '') {
-      $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
+      $prefix  = $this->getConfiguration('interaction_prefix', '');
       $caption = $prefix !== '' ? $prefix . $_caption : $_caption;
     }
 
@@ -604,7 +604,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function replyToLast($_message) {
-    $prefix  = $this->getConfiguration('interaction_prefix', '🏠 ');
+    $prefix  = $this->getConfiguration('interaction_prefix', '');
     $message = $prefix !== '' ? $prefix . $_message : $_message;
 
     $params = [
@@ -1463,7 +1463,7 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Nouveau texte obligatoire', __FILE__));
     }
     // Réapplique le préfixe Jeedom comme pour un envoi normal
-    $prefix = $this->getConfiguration('interaction_prefix', '🏠 ');
+    $prefix = $this->getConfiguration('interaction_prefix', '');
     $text   = $prefix !== '' ? $prefix . $text : $text;
     return $this->sendToDaemon('editLast', [
       'instance_id' => $this->getId(),

@@ -78,7 +78,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo (int) $eqLogic->getId(); ?>">
 						<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
 						<br>
-						<span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
+						<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
 					</div>
 				<?php endforeach; ?>
 			</div>
@@ -206,6 +206,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									<div id="wa_connected_zone" style="display:none;margin-top:6px;">
 										<i class="fas fa-check-circle" style="color:#25D366;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
 										<span style="color:#25D366;font-weight:600;">{{Connecté à WhatsApp ✓}}</span>
+										<p class="text-muted" style="font-size:0.8em;margin:6px 0 0;">
+											<i class="fas fa-bell-slash"></i> {{Pas de notification sur votre téléphone ? C'est normal : WhatsApp n'envoie pas de notification pour vos propres messages. Ajoutez un contact dans le groupe pour en recevoir.}}
+										</p>
 									</div>
 									<div id="wa_disconnected_zone" style="display:none;margin-top:6px;">
 										<i class="fas fa-times-circle" style="color:#d9534f;font-size:1.1em;vertical-align:middle;margin-right:5px;"></i>
@@ -523,9 +526,10 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								<div class="col-sm-7">
 									<input type="text" class="eqLogicAttr form-control"
 										   data-l1key="configuration" data-l2key="interaction_prefix"
-										   placeholder="🏠  (défaut si vide)">
+										   placeholder="ex: [Jeedom] ou (vide = pas de prefixe)">
 									<span class="help-block">
-										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small>
+										<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
+										<small class="text-warning"><i class="fas fa-exclamation-triangle"></i> {{Les emoji (ex: 🏠) peuvent provoquer une erreur SQL sur les Jeedom anciens (MySQL utf8 au lieu de utf8mb4). En cas d'erreur à la sauvegarde, utilisez du texte simple ([Jeedom]).}}</small>
 									</span>
 								</div>
 							</div>
@@ -606,7 +610,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								{{Message}} <span class="text-danger" title="{{Champ obligatoire}}">*</span>
 							</label>
 							<input type="text" id="test_message" class="form-control"
-								value="Test depuis JeeWhatsApp 🚀">
+								value="Test depuis JeeWhatsApp">
 						</div>
 
 						<!-- Séparateur optionnel -->
@@ -664,7 +668,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 							</label>
 							<textarea class="eqLogicAttr form-control" rows="10"
 								data-l1key="configuration" data-l2key="message_templates"
-								placeholder="bienvenue=Bienvenue chez vous ! 🏠&#10;alerte=⚠️ Alerte : #[Maison][Détecteur][Présence]# !&#10;nuit=🌙 Bonne nuit — fermeture automatique des volets&#10;# Les lignes commençant par # sont des commentaires"></textarea>
+								placeholder="bienvenue=Bienvenue chez vous !&#10;alerte=Alerte : #[Maison][Detecteur][Presence]# !&#10;nuit=Bonne nuit - fermeture automatique des volets&#10;# Les lignes commencant par # sont des commentaires"></textarea>
 							<span class="help-block" style="font-size:0.82em;margin-top:6px;">
 								<strong>{{Format :}}</strong> <code>clé=texte</code> — {{une ligne par template, clé insensible à la casse}}<br>
 								{{Les lignes vides et celles commençant par}} <code>#</code> {{sont ignorées.}}
