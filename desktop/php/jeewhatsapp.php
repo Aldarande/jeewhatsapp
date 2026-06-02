@@ -35,6 +35,37 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			</div>
 		</div>
 
+		<!-- Modal Nouvel équipement -->
+		<div class="modal fade" id="modal_newJeeWhatsApp" tabindex="-1" role="dialog">
+			<div class="modal-dialog modal-sm" role="document">
+				<div class="modal-content">
+					<div class="modal-header" style="background:linear-gradient(135deg,#075e54,#128c7e);border-radius:5px 5px 0 0;">
+						<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
+						<h4 class="modal-title" style="color:#fff;">
+							<i class="fab fa-whatsapp"></i> {{Nouveau compte WhatsApp}}
+						</h4>
+					</div>
+					<div class="modal-body" style="padding:20px 24px;">
+						<div class="form-group" style="margin:0;">
+							<label style="font-weight:600;margin-bottom:8px;display:block;">{{Nom de l'équipement}}</label>
+							<input type="text" id="in_newJeeWhatsAppName" class="form-control"
+								placeholder="{{ex : WhatsApp maison, Bot Jeedom…}}"
+								maxlength="64" autocomplete="off">
+							<p class="help-block" style="margin-top:6px;font-size:0.85em;">
+								{{Ce nom identifie le compte dans Jeedom. Il peut être modifié plus tard.}}
+							</p>
+						</div>
+					</div>
+					<div class="modal-footer" style="border-top:1px solid #e8e8e8;padding:12px 16px;">
+						<button type="button" class="btn btn-default" data-dismiss="modal">{{Annuler}}</button>
+						<button type="button" class="btn btn-success" id="btn_confirmNewJeeWhatsApp">
+							<i class="fas fa-plus-circle"></i> {{Créer}}
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Modal Don -->
 		<div class="modal fade" id="modal_donJeeWhatsApp" tabindex="-1" role="dialog">
 			<div class="modal-dialog" role="document">
