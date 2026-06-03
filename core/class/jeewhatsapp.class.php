@@ -43,6 +43,23 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Exclusions de sauvegarde Jeedom
+  // Exclut les binaires et modèles lourds installés par install_dep.sh.
+  // Ces fichiers sont re-téléchargés automatiquement à la prochaine
+  // installation des dépendances — inutile de les inclure dans le backup.
+  // -------------------------------------------------------------------------
+
+  public static function backupExclude() {
+    return [
+      'resources/piper/piper',          // binaire Piper TTS (~50 Mo)
+      'resources/piper/voices',         // modèles vocaux Piper (~100 Mo)
+      'resources/piper/piper.tar.gz',   // archive d'installation
+      'resources/stt/model-fr',         // modèle Vosk STT (~40 Mo)
+      'resources/jeewhatsappd/node_modules', // dépendances Node.js
+    ];
+  }
+
+  // -------------------------------------------------------------------------
   // Daemon
   // -------------------------------------------------------------------------
 

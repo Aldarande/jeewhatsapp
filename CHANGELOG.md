@@ -9,6 +9,23 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ---
 
+## [0.6.2] — 2026-06-03
+
+### Fixed
+
+- **Taille des backups Jeedom** — ajout de `backupExclude()` pour exclure les
+  ressources lourdes installées par `install_dep.sh` et inutiles dans un backup
+  (re-téléchargées automatiquement à la prochaine installation des dépendances) :
+  - `resources/piper/piper` — binaire Piper TTS (~50 Mo)
+  - `resources/piper/voices` — modèles vocaux Piper (~100 Mo)
+  - `resources/piper/piper.tar.gz` — archive d'installation Piper
+  - `resources/stt/model-fr` — modèle Vosk STT français (~40 Mo)
+  - `resources/jeewhatsappd/node_modules` — dépendances Node.js
+  
+  Suggestion de la communauté : merci à **ddelec24** 🙏
+
+---
+
 ## [0.6.1] — 2026-06-03
 
 ### Added
