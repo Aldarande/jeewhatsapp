@@ -572,7 +572,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 								</div>
 							</div>
-						</div><!-- /.row ligne 2 -->
+						<!-- /.section Paramètres WhatsApp -->
 
 					</fieldset>
 				</form>
