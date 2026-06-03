@@ -235,6 +235,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 											<span id="wa_status_badge" class="label label-default" style="font-size:0.9em;padding:6px 14px;">
 												<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
 											</span>
+											<button class="btn btn-xs btn-danger" id="btn_logout_wa" type="button" style="display:none;" title="{{Déconnecter ce compte WhatsApp}}">
+												<i class="fas fa-power-off"></i> {{Déconnexion}}
+											</button>
 											<button class="btn btn-xs btn-default" id="btn_refresh_qr" type="button">
 												<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
 											</button>
@@ -279,17 +282,14 @@ sendVarToJS('eqType', 'jeewhatsapp');
 						</div><!-- /.row ligne 1 -->
 
 						<!-- ── Ligne 2 : Paramètres WhatsApp (2 colonnes) ─────── -->
-						<div class="row">
-							<div class="col-xs-12">
-								<legend><i class="fas fa-sliders-h"></i> {{Paramètres WhatsApp}}</legend>
+							<div class="row">
+								<div class="col-xs-12">
+									<legend><i class="fas fa-sliders-h"></i> {{Paramètres de base}}</legend>
+								</div>
 							</div>
-						</div>
-						<div class="row">
-
-							<!-- Colonne gauche : groupe & session ────────────────── -->
-							<div class="col-lg-6">
-
-								<!-- Nom du groupe canal -->
+							<div class="row">
+								<div class="col-lg-6">
+<!-- Nom du groupe canal -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Groupe canal}}</label>
 									<div class="col-sm-7">
@@ -314,8 +314,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- JID du groupe lié (readonly) -->
+<!-- JID du groupe lié (readonly) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Groupe lié}}</label>
 									<div class="col-sm-7">
@@ -329,8 +328,59 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										<span id="group_link_result" class="help-block" style="display:none;"></span>
 									</div>
 								</div>
-
-								<!-- Groupes additionnels (v0.3 #16) -->
+<!-- Préfixe Jeedom -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control"
+											   data-l1key="configuration" data-l2key="interaction_prefix"
+											   placeholder="(vide = prefixe maison par defaut)">
+										<span class="help-block">
+											<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
+											<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
+										</span>
+									</div>
+								</div>
+								</div>
+								<div class="col-lg-6">
+<!-- Interactions Jeedom -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
+									<div class="col-sm-7">
+										<label class="checkbox-inline">
+											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="interactions_enabled" value="1"> {{Activer}}
+										</label>
+										<span class="help-block">
+											<small>{{Répond automatiquement aux messages reçus dans le groupe via le moteur d'interactions Jeedom}}</small>
+										</span>
+									</div>
+								</div>
+<!-- Filtre mot-clé (v0.2) -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Mot-clé déclencheur}}</label>
+									<div class="col-sm-7">
+										<input type="text" class="eqLogicAttr form-control"
+											   data-l1key="configuration" data-l2key="interaction_keyword"
+											   placeholder="ex: !jeedom (vide = tout message)">
+										<span class="help-block">
+											<small>{{Si renseigné, seuls les messages commençant par ce mot-clé déclenchent les interactions. Le mot-clé est ensuite retiré du message avant traitement. Insensible à la casse.}}</small>
+										</span>
+									</div>
+								</div>
+								</div>
+							</div>
+							<div class="row" style="margin-top:14px;">
+								<div class="col-xs-12">
+									<legend style="cursor:pointer;" data-toggle="collapse" data-target="#jwa_advanced" id="jwa_advanced_toggle">
+										<i class="fas fa-sliders-h"></i> {{Paramètres avancés}}
+										<i class="fas fa-chevron-down" style="font-size:0.8em;margin-left:6px;"></i>
+										<small class="text-muted" style="font-weight:normal;margin-left:8px;">{{(pour aller plus loin — cliquez pour afficher)}}</small>
+									</legend>
+								</div>
+							</div>
+							<div class="row collapse" id="jwa_advanced">
+								<div class="col-lg-6">
+<!-- Groupes additionnels (v0.3 #16) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Groupes additionnels}}</label>
 									<div class="col-sm-7">
@@ -342,8 +392,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Gestion du groupe (v0.5 #22) -->
+<!-- Gestion du groupe (v0.5 #22) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Gestion du groupe}}</label>
 									<div class="col-sm-7">
@@ -371,8 +420,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										<span id="grp_result" class="help-block" style="display:none;"></span>
 									</div>
 								</div>
-
-								<!-- Sauvegarde de session (v0.5 #26) -->
+<!-- Sauvegarde de session (v0.5 #26) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Sauvegarde de session}}</label>
 									<div class="col-sm-7">
@@ -394,22 +442,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										<span id="bk_result" class="help-block" style="display:none;"></span>
 									</div>
 								</div>
-
-								<!-- Préfixe Jeedom -->
-								<div class="form-group">
-									<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
-									<div class="col-sm-7">
-										<input type="text" class="eqLogicAttr form-control"
-											   data-l1key="configuration" data-l2key="interaction_prefix"
-											   placeholder="(vide = prefixe maison par defaut)">
-										<span class="help-block">
-											<small>{{Ajouté à chaque message envoyé par Jeedom dans le groupe. Permet de distinguer les messages Jeedom des messages des membres.}}</small><br>
-											<small>{{Laissez vide pour utiliser le préfixe maison par défaut. Si votre Jeedom est sur une ancienne base MySQL (utf8 et non utf8mb4), les emoji saisis ici peuvent provoquer une erreur à la sauvegarde — dans ce cas utilisez du texte simple (ex : [J]).}}</small>
-										</span>
-									</div>
-								</div>
-
-								<!-- Messages éphémères (v0.3 #15) -->
+<!-- Messages éphémères (v0.3 #15) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Messages éphémères}}</label>
 									<div class="col-sm-7">
@@ -424,8 +457,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Message de soutien mensuel -->
+<!-- Message de soutien mensuel -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Message de soutien}}</label>
 									<div class="col-sm-7">
@@ -437,39 +469,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-							</div><!-- /.col-lg-6 gauche -->
-
-							<!-- Colonne droite : interactions & fonctions avancées ── -->
-							<div class="col-lg-6">
-
-								<!-- Interactions Jeedom -->
-								<div class="form-group">
-									<label class="col-sm-4 control-label">{{Interactions Jeedom}}</label>
-									<div class="col-sm-7">
-										<label class="checkbox-inline">
-											<input type="checkbox" class="eqLogicAttr" data-l1key="configuration" data-l2key="interactions_enabled" value="1"> {{Activer}}
-										</label>
-										<span class="help-block">
-											<small>{{Répond automatiquement aux messages reçus dans le groupe via le moteur d'interactions Jeedom}}</small>
-										</span>
-									</div>
 								</div>
-
-								<!-- Filtre mot-clé (v0.2) -->
-								<div class="form-group">
-									<label class="col-sm-4 control-label">{{Mot-clé déclencheur}}</label>
-									<div class="col-sm-7">
-										<input type="text" class="eqLogicAttr form-control"
-											   data-l1key="configuration" data-l2key="interaction_keyword"
-											   placeholder="ex: !jeedom (vide = tout message)">
-										<span class="help-block">
-											<small>{{Si renseigné, seuls les messages commençant par ce mot-clé déclenchent les interactions. Le mot-clé est ensuite retiré du message avant traitement. Insensible à la casse.}}</small>
-										</span>
-									</div>
-								</div>
-
-								<!-- Commandes shortcuts (v0.4 #19) -->
+								<div class="col-lg-6">
+<!-- Commandes shortcuts (v0.4 #19) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Commandes shortcuts}}</label>
 									<div class="col-sm-7">
@@ -481,8 +483,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Whitelist expéditeurs (v0.2, sécurité) -->
+<!-- Whitelist expéditeurs (v0.2, sécurité) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Whitelist expéditeurs}}</label>
 									<div class="col-sm-7">
@@ -494,8 +495,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Reconnaissance utilisateur (v0.4 #21) -->
+<!-- Reconnaissance utilisateur (v0.4 #21) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Reconnaissance utilisateur}}</label>
 									<div class="col-sm-7">
@@ -507,8 +507,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Présence typing (v0.3 #14) -->
+<!-- Présence typing (v0.3 #14) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Présence "en train d'écrire"}}</label>
 									<div class="col-sm-7">
@@ -520,8 +519,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Réponses vocales / TTS (v0.4 #18) -->
+<!-- Réponses vocales / TTS (v0.4 #18) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Réponses vocales (TTS)}}</label>
 									<div class="col-sm-7">
@@ -533,8 +531,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- Voix TTS optionnelle (v0.4 #18) -->
+<!-- Voix TTS optionnelle (v0.4 #18) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Voix de synthèse}}</label>
 									<div class="col-sm-7">
@@ -546,8 +543,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- OCR sur images reçues (v0.4 #20) -->
+<!-- OCR sur images reçues (v0.4 #20) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{OCR images reçues}}</label>
 									<div class="col-sm-7">
@@ -562,8 +558,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-								<!-- STT sur notes vocales reçues (v0.4 #17) -->
+<!-- STT sur notes vocales reçues (v0.4 #17) -->
 								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Transcription vocale (STT)}}</label>
 									<div class="col-sm-7">
@@ -575,9 +570,8 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
-
-							</div><!-- /.col-lg-6 droite -->
-
+								</div>
+							</div>
 						</div><!-- /.row ligne 2 -->
 
 					</fieldset>
@@ -599,6 +593,43 @@ sendVarToJS('eqType', 'jeewhatsapp');
 									<i class="fas fa-mobile-alt"></i>
 									{{WhatsApp → Appareils liés → Lier un appareil}}
 								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Modal confirmation déconnexion -->
+				<div class="modal fade" id="modal_logoutWa" tabindex="-1" role="dialog" aria-labelledby="modal_logoutWa_label">
+					<div class="modal-dialog" role="document" style="max-width:480px;margin:60px auto;">
+						<div class="modal-content" style="border:2px solid #d9534f;border-radius:10px;">
+							<div class="modal-header" style="background:#d9534f;color:#fff;border-radius:8px 8px 0 0;padding:12px 16px;">
+								<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
+								<h4 class="modal-title" id="modal_logoutWa_label" style="color:#fff;margin:0;">
+									<i class="fas fa-exclamation-triangle"></i> {{Déconnecter le compte WhatsApp ?}}
+								</h4>
+							</div>
+							<div class="modal-body" style="padding:18px 20px;">
+								<p style="font-size:1.02em;margin-bottom:12px;">{{Cette action est irréversible et va :}}</p>
+								<ul style="line-height:1.7;">
+									<li><i class="fas fa-unlink" style="color:#d9534f;width:18px;"></i> {{délier l'appareil côté WhatsApp (équivalent « Se déconnecter » depuis Appareils liés sur le téléphone)}}</li>
+									<li><i class="fas fa-eraser" style="color:#d9534f;width:18px;"></i> {{supprimer définitivement les identifiants stockés localement (dossier auth/)}}</li>
+									<li><i class="fas fa-broom" style="color:#d9534f;width:18px;"></i> {{réinitialiser le groupe lié et les commandes info (dernier message, statut, compteurs)}}</li>
+								</ul>
+								<p style="margin-top:12px;">
+									<i class="fas fa-qrcode" style="color:#25D366;"></i>
+									{{Pour vous reconnecter ensuite, il faudra scanner un nouveau QR code.}}
+								</p>
+								<p class="text-muted" style="font-size:0.85em;margin-top:10px;margin-bottom:0;">
+									<i class="fas fa-lightbulb"></i> {{Astuce : pour pouvoir restaurer ce compte plus tard sans rescanner, faites d'abord une « Sauvegarde de session » (Paramètres avancés).}}
+								</p>
+							</div>
+							<div class="modal-footer" style="padding:10px 16px;">
+								<button type="button" class="btn btn-default" data-dismiss="modal">
+									<i class="fas fa-times"></i> {{Annuler}}
+								</button>
+								<button type="button" class="btn btn-danger" id="btn_logout_confirm">
+									<i class="fas fa-power-off"></i> {{Oui, déconnecter}}
+								</button>
 							</div>
 						</div>
 					</div>
@@ -811,6 +842,43 @@ $('#btn_preview_templates').on('click', function () {
 
 $('#btn_refresh_qr').on('click', function () { refreshQRStatus(); });
 
+// ── Déconnexion du compte WhatsApp ───────────────────────────────────────────
+$('#btn_logout_wa').on('click', function () {
+  if (!$('input.eqLogicAttr[data-l1key="id"]').val()) {
+    $.fn.showAlert({ message: '{{Sauvegardez l\'équipement d\'abord}}', level: 'warning' });
+    return;
+  }
+  $('#modal_logoutWa').modal('show');
+});
+
+$('#btn_logout_confirm').on('click', function () {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  if (!eqLogic_id) { return; }
+  var $btn = $(this);
+  $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> {{Déconnexion…}}');
+  $.ajax({
+    type: 'POST',
+    url:  'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data: { action: 'logout', eqLogic_id: eqLogic_id },
+    dataType: 'json',
+    success: function (data) {
+      $btn.prop('disabled', false).html('<i class="fas fa-power-off"></i> {{Oui, déconnecter}}');
+      $('#modal_logoutWa').modal('hide');
+      if (data.state === 'ok') {
+        $.fn.showAlert({ message: '{{Compte WhatsApp déconnecté. Les identifiants locaux ont été supprimés — scannez un nouveau QR code pour reconnecter.}}', level: 'success' });
+        $('#btn_logout_wa').hide();
+        refreshQRStatus();
+      } else {
+        $.fn.showAlert({ message: '{{Erreur lors de la déconnexion : }}' + (data.result || data.error || '?'), level: 'danger' });
+      }
+    },
+    error: function () {
+      $btn.prop('disabled', false).html('<i class="fas fa-power-off"></i> {{Oui, déconnecter}}');
+      $.fn.showAlert({ message: '{{Erreur de communication avec le daemon}}', level: 'danger' });
+    }
+  });
+});
+
 function refreshQRStatus() {
   var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
   if (!eqLogic_id) { return; }
@@ -838,6 +906,13 @@ function applyStatus(r) {
   $('#wa_qr_zone').hide();
   $('#wa_connected_zone').hide();
   $('#wa_disconnected_zone').hide();
+
+  // Bouton Déconnexion : visible uniquement quand un compte est lié (connecté)
+  if (r && r.status === 'connected') {
+    $('#btn_logout_wa').show();
+  } else {
+    $('#btn_logout_wa').hide();
+  }
 
   if (r && r.qr) {
     $('#wa_qr_img').attr('src', r.qr);

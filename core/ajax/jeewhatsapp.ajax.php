@@ -131,6 +131,15 @@ try {
       ajax::success($eqLogic->restoreSession(init('passphrase', ''), $blob));
       break;
 
+    // ── Déconnexion du compte WhatsApp ──────────────────────────────────
+    case 'logout':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      ajax::success($eqLogic->logout());
+      break;
+
     // ── Statut de connexion WhatsApp ────────────────────────────────────
     case 'getStatus':
       $eqLogic_id = init('eqLogic_id');

@@ -1671,6 +1671,52 @@ class jeewhatsapp extends eqLogic {
     return $st;
   }
 
+  // -------------------------------------------------------------------------
+  // Déconnexion propre du compte WhatsApp
+  // 1) demande au daemon de faire un logout Baileys (délie l'appareil côté
+  //    téléphone) + supprime les credentials locaux auth/{id}/
+  // 2) nettoie les données locales liées au compte côté Jeedom :
+  //    - group_jid en configuration (le groupe canal n'est plus résolu)
+  //    - cmds info volatiles (dernier message, statut de connexion, etc.)
+  //    - compteurs en cache
+  // Après ça, un nouveau QR code est nécessaire pour se reconnecter.
+  // -------------------------------------------------------------------------
+  public function logout() {
+    $result = ['logged_out' => false, 'files_removed' => 0];
+    // 1) logout + nettoyage côté daemon (best effort : on continue même si KO)
+    try {
+      $result = $this->sendToDaemon('logout', ['instance_id' => $this->getId()]);
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::logout() l.' . __LINE__
+        . ' — logout daemon : ' . $e->getMessage() . ' (nettoyage local poursuivi)');
+    }
+
+    // 2) nettoyage des données locales Jeedom liées au compte
+    $this->setConfiguration('group_jid', '');
+    $this->save();
+
+    // Réinitialise les cmds info volatiles (état du compte/connexion)
+    foreach (['last_message', 'last_sender', 'last_sender_name', 'last_sender_profile',
+              'last_received_at', 'last_group', 'last_group_name', 'last_voice_text',
+              'last_ocr_text', 'last_attachment_path', 'last_attachment_type',
+              'last_attachment_mime', 'connected_since'] as $logicalId) {
+      $cmd = $this->getCmd('info', $logicalId);
+      if (is_object($cmd)) { $cmd->event(''); }
+    }
+
+    // Purge des compteurs en cache
+    foreach (['jeewhatsapp::sent::' . $this->getId() . '::hour',
+              'jeewhatsapp::msg_today::' . $this->getId()] as $cacheKey) {
+      try { cache::delete($cacheKey); } catch (Exception $e) {}
+    }
+
+    log::add('jeewhatsapp', 'info',
+      'jeewhatsapp.class.php::logout() l.' . __LINE__
+      . ' — Compte WhatsApp déconnecté et données locales nettoyées (eqLogic #' . $this->getId() . ')');
+    return $result;
+  }
+
   public function createGroup($_name = null) {
     $name = ($_name !== null && $_name !== '') ? $_name : $this->getConfiguration('group_name', 'jeewhatsapp');
     $result = $this->sendToDaemon('createGroup', [

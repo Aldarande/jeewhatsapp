@@ -7,6 +7,24 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Bouton « Déconnexion »** (onglet Équipement → Connexion) — visible uniquement quand un
+  compte est connecté, à gauche de « Rafraîchir ». Ouvre une **modale d'alerte détaillée**
+  (action irréversible) puis déconnecte proprement : `sock.logout()` côté daemon (délie
+  l'appareil côté WhatsApp), suppression des credentials locaux `auth/{id}/`, et nettoyage
+  des données Jeedom liées (group_jid, cmds info volatiles, compteurs cache). Action daemon
+  `logout`, méthode PHP `logout()`, endpoint AJAX `logout`.
+
+### Changed
+
+- **Onglet Équipement — réorganisation des « Paramètres WhatsApp »** en deux sections :
+  - **Paramètres de base** (toujours visibles) : groupe canal, groupe lié, préfixe Jeedom,
+    interactions Jeedom, mot-clé déclencheur.
+  - **Paramètres avancés** (repliable, masqué par défaut) : groupes additionnels, gestion du
+    groupe, sauvegarde de session, messages éphémères, message de soutien, commandes shortcuts,
+    whitelist, reconnaissance utilisateur, présence, TTS, voix, OCR, STT.
+
 ### Security
 
 - **F-001 (HIGH, Tar Slip)** — `restoreSession()` valide désormais explicitement chaque entrée

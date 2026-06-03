@@ -1374,6 +1374,45 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       return { jid: result.id, name: groupName };
     }
 
+    // ── Déconnexion propre du compte WhatsApp ──────────────────────────────
+    // Envoie un logout à WhatsApp (délie l'appareil côté téléphone), ferme la
+    // socket, puis supprime les credentials locaux (auth/{id}/*) sauf status.txt.
+    // Après ça, un nouveau QR code sera nécessaire pour se reconnecter.
+    case 'logout': {
+      const sock = sockets[id];
+      // 1) logout WhatsApp si la socket est active (délie l'appareil côté tel)
+      if (sock) {
+        try {
+          await Promise.race([
+            sock.logout(),
+            new Promise((_, r) => setTimeout(() => r(new Error('logout timeout')), 8000)),
+          ]);
+        } catch (e) {
+          logMsg('warning', '[' + id + '] logout WhatsApp : ' + e.message + ' — nettoyage local quand même');
+        }
+        try { sock.ev.removeAllListeners(); } catch (_) {}
+        try { sock.end(undefined); } catch (_) {}
+        delete sockets[id];
+      }
+      // 2) nettoyage des credentials locaux (tout sauf status.txt)
+      const dir = authDir(id);
+      let removed = 0;
+      try {
+        for (const f of fs.readdirSync(dir)) {
+          if (f !== 'status.txt') {
+            try { fs.unlinkSync(path.join(dir, f)); removed++; } catch (_) {}
+          }
+        }
+      } catch (_) {}
+      // 3) reset état mémoire de l'instance
+      delete groupJids[id];
+      delete lastIncomingMsg[id];
+      delete lastSentMsg[id];
+      writeStatus(id, 'logged_out');
+      logMsg('info', '[' + id + '] Déconnexion demandée — ' + removed + ' fichier(s) de session supprimé(s)');
+      return { logged_out: true, files_removed: removed };
+    }
+
     // ── QR code ────────────────────────────────────────────────────────────
     case 'getQR': {
       const qf = qrFilePath(id);
