@@ -2220,6 +2220,29 @@ class jeewhatsapp extends eqLogic {
       $tmpl->save();
     }
 
+    // Commandes info cachées : statistiques 30 jours (#30)
+    // Non visibles sur le dashboard, utilisables dans les scénarios.
+    $statCmds = [
+      ['logicalId' => 'stats_sent_30d',     'name' => 'Envoyés (30 jours)',   'unite' => 'msg'],
+      ['logicalId' => 'stats_received_30d', 'name' => 'Reçus (30 jours)',    'unite' => 'msg'],
+    ];
+    foreach ($statCmds as $def) {
+      $c = $this->getCmd('info', $def['logicalId']);
+      if (!is_object($c)) {
+        $c = new jeewhatsappCmd();
+        $c->setEqLogic_id($this->getId());
+        $c->setLogicalId($def['logicalId']);
+        $c->setType('info');
+        $c->setSubType('numeric');
+        $c->setName($def['name']);
+        $c->setUnite($def['unite']);
+        $c->setIsVisible(0);   // caché sur le dashboard
+        $c->setIsHistorized(1);
+        $c->setOrder($order++);
+        $c->save();
+      }
+    }
+
     // Si le daemon tourne déjà, on le redémarre pour qu'il prenne en compte
     // le nouvel équipement (ou les changements de config comme group_name, extra_groups…).
     // Fait après la sauvegarde des commandes pour avoir un état cohérent.
@@ -2314,6 +2337,16 @@ class jeewhatsapp extends eqLogic {
     }
 
     $this->saveStats($data);
+
+    // Mettre à jour les commandes info cachées (scénarios)
+    $total30s = 0;
+    $total30r = 0;
+    foreach ($data['days'] as $day) {
+      $total30s += ($day['s'] ?? 0);
+      $total30r += ($day['r'] ?? 0);
+    }
+    $this->checkAndUpdateCmd('stats_sent_30d',     $total30s);
+    $this->checkAndUpdateCmd('stats_received_30d', $total30r);
   }
 
   /**

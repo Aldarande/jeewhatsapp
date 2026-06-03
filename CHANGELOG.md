@@ -7,6 +7,23 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.6.1] — 2026-06-03
+
+### Added
+
+- **Commandes info cachées — statistiques 30 jours** (#30) : deux nouvelles commandes
+  `info/numeric`, non visibles sur le dashboard mais utilisables dans les scénarios :
+  - `stats_sent_30d` — nombre de messages envoyés sur les 30 derniers jours (historisé)
+  - `stats_received_30d` — nombre de messages reçus sur les 30 derniers jours (historisé)
+  Les valeurs sont mises à jour automatiquement à chaque envoi ou réception via `appendStats()`.
+  Les commandes sont créées idempotentiellement dans `postSave()`.
+
+---
+
+## [0.6.0] — 2026-06-03
+
 ### Added
 
 - **Bouton « Déconnexion »** (onglet Équipement → Connexion) — visible uniquement quand un
