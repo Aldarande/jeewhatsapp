@@ -235,11 +235,11 @@ sendVarToJS('eqType', 'jeewhatsapp');
 											<span id="wa_status_badge" class="label label-default" style="font-size:0.9em;padding:6px 14px;">
 												<i class="fas fa-circle-notch fa-spin"></i> {{Chargement…}}
 											</span>
-											<button class="btn btn-xs btn-danger" id="btn_logout_wa" type="button" style="display:none;" title="{{Déconnecter ce compte WhatsApp}}">
-												<i class="fas fa-power-off"></i> {{Déconnexion}}
-											</button>
 											<button class="btn btn-xs btn-default" id="btn_refresh_qr" type="button">
 												<i class="fas fa-sync-alt"></i> {{Rafraîchir}}
+											</button>
+											<button class="btn btn-xs btn-danger" id="btn_logout_wa" type="button" style="display:none;" title="{{Déconnecter ce compte WhatsApp}}">
+												<i class="fas fa-power-off"></i> {{Déconnexion}}
 											</button>
 										</div>
 										<div id="wa_connected_zone" style="display:none;margin-top:6px;">
