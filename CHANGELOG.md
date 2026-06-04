@@ -9,6 +9,25 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ---
 
+## [0.6.3] — 2026-06-03
+
+### Fixed
+
+- **Backup Jeedom — exclusions affinées** : seuls les credentials Baileys
+  (`creds.json`, `pre-key-*`, `session-*`…) sont conservés dans le backup.
+  Les données volatiles sont désormais explicitement exclues :
+  - `history.json` — historique widget (reconstruit à l'usage)
+  - `events.json` — tampon debug live (données temps réel)
+  - `status.txt` — statut courant daemon
+  - `qr.txt` — QR code temporaire (expire en 30 s)
+  - `group_jid.txt` — JID du groupe en cache (retrouvé à la reconnexion)
+  - `data/` — statistiques 30j (reconstruites à l'usage)
+
+  **Règle** : un backup JeeWhatsApp contient uniquement ce qui est nécessaire
+  à la restauration de la session WhatsApp sans re-scanner le QR code.
+
+---
+
 ## [0.6.2] — 2026-06-03
 
 ### Fixed

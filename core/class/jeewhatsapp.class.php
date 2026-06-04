@@ -51,11 +51,24 @@ class jeewhatsapp extends eqLogic {
 
   public static function backupExclude() {
     return [
-      'resources/piper/piper',          // binaire Piper TTS (~50 Mo)
-      'resources/piper/voices',         // modèles vocaux Piper (~100 Mo)
-      'resources/piper/piper.tar.gz',   // archive d'installation
-      'resources/stt/model-fr',         // modèle Vosk STT (~40 Mo)
-      'resources/jeewhatsappd/node_modules', // dépendances Node.js
+      // ── Binaires et modèles re-téléchargeables (install_dep.sh) ──────────
+      'resources/piper/piper',               // binaire Piper TTS (~50 Mo)
+      'resources/piper/voices',              // modèles vocaux Piper (~100 Mo)
+      'resources/piper/piper.tar.gz',        // archive d'installation Piper
+      'resources/stt/model-fr',             // modèle Vosk STT français (~40 Mo)
+      'resources/jeewhatsappd/node_modules', // dépendances Node.js (npm)
+
+      // ── Données volatiles dans auth/{id}/ — reconstruites à la reconnexion ──
+      // Les credentials Baileys (creds.json, pre-key-*, session-*, …) sont
+      // conservés — ce sont eux qui permettent de restaurer la session sans QR.
+      'history.json',    // historique widget (50 msgs) — reconstruit à l'usage
+      'events.json',     // tampon debug live — données temps réel sans valeur
+      'status.txt',      // statut courant du daemon — volatile
+      'qr.txt',          // QR code temporaire — expiré en 30 s
+      'group_jid.txt',   // JID groupe en cache — retrouvé auto à la connexion
+
+      // ── Statistiques (data/) ──────────────────────────────────────────────
+      'data/',           // stats_sent_30d / stats_received_30d — reconstruites
     ];
   }
 
