@@ -236,6 +236,8 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Sondage — total votes | `poll_total` | numeric | oui | Nombre total de votes reçus sur le dernier sondage |
 | Dernier groupe — tag | `last_group` | string | non | (v0.3) Tag du groupe d'origine du dernier message reçu (`` vide = groupe canal principal) |
 | Dernier groupe — nom | `last_group_name` | string | non | (v0.3) Nom du groupe WhatsApp d'origine du dernier message reçu |
+| Envoyés (30 jours) | `stats_sent_30d` | numeric | oui | (v0.6.1) Total envoyés sur 30 jours — caché (dashboard), utilisable en scénario |
+| Reçus (30 jours) | `stats_received_30d` | numeric | oui | (v0.6.1) Total reçus sur 30 jours — caché (dashboard), utilisable en scénario |
 
 ### Commandes ACTION
 

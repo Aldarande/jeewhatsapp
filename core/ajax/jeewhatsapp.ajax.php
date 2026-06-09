@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia', 'backupSession', 'restoreSession', 'logout']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia', 'generateWebhookToken', 'getLiveEvents', 'getStats', 'backupSession', 'restoreSession', 'logout']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -156,6 +156,54 @@ try {
       $status  = $eqLogic->getConnectionStatus();
       $status['daemon'] = jeewhatsapp::deamon_info()['state'];
       ajax::success($status);
+      break;
+
+    // ── Événements live — tampon circulaire du daemon (#31) ────────────────
+    case 'getLiveEvents':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $since = (int) init('since', 0); // timestamp JS (ms) du dernier événement reçu
+      $file  = dirname(__FILE__) . '/../../resources/jeewhatsappd/auth/'
+             . intval($eqLogic_id) . '/events.json';
+      $events = [];
+      if (is_file($file)) {
+        $raw = @file_get_contents($file);
+        if ($raw) {
+          $all = json_decode($raw, true);
+          if (is_array($all)) {
+            // Filtrer les événements plus récents que $since (millisecondes)
+            foreach ($all as $ev) {
+              $evTs = isset($ev['ts']) ? (int) (strtotime($ev['ts']) * 1000) : 0;
+              if ($since === 0 || $evTs > $since) {
+                $events[] = $ev;
+              }
+            }
+          }
+        }
+      }
+      ajax::success($events);
+      break;
+
+    // ── Statistiques (#30) ──────────────────────────────────────────────────
+    case 'getStats':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      ajax::success($eqLogic->getStats());
+      break;
+
+    // ── Génération (ou révocation) du token webhook REST (#33) ─────────────
+    case 'generateWebhookToken':
+      $token = bin2hex(random_bytes(32)); // 64 caractères hex
+      config::save('webhook_token', $token, 'jeewhatsapp');
+      $jeedom_port = config::byKey('port', 'network', 80);
+      $jeedom_comp = config::byKey('urlcomplement', 'network', '');
+      $base_url    = 'http://127.0.0.1:' . $jeedom_port . $jeedom_comp;
+      ajax::success([
+        'token'   => $token,
+        'url'     => $base_url . '/plugins/jeewhatsapp/core/php/webhook.php',
+      ]);
       break;
 
     default:

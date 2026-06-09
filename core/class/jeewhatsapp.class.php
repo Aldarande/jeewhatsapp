@@ -43,6 +43,45 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Exclusions de sauvegarde Jeedom
+  // Exclut les binaires et modèles lourds installés par install_dep.sh.
+  // Ces fichiers sont re-téléchargés automatiquement à la prochaine
+  // installation des dépendances — inutile de les inclure dans le backup.
+  // -------------------------------------------------------------------------
+
+  public static function backupExclude() {
+    return [
+      // ── Binaires et modèles re-téléchargeables (install_dep.sh) ──────────
+      'resources/piper/piper',               // binaire Piper TTS (~50 Mo)
+      'resources/piper/voices',              // modèles vocaux Piper (~100 Mo)
+      'resources/piper/piper.tar.gz',        // archive d'installation Piper
+      'resources/stt/model-fr',             // modèle Vosk STT français (~40 Mo)
+      'resources/jeewhatsappd/node_modules', // dépendances Node.js (npm)
+
+      // ── Données volatiles dans auth/{id}/ — reconstruites à la reconnexion ──
+      // Les credentials Baileys (creds.json, pre-key-*, session-*, …) sont
+      // conservés — ce sont eux qui permettent de restaurer la session sans QR.
+      'history.json',    // historique widget (50 msgs) — reconstruit à l'usage
+      'events.json',     // tampon debug live — données temps réel sans valeur
+      'status.txt',      // statut courant du daemon — volatile
+      'qr.txt',          // QR code temporaire — expiré en 30 s
+      'group_jid.txt',   // JID groupe en cache — retrouvé auto à la connexion
+
+      // ── Statistiques (data/) ──────────────────────────────────────────────
+      'data/',           // stats_sent_30d / stats_received_30d — reconstruites
+
+      // ── Sauvegardes de session pré-restauration ───────────────────────────
+      // auth/{id}.bak_YYYYmmddHHMMSS : copie de l'ancienne session faite par
+      // restoreSession() avant écrasement (rollback LOCAL uniquement). La session
+      // active est déjà dans le backup — inutile d'y dupliquer d'anciens
+      // credentials WhatsApp. Le chemin est complet et contigu : GNU tar exclut
+      // alors bien le dossier daté et son contenu (motif vérifié sur tar 1.34).
+      // Complément à jeewhatsapp::pruneSessionBackups() qui borne leur nombre.
+      'resources/jeewhatsappd/auth/*.bak_*',
+    ];
+  }
+
+  // -------------------------------------------------------------------------
   // Daemon
   // -------------------------------------------------------------------------
 
@@ -202,9 +241,10 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_group',       $_data['group_tag']    ?? '');
     $this->checkAndUpdateCmd('last_group_name',  $_data['group_name']   ?? '');
 
-    // Historique widget : ajoute le message entrant
+    // Historique widget + statistiques (#30)
     $senderLabel = $resolvedProfile ?? ($_data['sender_name'] ?? ($_data['sender'] ?? ''));
     $this->appendHistory('in', $_data['message'] ?? '', $senderLabel);
+    $this->appendStats('r', $_data['sender'] ?? '', $_data['sender_name'] ?? '');
 
     // Compteur messages reçus aujourd'hui (cache TTL jusqu'à minuit)
     $this->incrementMessagesTodayCounter();
@@ -324,6 +364,10 @@ class jeewhatsapp extends eqLogic {
     // Historique widget : ajoute le message sortant (sans préfixe dans l'historique)
     if (!$_skipPrefix) {
       $this->appendHistory('out', $_message);
+    }
+    // Statistiques (#30)
+    if (!$_skipPrefix) {
+      $this->appendStats('s');
     }
     return $result;
   }
@@ -988,6 +1032,22 @@ class jeewhatsapp extends eqLogic {
   // Cron daily : supprime les médias entrants > 30 jours dans data/jeewhatsapp/incoming/
   // Évite l'accumulation infinie. Le seuil 30j est en dur (modifiable plus tard).
   public static function cronCleanupIncoming() {
+    // Filet de sécurité : purge les anciennes sauvegardes de session
+    // auth/{id}.bak_* même pour les instances jamais re-restaurées et les
+    // backups orphelins d'équipements supprimés (que restoreSession() ne
+    // toucherait plus). Placé AVANT le return anticipé ci-dessous.
+    try {
+      $purgedBak = self::pruneSessionBackups();
+      if ($purgedBak > 0) {
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::cronCleanupIncoming() l.' . __LINE__
+          . ' — ' . $purgedBak . ' ancienne(s) sauvegarde(s) de session purgée(s)');
+      }
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::cronCleanupIncoming() l.' . __LINE__ . ' — purge backups : ' . $e->getMessage());
+    }
+
     $base = __DIR__ . '/../../../../data/jeewhatsapp/incoming';
     if (!is_dir($base)) { return; }
     $maxAge  = 30 * 86400;
@@ -1240,8 +1300,93 @@ class jeewhatsapp extends eqLogic {
 
   const BACKUP_KDF_ITERATIONS = 200000;
 
+  // Nombre maximum de sauvegardes de session `{id}.bak_*` conservées par
+  // instance (la plus récente d'abord). Les .bak_ sont créés par restoreSession()
+  // avant chaque écrasement ; sans purge ils s'accumulent indéfiniment dans
+  // resources/jeewhatsappd/auth/ et gonflent les sauvegardes Jeedom (auth/ n'en
+  // est pas exclu) tout en y laissant traîner des credentials WhatsApp.
+  const MAX_SESSION_BACKUPS = 1;
+
+  // Dossier parent des sessions Baileys (un sous-dossier par équipement + les
+  // backups `{id}.bak_*`). Source unique du chemin auth/ (statique pour être
+  // réutilisable depuis les crons et la purge sans instance).
+  private static function authBaseDir() {
+    return __DIR__ . '/../../resources/jeewhatsappd/auth';
+  }
+
   private function authDir() {
-    return __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId();
+    return self::authBaseDir() . '/' . $this->getId();
+  }
+
+  // -------------------------------------------------------------------------
+  // Purge des anciennes sauvegardes de session `{id}.bak_YYYYmmddHHMMSS`.
+  // Ne conserve que les $_keep plus récentes par instance (la plus récente
+  // d'abord). Appelée après chaque restauration réussie et par le cron daily.
+  //
+  // $_id  : limite la purge à cette instance (null = balayage de toutes).
+  // $_keep: nombre de backups conservés par instance (défaut MAX_SESSION_BACKUPS).
+  // Retourne le nombre de dossiers supprimés.
+  // -------------------------------------------------------------------------
+
+  public static function pruneSessionBackups($_id = null, $_keep = self::MAX_SESSION_BACKUPS) {
+    return self::pruneSessionBackupsIn(self::authBaseDir(), $_id, $_keep);
+  }
+
+  // Cœur testable de la purge — opère sur un dossier parent arbitraire, sans
+  // dépendance Jeedom (pas de log::, pas de config::), pour pouvoir être validé
+  // en isolation. Ne PAS appeler directement : passer par pruneSessionBackups().
+  private static function pruneSessionBackupsIn($_parent, $_id = null, $_keep = self::MAX_SESSION_BACKUPS) {
+    if (!is_dir($_parent)) { return 0; }
+    $keep = max(0, (int) $_keep);
+
+    // Filtre STRICT : `{id}.bak_` suivi d'EXACTEMENT 14 chiffres (date YmdHis).
+    // - les sessions actives (`{id}` numérique seul, sans suffixe) ne matchent jamais ;
+    // - un id différent dont le préfixe coïnciderait (5 vs 55) est exclu car l'id
+    //   est ancré (^...) et suivi obligatoirement de `.bak_` ;
+    // - tout nom non conforme (`{id}.bak_notadate`, `{id}.backup_…`) est ignoré.
+    // L'id est capturé en groupe 1 pour regrouper les backups par instance.
+    $idPat = ($_id === null) ? '(\d+)' : '(' . preg_quote((string) $_id, '#') . ')';
+    $regex = '#^' . $idPat . '\.bak_(\d{14})$#';
+
+    $byId = [];
+    foreach (scandir($_parent) as $entry) {
+      if ($entry === '.' || $entry === '..') { continue; }
+      if (!is_dir($_parent . '/' . $entry)) { continue; }
+      if (!preg_match($regex, $entry, $m)) { continue; }
+      $byId[$m[1]][] = $entry;
+    }
+
+    $deleted = 0;
+    foreach ($byId as $dirs) {
+      if (count($dirs) <= $keep) { continue; }
+      // Suffixe YmdHis lexicographiquement ordonnable → tri décroissant =
+      // du plus récent au plus ancien. On garde les $keep premiers.
+      rsort($dirs);
+      foreach (array_slice($dirs, $keep) as $old) {
+        if (self::rrmdir($_parent . '/' . $old)) { $deleted++; }
+      }
+    }
+    return $deleted;
+  }
+
+  // Suppression récursive best-effort d'un dossier et de son contenu.
+  // Retourne true si le dossier n'existe plus à la fin. Ne suit pas les liens
+  // symboliques (les supprime sans descendre dedans).
+  private static function rrmdir($_dir) {
+    if (is_link($_dir)) { return @unlink($_dir); }
+    if (!is_dir($_dir)) { return !file_exists($_dir); }
+    $items = @scandir($_dir);
+    if ($items === false) { return false; }
+    foreach ($items as $item) {
+      if ($item === '.' || $item === '..') { continue; }
+      $path = $_dir . '/' . $item;
+      if (is_dir($path) && !is_link($path)) {
+        self::rrmdir($path);
+      } else {
+        @unlink($path);
+      }
+    }
+    return @rmdir($_dir);
   }
 
   public function backupSession($_passphrase) {
@@ -1375,6 +1520,22 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Archive de restauration illisible : ', __FILE__) . $e->getMessage());
     }
     @unlink($tarPath);
+
+    // Purge des anciennes sauvegardes de session : on ne conserve que la plus
+    // récente (celle créée juste au-dessus, état pré-restauration utile pour un
+    // rollback). Best-effort — un échec de purge ne doit pas faire échouer une
+    // restauration par ailleurs réussie.
+    try {
+      $purged = self::pruneSessionBackups($this->getId());
+      if ($purged > 0) {
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::restoreSession() l.' . __LINE__
+          . ' — ' . $purged . ' ancienne(s) sauvegarde(s) de session purgée(s) pour l\'instance ' . $this->getId());
+      }
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — purge backups : ' . $e->getMessage());
+    }
 
     // Arrête le daemon pour qu'il recharge les credentials restaurés au prochain démarrage.
     // On ne redémarre PAS ici : deamon_start() bloque ~60 s en AJAX (timeout HTTP)
@@ -1868,8 +2029,10 @@ class jeewhatsapp extends eqLogic {
       $send->save();
     }
     // Le champ "Titre" sert d'override optionnel (numéro direct ou JID de groupe)
-    if ($send->getDisplay('title_placeholder') !== 'Destinataire (optionnel — vide = groupe canal)') {
-      $send->setDisplay('title_placeholder', 'Destinataire (optionnel — vide = groupe canal)');
+    // NM (Notification Manager) utilise ce champ "Titre" comme destinataire.
+    // Laisser vide = groupe canal par defaut.
+    if ($send->getDisplay('title_placeholder') !== 'Numero direct ou vide = groupe canal (NM : numero destinataire)') {
+      $send->setDisplay('title_placeholder', 'Numero direct ou vide = groupe canal (NM : numero destinataire)');
       $send->save();
     }
 
@@ -2218,6 +2381,29 @@ class jeewhatsapp extends eqLogic {
       $tmpl->save();
     }
 
+    // Commandes info cachées : statistiques 30 jours (#30)
+    // Non visibles sur le dashboard, utilisables dans les scénarios.
+    $statCmds = [
+      ['logicalId' => 'stats_sent_30d',     'name' => 'Envoyés (30 jours)',   'unite' => 'msg'],
+      ['logicalId' => 'stats_received_30d', 'name' => 'Reçus (30 jours)',    'unite' => 'msg'],
+    ];
+    foreach ($statCmds as $def) {
+      $c = $this->getCmd('info', $def['logicalId']);
+      if (!is_object($c)) {
+        $c = new jeewhatsappCmd();
+        $c->setEqLogic_id($this->getId());
+        $c->setLogicalId($def['logicalId']);
+        $c->setType('info');
+        $c->setSubType('numeric');
+        $c->setName($def['name']);
+        $c->setUnite($def['unite']);
+        $c->setIsVisible(0);   // caché sur le dashboard
+        $c->setIsHistorized(1);
+        $c->setOrder($order++);
+        $c->save();
+      }
+    }
+
     // Si le daemon tourne déjà, on le redémarre pour qu'il prenne en compte
     // le nouvel équipement (ou les changements de config comme group_name, extra_groups…).
     // Fait après la sauvegarde des commandes pour avoir un état cohérent.
@@ -2230,6 +2416,133 @@ class jeewhatsapp extends eqLogic {
           . ' — Redémarrage daemon impossible : ' . $e->getMessage());
       }
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Statistiques (#30)
+  // Stockage : plugins/jeewhatsapp/data/{eqId}/stats.json
+  // Structure : {"days":[{"d":"YYYY-MM-DD","s":N,"r":N},...], "contacts":{"33...":{"n":N,"l":"Nom"}}}
+  // Conserve les 30 derniers jours et le top 20 contacts.
+  // -------------------------------------------------------------------------
+
+  private function statsFile() {
+    $dir = dirname(__FILE__) . '/../../data/' . $this->getId();
+    if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+    return $dir . '/stats.json';
+  }
+
+  private function loadStats() {
+    $file = $this->statsFile();
+    if (!is_file($file)) { return ['days' => [], 'contacts' => []]; }
+    $raw = @file_get_contents($file);
+    if (!$raw) { return ['days' => [], 'contacts' => []]; }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : ['days' => [], 'contacts' => []];
+  }
+
+  private function saveStats($data) {
+    @file_put_contents($this->statsFile(), json_encode($data, JSON_UNESCAPED_UNICODE));
+  }
+
+  /**
+   * Incrémente le compteur journalier.
+   * $_dir : 's' (sent) ou 'r' (received)
+   * $_sender : numéro expéditeur (optionnel, pour les stats contacts)
+   */
+  public function appendStats($_dir, $_sender = '', $_senderName = '') {
+    $data  = $this->loadStats();
+    $today = date('Y-m-d');
+
+    // Mise à jour du jour courant
+    $days  = $data['days'] ?? [];
+    $found = false;
+    foreach ($days as &$day) {
+      if ($day['d'] === $today) {
+        $day[$_dir] = ($day[$_dir] ?? 0) + 1;
+        $found = true;
+        break;
+      }
+    }
+    unset($day);
+    if (!$found) {
+      $days[] = ['d' => $today, 's' => 0, 'r' => 0, [$_dir] => 1];
+      // Correction : initialiser correctement
+      $last = &$days[count($days) - 1];
+      $last['s'] = $_dir === 's' ? 1 : 0;
+      $last['r'] = $_dir === 'r' ? 1 : 0;
+      unset($last);
+    }
+
+    // Garder les 30 derniers jours (tri par date croissante)
+    usort($days, function ($a, $b) { return strcmp($a['d'], $b['d']); });
+    if (count($days) > 30) { $days = array_slice($days, -30); }
+    $data['days'] = $days;
+
+    // Stats contacts (uniquement pour les messages reçus)
+    if ($_dir === 'r' && $_sender !== '') {
+      $sender = preg_replace('/\D/', '', $_sender);
+      if ($sender !== '') {
+        $contacts = $data['contacts'] ?? [];
+        if (!isset($contacts[$sender])) {
+          $contacts[$sender] = ['n' => 0, 'l' => ''];
+        }
+        $contacts[$sender]['n'] = ($contacts[$sender]['n'] ?? 0) + 1;
+        if ($_senderName !== '') { $contacts[$sender]['l'] = $_senderName; }
+        // Top 20 contacts uniquement
+        arsort($contacts);
+        if (count($contacts) > 20) {
+          $contacts = array_slice($contacts, 0, 20, true);
+        }
+        $data['contacts'] = $contacts;
+      }
+    }
+
+    $this->saveStats($data);
+
+    // Mettre à jour les commandes info cachées (scénarios)
+    $total30s = 0;
+    $total30r = 0;
+    foreach ($data['days'] as $day) {
+      $total30s += ($day['s'] ?? 0);
+      $total30r += ($day['r'] ?? 0);
+    }
+    $this->checkAndUpdateCmd('stats_sent_30d',     $total30s);
+    $this->checkAndUpdateCmd('stats_received_30d', $total30r);
+  }
+
+  /**
+   * Retourne les statistiques pour l'UI : 30 derniers jours + top contacts + totaux.
+   */
+  public function getStats() {
+    $data  = $this->loadStats();
+    $days  = $data['days'] ?? [];
+
+    // Remplir les jours manquants sur les 30 derniers jours avec des zéros
+    $filled = [];
+    for ($i = 29; $i >= 0; $i--) {
+      $d = date('Y-m-d', strtotime("-{$i} days"));
+      $entry = ['d' => $d, 's' => 0, 'r' => 0];
+      foreach ($days as $day) {
+        if ($day['d'] === $d) { $entry = $day; break; }
+      }
+      $filled[] = $entry;
+    }
+
+    $totalSent     = array_sum(array_column($filled, 's'));
+    $totalReceived = array_sum(array_column($filled, 'r'));
+
+    // Top 5 contacts pour l'affichage
+    $contacts = $data['contacts'] ?? [];
+    arsort($contacts);
+    $topContacts = array_slice($contacts, 0, 5, true);
+
+    return [
+      'days'          => $filled,
+      'top_contacts'  => $topContacts,
+      'total_sent'    => $totalSent,
+      'total_received'=> $totalReceived,
+      'period'        => '30 jours',
+    ];
   }
 
   // -------------------------------------------------------------------------
