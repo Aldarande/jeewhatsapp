@@ -7,6 +7,23 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Accumulation des sauvegardes de session `auth/{id}.bak_*`** — `restoreSession()`
+  renomme l'ancienne session en `{id}.bak_YYYYmmddHHMMSS` avant chaque
+  restauration, mais ces dossiers n'étaient jamais supprimés : ils
+  s'accumulaient dans `resources/jeewhatsappd/auth/` (chacun contenant des
+  credentials WhatsApp) et gonflaient les backups Jeedom.
+  - Nouvelle routine `jeewhatsapp::pruneSessionBackups()` : ne conserve que la
+    sauvegarde la plus récente par instance (`MAX_SESSION_BACKUPS = 1`), filtre
+    strict `{id}.bak_` + 14 chiffres (les sessions actives `{id}` ne sont jamais
+    touchées). Appelée après chaque restauration réussie et, en filet de
+    sécurité, par le cron daily `cronCleanupIncoming` (balaie aussi les backups
+    orphelins d'équipements supprimés).
+  - `backupExclude()` exclut désormais `resources/jeewhatsappd/auth/*.bak_*` :
+    la session active suffit dans un backup, inutile d'y dupliquer d'anciens
+    credentials.
+
 ---
 
 ## [0.6.3] — 2026-06-03
