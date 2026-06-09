@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia', 'backupSession', 'restoreSession', 'logout']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -25,6 +25,13 @@ try {
       $phone   = trim(init('phone', ''));
       $mention = trim(init('mention', ''));
       $message = trim(init('message', 'Test JeeWhatsApp 🚀'));
+      // Résout les tags Jeedom saisis dans le champ test (#[Objet][Éq][Cmd]# ou #id#)
+      // pour reproduire fidèlement ce qu'un scénario enverrait.
+      try {
+        $message = cmd::cmdToValue(jeedom::fromHumanReadable($message));
+      } catch (Exception $e) {
+        log::add('jeewhatsapp', 'warning', 'jeewhatsapp.ajax.php::testSend l.' . __LINE__ . ' — résolution des tags impossible : ' . $e->getMessage());
+      }
       // phone vide = envoyer dans le groupe canal — skipPrefix=true pour les tests
       $eqLogic->sendMessage($message, $phone !== '' ? $phone : null, $mention !== '' ? $mention : null, true);
       ajax::success();
@@ -110,7 +117,7 @@ try {
       $blob = $eqLogic->backupSession(init('passphrase', ''));
       while (ob_get_level() > 0) { ob_end_clean(); }
       header('Content-Type: application/octet-stream');
-      header('Content-Disposition: attachment; filename="jeewhatsapp-session-' . intval($eqLogic_id) . '.jwab"');
+      header('Content-Disposition: attachment; filename="jeewhatsapp-session-' . intval($eqLogic_id) . '-' . date('Ymd-Hi') . '.jwab"');
       header('Content-Length: ' . strlen($blob));
       echo $blob;
       exit(0);
