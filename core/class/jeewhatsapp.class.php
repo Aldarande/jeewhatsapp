@@ -166,9 +166,13 @@ class jeewhatsapp extends eqLogic {
     $pid_file = jeedom::getTmpFolder(__CLASS__) . '/daemon.pid';
     if (file_exists($pid_file)) {
       $pid = intval(trim(file_get_contents($pid_file)));
-      if ($pid > 0) { system::kill($pid); }
-      system::fuserk(self::getPort());
-      unlink($pid_file);
+      if ($pid > 0) { shell_exec('kill -15 ' . $pid . ' 2>/dev/null || kill -9 ' . $pid . ' 2>/dev/null'); }
+      @unlink($pid_file);
+    }
+    // Libère le port dans tous les cas (system::fuserk() absent dans Jeedom 4.4+)
+    $port = intval(self::getPort());
+    if ($port > 0) {
+      shell_exec('fuser -k ' . $port . '/tcp > /dev/null 2>&1');
     }
   }
 
@@ -1407,15 +1411,16 @@ class jeewhatsapp extends eqLogic {
     }
     @unlink($tarPath);
 
-    // Redémarre le daemon pour recharger les credentials restaurés
+    // Arrête le daemon pour qu'il recharge les credentials restaurés au prochain démarrage.
+    // On ne redémarre PAS ici : deamon_start() bloque ~60 s en AJAX (timeout HTTP)
+    // et un double-démarrage (UI + background) cause une désynchronisation du daemon_secret.
+    // Le message JS demande à l'utilisateur de relancer le daemon depuis la page du plugin.
     try {
       self::deamon_stop();
-      sleep(1);
-      self::deamon_start();
     } catch (Exception $e) {
-      log::add('jeewhatsapp', 'warning', 'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — redémarrage daemon : ' . $e->getMessage());
+      log::add('jeewhatsapp', 'warning', 'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — arrêt daemon : ' . $e->getMessage());
     }
-    return ['restored' => true];
+    return ['restored' => true, 'restart_required' => true];
   }
 
   // -------------------------------------------------------------------------
@@ -2729,13 +2734,18 @@ class jeewhatsappCmd extends cmd {
         if ($text === null) {
           throw new Exception(__('Template introuvable : ', __FILE__) . $key);
         }
-        // Substitution des tags Jeedom #[Objet][Équipement][Commande]# si présents
+        // Résolution des tags Jeedom dans le texte du template.
+        // Contrairement à send_message (dont le moteur de scénario résout déjà
+        // $_options['message'] avant execute()), le texte du template est chargé
+        // depuis la configuration APRÈS cette résolution — il faut donc le faire ici :
+        //   1. fromHumanReadable : #[Objet][Équipement][Commande]# → #1234#
+        //   2. cmdToValue        : #1234# → valeur courante de la commande
         try {
-          $text = jeedom::toHumanReadable($text);
+          $text = cmd::cmdToValue(jeedom::fromHumanReadable($text));
         } catch (Exception $e) {
           log::add('jeewhatsapp', 'warning',
             'jeewhatsapp.class.php::execute(send_template) l.' . __LINE__
-            . ' — toHumanReadable impossible : ' . $e->getMessage());
+            . ' — résolution des tags impossible : ' . $e->getMessage());
         }
         $eqLogic->sendMessage($text, $phone);
         break;

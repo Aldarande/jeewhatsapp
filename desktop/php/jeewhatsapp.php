@@ -1503,9 +1503,17 @@ $('#bk_backup').on('click', function () {
     })
     .then(function (blob) {
       var url = URL.createObjectURL(blob);
+      var now = new Date();
+      var ts = now.getFullYear()
+        + ('0' + (now.getMonth() + 1)).slice(-2)
+        + ('0' + now.getDate()).slice(-2)
+        + '-' + ('0' + now.getHours()).slice(-2)
+        + ('0' + now.getMinutes()).slice(-2);
       var a = document.createElement('a');
-      a.href = url; a.download = 'jeewhatsapp-session-' + eqLogic_id + '.jwab';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      a.href = url; a.download = 'jeewhatsapp-session-' + eqLogic_id + '-' + ts + '.jwab';
+      document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true }));
+      a.remove(); URL.revokeObjectURL(url);
       $btn.prop('disabled', false);
       $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
         .append(' {{Sauvegarde téléchargée — conservez le fichier et la phrase de passe en lieu sûr}}')
@@ -1537,7 +1545,7 @@ $('#bk_restore').on('click', function () {
       $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}');
       if (data.state === 'ok') {
         $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
-          .append(' {{Session restaurée — démon redémarré. Vérifiez le statut de connexion.}}')
+          .append(' {{Session restaurée — relancez le démon depuis Plugins → Gestion des démons, puis vérifiez le statut de connexion.}}')
           .css('color', '#25D366').show();
       } else {
         $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();

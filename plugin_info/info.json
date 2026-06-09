@@ -29,5 +29,10 @@
     "docker",
     "diy",
     "mobile"
+  ],
+  "excludeFromBackup": [
+    "resources/jeewhatsappd/node_modules",
+    "resources/piper",
+    "resources/stt"
   ]
 }
