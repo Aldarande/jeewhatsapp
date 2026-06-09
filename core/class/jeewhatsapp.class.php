@@ -43,6 +43,36 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Exclusions de sauvegarde Jeedom
+  // Exclut les binaires et modèles lourds installés par install_dep.sh.
+  // Ces fichiers sont re-téléchargés automatiquement à la prochaine
+  // installation des dépendances — inutile de les inclure dans le backup.
+  // -------------------------------------------------------------------------
+
+  public static function backupExclude() {
+    return [
+      // ── Binaires et modèles re-téléchargeables (install_dep.sh) ──────────
+      'resources/piper/piper',               // binaire Piper TTS (~50 Mo)
+      'resources/piper/voices',              // modèles vocaux Piper (~100 Mo)
+      'resources/piper/piper.tar.gz',        // archive d'installation Piper
+      'resources/stt/model-fr',             // modèle Vosk STT français (~40 Mo)
+      'resources/jeewhatsappd/node_modules', // dépendances Node.js (npm)
+
+      // ── Données volatiles dans auth/{id}/ — reconstruites à la reconnexion ──
+      // Les credentials Baileys (creds.json, pre-key-*, session-*, …) sont
+      // conservés — ce sont eux qui permettent de restaurer la session sans QR.
+      'history.json',    // historique widget (50 msgs) — reconstruit à l'usage
+      'events.json',     // tampon debug live — données temps réel sans valeur
+      'status.txt',      // statut courant du daemon — volatile
+      'qr.txt',          // QR code temporaire — expiré en 30 s
+      'group_jid.txt',   // JID groupe en cache — retrouvé auto à la connexion
+
+      // ── Statistiques (data/) ──────────────────────────────────────────────
+      'data/',           // stats_sent_30d / stats_received_30d — reconstruites
+    ];
+  }
+
+  // -------------------------------------------------------------------------
   // Daemon
   // -------------------------------------------------------------------------
 
@@ -136,9 +166,13 @@ class jeewhatsapp extends eqLogic {
     $pid_file = jeedom::getTmpFolder(__CLASS__) . '/daemon.pid';
     if (file_exists($pid_file)) {
       $pid = intval(trim(file_get_contents($pid_file)));
-      if ($pid > 0) { system::kill($pid); }
-      system::fuserk(self::getPort());
-      unlink($pid_file);
+      if ($pid > 0) { shell_exec('kill -15 ' . $pid . ' 2>/dev/null || kill -9 ' . $pid . ' 2>/dev/null'); }
+      @unlink($pid_file);
+    }
+    // Libère le port dans tous les cas (system::fuserk() absent dans Jeedom 4.4+)
+    $port = intval(self::getPort());
+    if ($port > 0) {
+      shell_exec('fuser -k ' . $port . '/tcp > /dev/null 2>&1');
     }
   }
 
@@ -198,9 +232,10 @@ class jeewhatsapp extends eqLogic {
     $this->checkAndUpdateCmd('last_group',       $_data['group_tag']    ?? '');
     $this->checkAndUpdateCmd('last_group_name',  $_data['group_name']   ?? '');
 
-    // Historique widget : ajoute le message entrant
+    // Historique widget + statistiques (#30)
     $senderLabel = $resolvedProfile ?? ($_data['sender_name'] ?? ($_data['sender'] ?? ''));
     $this->appendHistory('in', $_data['message'] ?? '', $senderLabel);
+    $this->appendStats('r', $_data['sender'] ?? '', $_data['sender_name'] ?? '');
 
     // Compteur messages reçus aujourd'hui (cache TTL jusqu'à minuit)
     $this->incrementMessagesTodayCounter();
@@ -320,6 +355,10 @@ class jeewhatsapp extends eqLogic {
     // Historique widget : ajoute le message sortant (sans préfixe dans l'historique)
     if (!$_skipPrefix) {
       $this->appendHistory('out', $_message);
+    }
+    // Statistiques (#30)
+    if (!$_skipPrefix) {
+      $this->appendStats('s');
     }
     return $result;
   }
@@ -1372,15 +1411,16 @@ class jeewhatsapp extends eqLogic {
     }
     @unlink($tarPath);
 
-    // Redémarre le daemon pour recharger les credentials restaurés
+    // Arrête le daemon pour qu'il recharge les credentials restaurés au prochain démarrage.
+    // On ne redémarre PAS ici : deamon_start() bloque ~60 s en AJAX (timeout HTTP)
+    // et un double-démarrage (UI + background) cause une désynchronisation du daemon_secret.
+    // Le message JS demande à l'utilisateur de relancer le daemon depuis la page du plugin.
     try {
       self::deamon_stop();
-      sleep(1);
-      self::deamon_start();
     } catch (Exception $e) {
-      log::add('jeewhatsapp', 'warning', 'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — redémarrage daemon : ' . $e->getMessage());
+      log::add('jeewhatsapp', 'warning', 'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — arrêt daemon : ' . $e->getMessage());
     }
-    return ['restored' => true];
+    return ['restored' => true, 'restart_required' => true];
   }
 
   // -------------------------------------------------------------------------
@@ -1863,8 +1903,10 @@ class jeewhatsapp extends eqLogic {
       $send->save();
     }
     // Le champ "Titre" sert d'override optionnel (numéro direct ou JID de groupe)
-    if ($send->getDisplay('title_placeholder') !== 'Destinataire (optionnel — vide = groupe canal)') {
-      $send->setDisplay('title_placeholder', 'Destinataire (optionnel — vide = groupe canal)');
+    // NM (Notification Manager) utilise ce champ "Titre" comme destinataire.
+    // Laisser vide = groupe canal par defaut.
+    if ($send->getDisplay('title_placeholder') !== 'Numero direct ou vide = groupe canal (NM : numero destinataire)') {
+      $send->setDisplay('title_placeholder', 'Numero direct ou vide = groupe canal (NM : numero destinataire)');
       $send->save();
     }
 
@@ -2213,6 +2255,29 @@ class jeewhatsapp extends eqLogic {
       $tmpl->save();
     }
 
+    // Commandes info cachées : statistiques 30 jours (#30)
+    // Non visibles sur le dashboard, utilisables dans les scénarios.
+    $statCmds = [
+      ['logicalId' => 'stats_sent_30d',     'name' => 'Envoyés (30 jours)',   'unite' => 'msg'],
+      ['logicalId' => 'stats_received_30d', 'name' => 'Reçus (30 jours)',    'unite' => 'msg'],
+    ];
+    foreach ($statCmds as $def) {
+      $c = $this->getCmd('info', $def['logicalId']);
+      if (!is_object($c)) {
+        $c = new jeewhatsappCmd();
+        $c->setEqLogic_id($this->getId());
+        $c->setLogicalId($def['logicalId']);
+        $c->setType('info');
+        $c->setSubType('numeric');
+        $c->setName($def['name']);
+        $c->setUnite($def['unite']);
+        $c->setIsVisible(0);   // caché sur le dashboard
+        $c->setIsHistorized(1);
+        $c->setOrder($order++);
+        $c->save();
+      }
+    }
+
     // Si le daemon tourne déjà, on le redémarre pour qu'il prenne en compte
     // le nouvel équipement (ou les changements de config comme group_name, extra_groups…).
     // Fait après la sauvegarde des commandes pour avoir un état cohérent.
@@ -2225,6 +2290,133 @@ class jeewhatsapp extends eqLogic {
           . ' — Redémarrage daemon impossible : ' . $e->getMessage());
       }
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Statistiques (#30)
+  // Stockage : plugins/jeewhatsapp/data/{eqId}/stats.json
+  // Structure : {"days":[{"d":"YYYY-MM-DD","s":N,"r":N},...], "contacts":{"33...":{"n":N,"l":"Nom"}}}
+  // Conserve les 30 derniers jours et le top 20 contacts.
+  // -------------------------------------------------------------------------
+
+  private function statsFile() {
+    $dir = dirname(__FILE__) . '/../../data/' . $this->getId();
+    if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+    return $dir . '/stats.json';
+  }
+
+  private function loadStats() {
+    $file = $this->statsFile();
+    if (!is_file($file)) { return ['days' => [], 'contacts' => []]; }
+    $raw = @file_get_contents($file);
+    if (!$raw) { return ['days' => [], 'contacts' => []]; }
+    $data = json_decode($raw, true);
+    return is_array($data) ? $data : ['days' => [], 'contacts' => []];
+  }
+
+  private function saveStats($data) {
+    @file_put_contents($this->statsFile(), json_encode($data, JSON_UNESCAPED_UNICODE));
+  }
+
+  /**
+   * Incrémente le compteur journalier.
+   * $_dir : 's' (sent) ou 'r' (received)
+   * $_sender : numéro expéditeur (optionnel, pour les stats contacts)
+   */
+  public function appendStats($_dir, $_sender = '', $_senderName = '') {
+    $data  = $this->loadStats();
+    $today = date('Y-m-d');
+
+    // Mise à jour du jour courant
+    $days  = $data['days'] ?? [];
+    $found = false;
+    foreach ($days as &$day) {
+      if ($day['d'] === $today) {
+        $day[$_dir] = ($day[$_dir] ?? 0) + 1;
+        $found = true;
+        break;
+      }
+    }
+    unset($day);
+    if (!$found) {
+      $days[] = ['d' => $today, 's' => 0, 'r' => 0, [$_dir] => 1];
+      // Correction : initialiser correctement
+      $last = &$days[count($days) - 1];
+      $last['s'] = $_dir === 's' ? 1 : 0;
+      $last['r'] = $_dir === 'r' ? 1 : 0;
+      unset($last);
+    }
+
+    // Garder les 30 derniers jours (tri par date croissante)
+    usort($days, function ($a, $b) { return strcmp($a['d'], $b['d']); });
+    if (count($days) > 30) { $days = array_slice($days, -30); }
+    $data['days'] = $days;
+
+    // Stats contacts (uniquement pour les messages reçus)
+    if ($_dir === 'r' && $_sender !== '') {
+      $sender = preg_replace('/\D/', '', $_sender);
+      if ($sender !== '') {
+        $contacts = $data['contacts'] ?? [];
+        if (!isset($contacts[$sender])) {
+          $contacts[$sender] = ['n' => 0, 'l' => ''];
+        }
+        $contacts[$sender]['n'] = ($contacts[$sender]['n'] ?? 0) + 1;
+        if ($_senderName !== '') { $contacts[$sender]['l'] = $_senderName; }
+        // Top 20 contacts uniquement
+        arsort($contacts);
+        if (count($contacts) > 20) {
+          $contacts = array_slice($contacts, 0, 20, true);
+        }
+        $data['contacts'] = $contacts;
+      }
+    }
+
+    $this->saveStats($data);
+
+    // Mettre à jour les commandes info cachées (scénarios)
+    $total30s = 0;
+    $total30r = 0;
+    foreach ($data['days'] as $day) {
+      $total30s += ($day['s'] ?? 0);
+      $total30r += ($day['r'] ?? 0);
+    }
+    $this->checkAndUpdateCmd('stats_sent_30d',     $total30s);
+    $this->checkAndUpdateCmd('stats_received_30d', $total30r);
+  }
+
+  /**
+   * Retourne les statistiques pour l'UI : 30 derniers jours + top contacts + totaux.
+   */
+  public function getStats() {
+    $data  = $this->loadStats();
+    $days  = $data['days'] ?? [];
+
+    // Remplir les jours manquants sur les 30 derniers jours avec des zéros
+    $filled = [];
+    for ($i = 29; $i >= 0; $i--) {
+      $d = date('Y-m-d', strtotime("-{$i} days"));
+      $entry = ['d' => $d, 's' => 0, 'r' => 0];
+      foreach ($days as $day) {
+        if ($day['d'] === $d) { $entry = $day; break; }
+      }
+      $filled[] = $entry;
+    }
+
+    $totalSent     = array_sum(array_column($filled, 's'));
+    $totalReceived = array_sum(array_column($filled, 'r'));
+
+    // Top 5 contacts pour l'affichage
+    $contacts = $data['contacts'] ?? [];
+    arsort($contacts);
+    $topContacts = array_slice($contacts, 0, 5, true);
+
+    return [
+      'days'          => $filled,
+      'top_contacts'  => $topContacts,
+      'total_sent'    => $totalSent,
+      'total_received'=> $totalReceived,
+      'period'        => '30 jours',
+    ];
   }
 
   // -------------------------------------------------------------------------
@@ -2542,13 +2734,18 @@ class jeewhatsappCmd extends cmd {
         if ($text === null) {
           throw new Exception(__('Template introuvable : ', __FILE__) . $key);
         }
-        // Substitution des tags Jeedom #[Objet][Équipement][Commande]# si présents
+        // Résolution des tags Jeedom dans le texte du template.
+        // Contrairement à send_message (dont le moteur de scénario résout déjà
+        // $_options['message'] avant execute()), le texte du template est chargé
+        // depuis la configuration APRÈS cette résolution — il faut donc le faire ici :
+        //   1. fromHumanReadable : #[Objet][Équipement][Commande]# → #1234#
+        //   2. cmdToValue        : #1234# → valeur courante de la commande
         try {
-          $text = jeedom::toHumanReadable($text);
+          $text = cmd::cmdToValue(jeedom::fromHumanReadable($text));
         } catch (Exception $e) {
           log::add('jeewhatsapp', 'warning',
             'jeewhatsapp.class.php::execute(send_template) l.' . __LINE__
-            . ' — toHumanReadable impossible : ' . $e->getMessage());
+            . ' — résolution des tags impossible : ' . $e->getMessage());
         }
         $eqLogic->sendMessage($text, $phone);
         break;

@@ -5,7 +5,9 @@
 [![License](https://img.shields.io/badge/licence-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![Jeedom](https://img.shields.io/badge/Jeedom-4.4+-green.svg)](https://jeedom.com)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-brightgreen.svg)](https://nodejs.org)
-[![Security](https://img.shields.io/badge/sécurité-100%2F100-success.svg)](SECURITY-AUDIT.md)
+[![Ko-fi](https://img.shields.io/badge/don-Ko--fi-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/aldarande)
+[![Liberapay](https://img.shields.io/badge/don-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/Aldarande/donate)
+[![GitHub Sponsors](https://img.shields.io/badge/don-GitHub%20Sponsors-ea4aaa?logo=github&logoColor=white)](https://github.com/sponsors/Aldarande)
 
 ---
 
@@ -277,8 +279,14 @@ Daemon Node.js (ESM)
 2. **Proposer une PR** : branche `dev` uniquement, respectez le [DEV-WORKFLOW.md](DEV-WORKFLOW.md)
 3. **Sécurité** : contactez [aldarande@gmail.com](mailto:aldarande@gmail.com)
 
-Si vous appréciez ce plugin (gratuit et open-source) :
-☕ [Ko-fi](https://ko-fi.com/aldarande) · 💙 [GitHub Sponsors](https://github.com/sponsors/Aldarande)
+Si vous appréciez ce plugin (gratuit et open-source), un don aide à financer
+le développement, les tests et les mises à jour :
+
+| Plateforme | Type | Lien |
+|---|---|---|
+| ☕ Ko-fi | Don ponctuel | [ko-fi.com/aldarande](https://ko-fi.com/aldarande) |
+| 💙 GitHub Sponsors | Mensuel | [github.com/sponsors/Aldarande](https://github.com/sponsors/Aldarande) |
+| 💛 Liberapay | Récurrent / anonyme possible | [liberapay.com/Aldarande](https://liberapay.com/Aldarande/donate) |
 
 ---
 

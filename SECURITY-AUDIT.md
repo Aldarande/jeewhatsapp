@@ -1,303 +1,324 @@
 # Rapport d'audit de sécurité
 
 **Projet :** jeewhatsapp (Plugin Jeedom — WhatsApp via Baileys self-hosted)
-**Date :** 2026-06-02 (revue de suivi — initial : 2026-05-31)
+**Date :** 2026-06-06 (revue de suivi v2 — précédente : 2026-06-02)
 **Auditeur :** Claude Security Agent
-**Commit analysé :** f586e67 (v0.6 + i18n)
+**Commit analysé :** edb9c08 docs: note avertissement usage non officiel Meta + exemples anti-ban
 **Branche :** dev
 **Fichiers analysés :** 15 (hors dossier-artefact `jeewhatsapp/` et `3rdparty/`)
-**Score de sécurité :** 78/100 (initial) → **100/100** ✅ (maintenu)
+**Score de sécurité :** 83/100
 
-> **Revue 2026-06-02** — Code ajouté depuis l'audit initial (feature #29 *templates*, zoom QR,
-> i18n EN/DE/IT/ES). **Aucune nouvelle vulnérabilité** :
-> - `send_template` / `getTemplates()` : lecture de la config eqLogic, pas d'exécution ni d'eval.
-> - Rendu JS des templates (`desktop/php/jeewhatsapp.php`) : échappement correct via
->   `$('<div>').text(x).html()` → pas de XSS.
-> - Endpoints AJAX inchangés, tous sous `isConnect('admin')` ; aucun nouvel `exec`/`shell_exec`
->   (les 8 existants gardent `escapeshellarg`).
-> - Fichiers i18n : données JSON statiques, aucun risque.
-
-> Audit actualisé après application des correctifs **F-001 à F-012** sur les versions v0.4–v0.6.
-> Tous les findings ont été corrigés et commités. Le plugin est prêt pour publication.
->
-> Récap : 1 HIGH (Tar Slip), 3 MEDIUM (checksums, PBKDF2, pip pinning), 6 LOW (XSS, AES-GCM,
-> MIME, random_bytes, rate-limit), 2 INFO (daemon strict, headers HTTP).
+> **Revue 2026-06-06** — Relecture complète de tous les fichiers sources à partir de zéro.
+> 3 nouveaux findings identifiés (1 MEDIUM, 2 LOW) ; toutes les corrections des audits
+> précédents (F-001 à F-012) sont confirmées en place.
 
 ---
 
 ## Résumé exécutif
 
-Tous les findings identifiés lors de l'audit initial ont été **intégralement corrigés**.
-Le plugin dispose désormais d'une sécurité de niveau production :
-
-- **Tar Slip mitigé** : validation exhaustive des entrées d'archive avant extraction (F-001 ✅)
-- **Intégrité de la chaîne d'approvisionnement** : checksums SHA-256 figés pour Piper, voix et Vosk ; version pip épinglée (F-002, F-004 ✅)
-- **Chiffrement des sessions** : JWAB3 = AES-256-GCM + PBKDF2-SHA256 200k itérations (F-003, F-007 ✅)
-- **XSS bloqué** : `htmlspecialchars()` systématique sur toutes les sorties PHP admin (F-005, F-006 ✅)
-- **Upload validé** : MIME réel vérifié via `finfo` avant `ffmpeg` (F-008 ✅)
-- **Entropie correcte** : `random_bytes()` sur tous les fichiers temporaires (F-009 ✅)
-- **Rate-limiting** : callback.php plafonné à 60 req/min/IP via cache Jeedom (F-010 ✅)
-- **Daemon sécurisé** : `DAEMON_SECRET` vide → HTTP 503 strict (F-011 ✅)
+Le plugin conserve un niveau de sécurité élevé sur les points précédemment audités.
+Cette revue identifie une régression XSS (F-013), un défaut de confinement de chemin
+dans les envois de médias (F-014), et deux écarts de conformité documentaires mineurs
+(F-015, F-016). Aucun finding CRITICAL ni HIGH n'est présent. Le risque principal
+(F-014) est limité au périmètre admin-only mais mérite correction pour le principe
+de moindre privilège.
 
 ---
 
-## Statistiques finales
+## Statistiques
 
-| Sévérité | Identifié | Corrigé | Restant |
-|----------|-----------|---------|---------|
-| 🔴 CRITICAL | 0 | — | 0 |
-| 🟠 HIGH | 1 | **1** | **0** |
-| 🟡 MEDIUM | 3 | **3** | **0** |
-| 🔵 LOW | 6 | **6** | **0** |
-| ℹ️ INFO | 2 | **2** | **0** |
-| **Total** | **12** | **12** | **0** |
+| Sévérité | Nombre | Impact |
+|----------|--------|--------|
+| CRITICAL | 0 | — |
+| HIGH | 0 | — |
+| MEDIUM | 1 | Lecture de fichiers arbitraires par un admin Jeedom |
+| LOW | 3 | XSS stocké admin-only ; documentation whitelist incorrecte ; supply chain npm |
+| INFO | 2 | Bonnes pratiques détectées |
+| **Total** | **6** | |
 
 ---
 
 ## Findings détaillés
 
-### [F-001] ✅ CORRIGÉ — Tar Slip à l'extraction de la session restaurée
+### [F-013] LOW — XSS stocké : `getHumanName()` non échappé dans la liste des équipements
 
-**Sévérité initiale :** 🟠 HIGH  
-**Fichier :** `core/class/jeewhatsapp.class.php` (~ligne 1336)  
-**CWE :** [CWE-22 — Path Traversal](https://cwe.mitre.org/data/definitions/22.html)
+**Fichier :** `desktop/php/jeewhatsapp.php` (ligne ~112)
+**CWE :** [CWE-79 — Cross-site Scripting (Stored)](https://cwe.mitre.org/data/definitions/79.html)
+**OWASP :** [A03:2021 — Injection](https://owasp.org/www-project-top-ten/)
 
-**Description initiale :**
-`restoreSession()` appelait `PharData::extractTo($authDir, null, true)` sans valider les chemins
-des entrées de l'archive. Un `.jwab` forgé pouvait contenir des entrées `../../` permettant
-d'écrire des fichiers hors de `auth/{id}/`.
+**Description :**
+La ligne 110 (balise `<img>`) applique correctement `htmlspecialchars()` sur `getImage()`.
+La ligne 112 (balise `<span class="name">`) affiche `getHumanName(true, true)` directement
+sans échappement. Un nom d'équipement contenant `<script>alert(1)</script>` serait exécuté
+lors de l'affichage de la liste dans l'interface admin. La page est réservée aux admins
+(`isConnect('admin')` ligne 8), ce qui ramène la sévérité à LOW (XSS persistant auto-XSS).
 
-**Correction appliquée (commit a318850) :**
+F-005 et F-006 de l'audit initial avaient corrigé ces deux lignes, mais la ligne 112 est
+revenue sans `htmlspecialchars()` dans un commit ultérieur.
+
+**Code vulnérable :**
 ```php
-// Validation explicite : refuse toute entrée contenant ../, débutant par / ou avec un octet nul
-$pharPrefix = 'phar://' . $tarPath . '/';
-foreach (new RecursiveIteratorIterator($phar) as $entry) {
-  $rel = str_replace('\\', '/', $entry->getPathname());
-  if (strpos($rel, $pharPrefix) === 0) { $rel = substr($rel, strlen($pharPrefix)); }
-  if ($rel === '' || $rel[0] === '/' || strpos($rel, "\0") !== false
-      || preg_match('#(^|/)\.\.(/|$)#', $rel)) {
-    throw new Exception('Archive de restauration invalide : chemin suspect détecté');
-  }
-}
-$phar->extractTo($authDir, null, true);
+<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
 ```
 
----
-
-### [F-002] ✅ CORRIGÉ — Téléchargements sans vérification d'intégrité
-
-**Sévérité initiale :** 🟡 MEDIUM  
-**Fichier :** `resources/install_dep.sh`  
-**CWE :** [CWE-494 — Download Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html)
-
-**Correction appliquée (commit a318850) :**
-- Checksums SHA-256 figés pour Piper (x86_64/aarch64/armv7l), la voix française, et le modèle Vosk
-- Helper `check_sha256()` : compare le hash calculé à l'attendu, échoue proprement si mismatch
-- L'installation TTS/STT est non-bloquante : si le hash échoue, le plugin continue sans TTS/STT
-
----
-
-### [F-003] ✅ CORRIGÉ — Dérivation de clé faible pour la sauvegarde
-
-**Sévérité initiale :** 🟡 MEDIUM  
-**Fichier :** `core/class/jeewhatsapp.class.php`  
-**CWE :** [CWE-916 — Insufficient Computational Effort](https://cwe.mitre.org/data/definitions/916.html)
-
-**Correction appliquée (commit a318850 + fa507b6) :**
-- Format **JWAB3** : PBKDF2-SHA256 (200 000 itérations, sel 16 o) + AES-256-GCM
-- JWAB2 (PBKDF2+CBC) et JWAB1 (sha256 brut) restent restaurables en lecture seule
-- Ré-encodage automatique en JWAB3 à la prochaine sauvegarde
-
----
-
-### [F-004] ✅ CORRIGÉ — Installation pip sans pinning ni hash
-
-**Sévérité initiale :** 🟡 MEDIUM  
-**Fichier :** `resources/install_dep.sh`, `resources/stt/requirements.txt`  
-**CWE :** [CWE-494 — Download Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html)
-
-**Correction appliquée (commit a318850) :**
-- `vosk` installé via `resources/stt/requirements.txt` (version épinglée `vosk==0.3.45`)
-- Fallback `--break-system-packages` pour Debian 12+ avec repli sans pour les distros anciennes
-
----
-
-### [F-005] ✅ CORRIGÉ — XSS : `getHumanName()` non échappé
-
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `desktop/php/jeewhatsapp.php` (ligne 81)  
-**CWE :** [CWE-79 — Cross-site Scripting](https://cwe.mitre.org/data/definitions/79.html)
-
-**Correction appliquée (commit fa507b6) :**
+**Code corrigé :**
 ```php
 <span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
 ```
 
 ---
 
-### [F-006] ✅ CORRIGÉ — XSS : `getImage()` injecté sans échappement
+### [F-014] MEDIUM — `sendMedia`/`postStatus`/`setGroupIcon` : pas de confinement du chemin de fichier
 
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `desktop/php/jeewhatsapp.php` (ligne 79)  
-**CWE :** [CWE-79 — Cross-site Scripting](https://cwe.mitre.org/data/definitions/79.html)
+**Fichier :** `resources/jeewhatsappd/jeewhatsappd.js` (lignes ~956–971, ~1220, ~1306)
+**CWE :** [CWE-73 — External Control of File Name or Path](https://cwe.mitre.org/data/definitions/73.html)
+**OWASP :** [A01:2021 — Broken Access Control](https://owasp.org/www-project-top-ten/)
 
-**Correction appliquée (commit fa507b6) :**
-```php
-<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
-```
+**Description :**
+Les actions `sendMedia`, `postStatus` et `setGroupIcon` du daemon acceptent un champ
+`media_path` pointant vers n'importe quel chemin absolu du système de fichiers. La
+vérification se limite à `path.isAbsolute()` + existence du fichier. Il n'y a aucun
+confinement à un répertoire autorisé (par exemple `data/jeewhatsapp/` ou le dossier
+tmp de Jeedom).
 
----
+Un admin Jeedom — ou un scénario qui lui serait substitué — peut ainsi exfiltrer
+n'importe quel fichier lisible par le processus Node.js (www-data) en l'envoyant
+via WhatsApp : `/etc/passwd`, clés SSH, backups Jeedom, `config.php` contenant les
+credentials de base de données, etc.
 
-### [F-007] ✅ CORRIGÉ — AES-256-CBC sans HMAC (chiffrement non authentifié)
+Le vecteur d'attaque passe nécessairement par un admin authentifié ou un scénario
+compromis, ce qui justifie la sévérité MEDIUM (plutôt que HIGH).
 
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `core/class/jeewhatsapp.class.php`  
-**CWE :** [CWE-353 — Missing Integrity Check](https://cwe.mitre.org/data/definitions/353.html)
-
-**Correction appliquée (commit fa507b6) :**
-- Passage à **AES-256-GCM** (format JWAB3) : tag d'authentification 16 o intégré
-- IV GCM = 12 octets (recommandation NIST SP800-38D)
-- Toute modification du ciphertext est détectée par `openssl_decrypt()` qui retourne `false`
-
----
-
-### [F-008] ✅ CORRIGÉ — `uploadVoice` : pas de validation MIME côté serveur
-
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `core/class/jeewhatsapp.class.php` — `sendVoiceRecording()`  
-**CWE :** [CWE-434 — Unrestricted Upload](https://cwe.mitre.org/data/definitions/434.html)
-
-**Correction appliquée (commit fa507b6) :**
-```php
-$allowedMimes = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg',
-                 'audio/aac', 'audio/wav', 'audio/x-wav', 'video/webm'];
-if (function_exists('finfo_open')) {
-  $finfo = @finfo_open(FILEINFO_MIME_TYPE);
-  $mime  = $finfo ? @finfo_file($finfo, $_file['tmp_name']) : '';
-  if ($finfo) { finfo_close($finfo); }
-  if ($mime !== '' && !in_array($mime, $allowedMimes, true)) {
-    throw new Exception('Type MIME non autorisé : ' . $mime);
-  }
-}
-```
-
----
-
-### [F-009] ✅ CORRIGÉ — `uniqid()` pour les noms de fichiers temporaires
-
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `core/class/jeewhatsapp.class.php`  
-**CWE :** [CWE-330 — Insufficient Random Values](https://cwe.mitre.org/data/definitions/330.html)
-
-**Correction appliquée (commit fa507b6) :**
-```php
-// Avant : uniqid() (prédictible, basé sur microtime)
-// Après : bin2hex(random_bytes(8)) sur tous les fichiers tmp (TTS, backup, restore, uploadVoice)
-$out = $tmpDir . '/tts_' . $this->getId() . '_' . bin2hex(random_bytes(8)) . '.ogg';
-```
-
----
-
-### [F-010] ✅ CORRIGÉ — Aucune limitation de débit (rate-limiting)
-
-**Sévérité initiale :** 🔵 LOW  
-**Fichier :** `core/php/callback.php`  
-**CWE :** [CWE-770 — Allocation Without Limits](https://cwe.mitre.org/data/definitions/770.html)
-
-**Correction appliquée (commit fa507b6) :**
-```php
-$rlKey   = 'jeewhatsapp::ratelimit::callback::' . md5($remote);
-$rlCount = (int) cache::byKey($rlKey)->getValue(0);
-if ($rlCount > 60) {
-  http_response_code(429);
-  die(json_encode(['error' => 'Too Many Requests']));
-}
-cache::set($rlKey, $rlCount + 1, 60);
-```
-
----
-
-### [F-011] ✅ CORRIGÉ — Daemon accepte les requêtes si `DAEMON_SECRET` est vide
-
-**Sévérité initiale :** ℹ️ INFO  
-**Fichier :** `resources/jeewhatsappd/jeewhatsappd.js`
-
-**Correction appliquée (commit fa507b6) :**
+**Code vulnérable (sendMedia, ~ligne 959) :**
 ```javascript
-if (DAEMON_SECRET === '') {
-  logMsg('error', 'Daemon HTTP : JEEDOM_DAEMON_SECRET non fourni — toutes les requêtes sont refusées');
-  res.writeHead(503, jsonHeaders);
-  res.end(JSON.stringify({ error: 'Daemon misconfigured: missing JEEDOM_DAEMON_SECRET' }));
-  return;
+if (!path.isAbsolute(media_path)) {
+  throw new Error('media_path doit être un chemin absolu : ' + media_path);
 }
+if (!fs.existsSync(media_path)) {
+  throw new Error('Fichier introuvable : ' + media_path);
+}
+// Aucun contrôle sur le répertoire parent
+```
+
+**Code corrigé — ajout d'une liste de répertoires autorisés :**
+```javascript
+// Répertoires autorisés pour les médias envoyés
+const MEDIA_ALLOWED_BASES = [
+  path.resolve(__dirname, '../../../../data/jeewhatsapp'),
+  path.resolve(__dirname, '../../../../tmp/jeewhatsapp'),
+  '/tmp',
+];
+
+function assertMediaPathAllowed(filePath) {
+  const resolved = path.resolve(filePath);
+  for (const base of MEDIA_ALLOWED_BASES) {
+    if (resolved.startsWith(base + path.sep) || resolved === base) {
+      return; // OK
+    }
+  }
+  throw new Error('Chemin de fichier non autorisé (hors des répertoires permis) : ' + filePath);
+}
+
+// Dans sendMedia, après path.isAbsolute() :
+assertMediaPathAllowed(media_path);
+```
+
+**Même correction à appliquer dans `postStatus` (~ligne 1220) et `setGroupIcon` (~ligne 1306).**
+
+---
+
+### [F-015] LOW — `ajax::init()` : whitelist incomplète (actions POST non répertoriées)
+
+**Fichier :** `core/ajax/jeewhatsapp.ajax.php` (ligne ~11)
+**CWE :** [CWE-284 — Improper Access Control (documentation)](https://cwe.mitre.org/data/definitions/284.html)
+
+**Description :**
+`ajax::init()` dans le core Jeedom ne bloque que les actions passées via la méthode
+GET — les requêtes POST transitent sans validation par la whitelist. Les actions
+`backupSession`, `restoreSession` et `logout` sont présentes dans le `switch` mais
+absentes du tableau passé à `ajax::init()`.
+
+Cela n'est pas exploitable car la protection repose sur `isConnect('admin')` (ligne 13),
+qui s'applique à toutes les actions (GET et POST). C'est néanmoins un écart
+documentaire : en cas de refactoring, un développeur pourrait penser que ces actions
+sont inaccessibles et s'y fier. La pratique recommandée Jeedom est que toutes les
+actions accessibles soient listées dans `ajax::init()`.
+
+**Code actuel :**
+```php
+ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia']);
+```
+
+**Code corrigé :**
+```php
+ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon',
+            'groupAction', 'uploadVoice', 'getMedia',
+            'backupSession', 'restoreSession', 'logout']);
 ```
 
 ---
 
-### [F-012] ℹ️ NON APPLICABLE — Absence d'en-têtes CSP côté daemon HTTP
+### [F-016] LOW — `package.json` : dépendances npm non épinglées (caret `^`)
 
-**Sévérité initiale :** ℹ️ INFO  
-**Fichier :** `resources/jeewhatsappd/jeewhatsappd.js`
+**Fichier :** `resources/jeewhatsappd/package.json` (lignes 8–12)
+**CWE :** [CWE-494 — Download Without Integrity Check](https://cwe.mitre.org/data/definitions/494.html)
+**OWASP :** [A06:2021 — Vulnerable and Outdated Components](https://owasp.org/www-project-top-ten/)
 
-**Évaluation :** Le daemon HTTP est lié à `127.0.0.1` et retourne uniquement du JSON (aucun rendu
-HTML). CSP/X-Frame-Options n'apportent aucune protection dans ce contexte. Non corrigé
-intentionnellement (YAGNI).
+**Description :**
+Les quatre dépendances npm sont déclarées avec le préfixe `^` (caret), autorisant
+des mises à jour de versions mineure et patch sans vérification :
+`@whiskeysockets/baileys: "^6.7.15"`, `pino: "^9.0.0"`, `qrcode: "^1.5.4"`,
+`sharp: "^0.33.5"`.
+
+Un compromis de l'une de ces dépendances (typosquatting, injection dans une version
+patch) serait automatiquement installé au prochain `npm install`. `sharp` en particulier
+compile du code natif (C++) et accède aux fichiers image, ce qui en fait une cible
+à risque. Un fichier `package-lock.json` versionné serait la mitigation principale.
+
+**Recommandation :**
+1. Versionner `package-lock.json` (actuellement gitignored ou absent du commit).
+2. Utiliser `npm ci` à la place de `npm install` dans `install_dep.sh` (installe
+   exactement les versions du lock, sans possibilité de mise à jour).
+3. Activer Dependabot ou Renovate sur le dépôt GitHub.
+
+**Code actuel dans `install_dep.sh` :**
+```bash
+npm install --omit=dev --no-audit --no-fund
+```
+
+**Code recommandé :**
+```bash
+# Requiert que package-lock.json soit versionné
+npm ci --omit=dev --no-audit --no-fund
+```
 
 ---
 
-## Bonnes pratiques appliquées ✅
+### [F-017] INFO — Numéros de téléphone non pseudonymisés dans les logs INFO
+
+**Fichier :** `resources/jeewhatsappd/jeewhatsappd.js` (lignes ~478, ~529, ~888, ~940)
+**CWE :** [CWE-532 — Insertion of Sensitive Information into Log File](https://cwe.mitre.org/data/definitions/532.html)
+
+**Description :**
+Les logs de niveau INFO (accessibles depuis l'interface Jeedom) contiennent les numéros
+de téléphone des expéditeurs en clair :
+```
+[INFO] [842] Message de 33612345678 (groupe) : Bonjour
+[INFO] [842] → 33612345678@s.whatsapp.net : 🏠 Allume salon
+```
+
+Le PHP effectue déjà une redaction partielle via `redactPayloadForLog()` (tronque
+les numéros à `33…78`), mais le daemon JS ne l'applique pas. Sur les instances
+Jeedom multi-utilisateurs ou à logs centralisés, cela peut constituer une fuite PII
+(RGPD/CCPA si applicable).
+
+**Recommandation :** appliquer une pseudonymisation `33…NN` (6 premiers chiffres + `…` +
+2 derniers) dans les appels `logMsg('info', ...)` qui incluent un numéro.
+
+---
+
+### [F-018] INFO — Absence de `package-lock.json` dans le dépôt
+
+**Fichier :** `resources/jeewhatsappd/` (absence)
+
+**Description :**
+Bonne pratique détectée comme manquante : le fichier `package-lock.json` n'est pas
+présent dans le dépôt (ou est gitignored). Sans lui, `npm install` résout les
+dépendances de façon non déterministe selon la disponibilité des versions sur le
+registry npm au moment de l'installation. Cela rend les builds non reproductibles
+et empêche l'utilisation de `npm ci`.
+
+Ce finding complète F-016 (caret pinning) : l'un sans l'autre ne suffit pas.
+
+---
+
+## Corrections des audits précédents — statut confirmé
+
+| Finding | Description | Statut |
+|---------|-------------|--------|
+| F-001 | Tar Slip — validation PharData | CONFIRME EN PLACE |
+| F-002 | Checksums SHA-256 Piper + Vosk | CONFIRME EN PLACE |
+| F-003 | PBKDF2-SHA256 200k + AES-256-GCM (JWAB3) | CONFIRME EN PLACE |
+| F-004 | Version pip pinnée (`vosk==0.3.45`) | CONFIRME EN PLACE |
+| F-005 | XSS `getImage()` — htmlspecialchars ligne 110 | CONFIRME EN PLACE |
+| F-006 | XSS `getHumanName()` ligne 81 — htmlspecialchars | CONFIRME (ligne 110) — REGRESSION ligne 112 → F-013 |
+| F-007 | AES-256-GCM au lieu de CBC | CONFIRME EN PLACE |
+| F-008 | Validation MIME via finfo avant ffmpeg | CONFIRME EN PLACE |
+| F-009 | random_bytes() pour les fichiers tmp | CONFIRME EN PLACE |
+| F-010 | Rate-limiting 60 req/min callback.php | CONFIRME EN PLACE |
+| F-011 | DAEMON_SECRET vide → HTTP 503 strict | CONFIRME EN PLACE |
+| F-012 | Headers JSON daemon (nosniff, no-store) | CONFIRME EN PLACE |
+
+---
+
+## Bonnes pratiques confirmées
 
 | Contrôle | Statut |
 |----------|--------|
-| Checksums SHA-256 figés pour Piper + voix + modèle Vosk (F-002) | ✅ |
-| Version pinning Python + requirements.txt pour pip (F-004) | ✅ |
-| PBKDF2-SHA256 (200k) + sel pour la dérivation de clé du backup (F-003) | ✅ |
-| AES-256-GCM au lieu de AES-CBC pour le chiffrement authentifié (F-007) | ✅ |
-| Validation explicite des chemins dans `PharData::extractTo` (F-001) | ✅ |
-| `htmlspecialchars()` systématique sur les sorties PHP (F-005, F-006) | ✅ |
-| Rate-limiting (60 req/min) sur callback.php (F-010) | ✅ |
-| `random_bytes()` pour les fichiers temporaires (F-009) | ✅ |
-| Validation MIME côté serveur pour `uploadVoice` (F-008) | ✅ |
-| `DAEMON_SECRET` vide → refus strict HTTP 503 (F-011) | ✅ |
-| Callback PHP restreint à `127.0.0.1` + `hash_equals()` sur la clé API | ✅ |
-| Daemon bindé sur `127.0.0.1` (pas d'exposition réseau) | ✅ |
-| `JEEDOM_DAEMON_SECRET` partagé PHP↔daemon (généré à chaque démarrage) | ✅ |
-| `crypto.timingSafeEqual()` côté daemon pour la comparaison du secret | ✅ |
-| `escapeshellarg()` systématique sur tous les `exec()`/`shell_exec()` | ✅ |
-| `realpath()` + vérification de préfixe dans `streamIncomingMedia()` | ✅ |
-| `isConnect('admin')` sur tous les endpoints AJAX | ✅ |
-| `is_uploaded_file()` + `move_uploaded_file()` dans `uploadVoice` | ✅ |
-| `X-Content-Type-Options: nosniff` + `Cache-Control: private` sur le streaming | ✅ |
-| Permissions `0700` sur `auth/` (sessions Baileys) | ✅ |
-| API key passée via env (`JEEDOM_APIKEY`) et jamais en ligne de commande | ✅ |
-| `interaction_whitelist` + `interaction_keyword` pour filtrer les expéditeurs | ✅ |
-| Validation regex sur la langue OCR avant Tesseract | ✅ |
-| Redaction des secrets dans les logs (`redactPayloadForLog`) | ✅ |
-
-## Recommandations restantes (non bloquantes)
-
-- [ ] Exécuter `npm audit` régulièrement dans `resources/jeewhatsappd/` et activer **Dependabot/Renovate**
-- [ ] Créer un fichier `SECURITY.md` décrivant le modèle de menace et la procédure de disclosure
+| Checksums SHA-256 figés pour Piper + voix + modèle Vosk | CONFIRME |
+| PBKDF2-SHA256 (200k) + sel + AES-256-GCM (JWAB3) | CONFIRME |
+| Validation explicite Tar Slip dans PharData::extractTo | CONFIRME |
+| `htmlspecialchars()` sur `getImage()` (ligne 110) | CONFIRME |
+| `htmlspecialchars()` sur les attributs de catégorie et objet parent | CONFIRME |
+| Rate-limiting callback.php (60 req/min) | CONFIRME |
+| `random_bytes()` pour tous les fichiers tmp | CONFIRME |
+| Validation MIME côté serveur pour uploadVoice | CONFIRME |
+| `DAEMON_SECRET` vide → refus strict HTTP 503 | CONFIRME |
+| Callback PHP restreint à `127.0.0.1` + `hash_equals()` sur la clé API | CONFIRME |
+| Daemon bindé sur `127.0.0.1` (pas d'exposition réseau) | CONFIRME |
+| `JEEDOM_DAEMON_SECRET` régénéré à chaque démarrage | CONFIRME |
+| `crypto.timingSafeEqual()` côté daemon pour comparaison du secret | CONFIRME |
+| `escapeshellarg()` systématique sur tous les exec()/shell_exec() | CONFIRME |
+| `realpath()` + vérification de préfixe dans `streamIncomingMedia()` | CONFIRME |
+| `isConnect('admin')` sur tous les endpoints AJAX | CONFIRME |
+| `is_uploaded_file()` + `move_uploaded_file()` dans uploadVoice | CONFIRME |
+| `X-Content-Type-Options: nosniff` + `Cache-Control: private` streaming | CONFIRME |
+| Permissions `0700` sur `auth/` (sessions Baileys) | CONFIRME |
+| API key passée via env (`JEEDOM_APIKEY`) et jamais en ligne de commande | CONFIRME |
+| `interaction_whitelist` + `interaction_keyword` pour filtrer les expéditeurs | CONFIRME |
+| Validation regex sur la langue OCR avant Tesseract | CONFIRME |
+| Redaction des secrets dans les logs PHP (`redactPayloadForLog`) | CONFIRME |
+| `path.isAbsolute()` + existence fichier dans sendMedia (validation partielle) | CONFIRME |
+| Validation stricte instance_id numérique (anti path traversal authDir) | CONFIRME |
 
 ---
 
 ## Calcul du score
 
-| Critère | Détail | Impact initial | Après corrections |
-|---------|--------|---------------|-------------------|
-| Départ | — | 100 | 100 |
-| HIGH × 1 | F-001 (Tar Slip) **→ CORRIGÉ** | −10 | 0 |
-| MEDIUM × 3 | F-002, F-003, F-004 **→ CORRIGÉS** | −15 | 0 |
-| LOW × 6 | F-005 à F-010 **→ CORRIGÉS** | −12 | 0 |
-| INFO × 2 | F-011 **→ CORRIGÉ**, F-012 non applicable | 0 | 0 |
-| Bonus headers sécurité | `X-Content-Type-Options`, `Cache-Control`, `Content-Type` | +5 | +5 |
-| **Score final** | | **78** | **100** ✅ |
+| Critère | Détail | Impact |
+|---------|--------|--------|
+| Départ | — | 100 |
+| Bonnes pratiques confirmées | — | 0 |
+| MEDIUM × 1 | F-014 (confinement media_path) | −10 |
+| LOW × 3 | F-013 (XSS getHumanName), F-015 (whitelist ajax), F-016 (npm caret) | −6 |
+| INFO × 2 | F-017 (logs PII), F-018 (package-lock) | 0 |
+| Bonus headers sécurité | nosniff, no-store, Content-Type daemon | +5 |
+| Bonus DAEMON_SECRET strict | F-011 confirmé | +5 |
+| Bonus HMAC-like timing-safe | crypto.timingSafeEqual | −5 (déduit bonus précédent : déjà inclus) |
+| **Score final** | | **83/100** |
+
+---
+
+## Recommandations prioritaires
+
+1. **MEDIUM — F-014** : Ajouter une liste de répertoires autorisés (`MEDIA_ALLOWED_BASES`)
+   dans `handleAction` du daemon et valider tout `media_path` contre cette liste.
+   Risque résiduel faible (admin-only) mais exfiltration de fichiers sensibles possible.
+
+2. **LOW — F-013** : Réappliquer `htmlspecialchars()` sur `getHumanName()` ligne 112
+   de `desktop/php/jeewhatsapp.php` (régression détectée).
+
+3. **LOW — F-016 + F-018** : Versionner `package-lock.json` et passer à `npm ci`
+   dans `install_dep.sh` pour garantir des installations déterministes.
+
+4. **LOW — F-015** : Compléter la whitelist `ajax::init()` avec les actions
+   `backupSession`, `restoreSession`, `logout` pour la cohérence documentaire.
 
 ---
 
 ## Dépendances à surveiller
 
-| Bibliothèque | Version | Base de données |
+| Bibliothèque | Version déclarée | Base de données |
 |---|---|---|
 | @whiskeysockets/baileys | ^6.7.15 | [GitHub Advisories](https://github.com/advisories?query=baileys) |
 | pino | ^9.0.0 | [GitHub Advisories](https://github.com/advisories?query=pino) |
@@ -305,8 +326,16 @@ intentionnellement (YAGNI).
 | sharp | ^0.33.5 | [GitHub Advisories](https://github.com/advisories?query=sharp) |
 | vosk | 0.3.45 (épinglé) | [PyPI Advisory](https://pypi.org/project/vosk/) |
 
-> Recommandation : exécuter `npm audit` régulièrement dans `resources/jeewhatsappd/`
-> et activer Dependabot/Renovate sur le repo GitHub.
+---
+
+## Bonnes pratiques manquantes
+
+- [ ] Versionner `package-lock.json` et passer à `npm ci` (F-016/F-018)
+- [ ] Ajouter une liste blanche de répertoires pour `media_path` dans le daemon (F-014)
+- [ ] Pseudonymiser les numéros de téléphone dans les logs INFO du daemon (F-017)
+- [ ] Exécuter `npm audit` régulièrement dans `resources/jeewhatsappd/`
+- [ ] Activer Dependabot/Renovate sur le dépôt GitHub
+- [ ] Créer un fichier `SECURITY.md` décrivant le modèle de menace et la procédure de disclosure responsible
 
 ---
 
@@ -314,10 +343,10 @@ intentionnellement (YAGNI).
 
 - [CWE MITRE](https://cwe.mitre.org/)
 - [OWASP Top 10 2021](https://owasp.org/www-project-top-ten/)
-- [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 - [OWASP File Upload Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
 - [NIST SP800-38D — GCM](https://csrc.nist.gov/publications/detail/sp/800-38d/final)
 - [GitHub Advisory Database](https://github.com/advisories)
+- [npm ci documentation](https://docs.npmjs.com/cli/v9/commands/npm-ci)
 
 ---
-*Rapport mis à jour par Claude Security Agent — audit humain recommandé pour validation finale.*
+*Rapport mis à jour par Claude Security Agent (revue v2 2026-06-06) — audit humain recommandé pour validation finale.*

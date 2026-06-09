@@ -176,6 +176,34 @@ function writeStatus(id, status) {
 }
 
 // ---------------------------------------------------------------------------
+// Événements live — tampon circulaire pour le mode debug visuel (#31)
+// Fichier : auth/{id}/events.json — 100 derniers événements, lecture par PHP
+// Types : 'in' (message reçu) | 'out' (message envoyé) | 'sys' (connexion/groupe)
+//         'warn' (avertissement) | 'err' (erreur)
+// ---------------------------------------------------------------------------
+
+function eventsFilePath(id) { return path.join(authDir(id), 'events.json'); }
+
+function writeEvent(id, type, text) {
+  try {
+    const file = eventsFilePath(id);
+    let events = [];
+    try {
+      const raw = fs.readFileSync(file, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) { events = parsed; }
+    } catch (_) {}
+    events.push({
+      ts:   new Date().toISOString(),
+      type: type,
+      text: String(text).substring(0, 200),
+    });
+    if (events.length > 100) { events = events.slice(-100); }
+    fs.writeFileSync(file, JSON.stringify(events));
+  } catch (_) {}
+}
+
+// ---------------------------------------------------------------------------
 // Extraction de texte — déroule les wrappers WhatsApp (éphémère, viewOnce…)
 // ---------------------------------------------------------------------------
 
@@ -296,6 +324,7 @@ async function connectInstance(instance) {
         const dataUrl = await QRCode.toDataURL(qr);
         fs.writeFileSync(qrFilePath(id), dataUrl);
         writeStatus(id, 'qr_pending');
+        writeEvent(id, 'sys', 'QR code prêt — en attente du scan');
         logMsg('info', '[' + id + '] QR code prêt — scanner avec WhatsApp');
       } catch (e) {
         logMsg('error', '[' + id + '] Erreur QR : ' + e.message);
@@ -308,6 +337,7 @@ async function connectInstance(instance) {
       if (fs.existsSync(qf)) { fs.unlinkSync(qf); }
       // Mémorise la date de connexion (exposée via getStatus pour cmd info connected_since)
       try { fs.writeFileSync(connectedSinceFilePath(id), new Date().toISOString()); } catch (_) {}
+      writeEvent(id, 'sys', '✓ Connecté à WhatsApp');
       logMsg('info', '[' + id + '] ✓ Connecté à WhatsApp');
 
       // Rechercher le groupe canal — retardé de 2 s pour laisser à Baileys
@@ -352,6 +382,7 @@ async function connectInstance(instance) {
 
       if (loggedOut) {
         logMsg('warning', '[' + id + '] Déconnecté (logout) — session supprimée');
+        writeEvent(id, 'err', 'Session expirée (logout) — rescannez le QR code');
         writeStatus(id, 'logged_out');
         const dir = authDir(id);
         for (const f of fs.readdirSync(dir)) {
@@ -362,6 +393,7 @@ async function connectInstance(instance) {
         delete groupJids[id];
       } else {
         logMsg('info', '[' + id + '] Connexion perdue (code ' + code + ') — reconnexion dans 5s');
+        writeEvent(id, 'warn', 'Connexion perdue (code ' + code + ') — reconnexion dans 5s');
         writeStatus(id, 'reconnecting');
         if (running) { setTimeout(() => connectInstance(instance), 5000); }
       }
@@ -527,6 +559,7 @@ async function connectInstance(instance) {
       lastIncomingMsg[id] = msg;
 
       logMsg('info', '[' + id + '] Message de ' + sender + ' (groupe) : ' + text.substring(0, 60));
+      writeEvent(id, 'in', sender + ' : ' + text.substring(0, 120));
       await sendCallback(id, {
         message:     text,
         sender,
@@ -892,6 +925,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       );
       const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
       recordSent(id, sent);
+      writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120));
       return { sent: true };
     }
 

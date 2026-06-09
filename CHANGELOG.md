@@ -7,6 +7,59 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+---
+
+## [0.6.3] — 2026-06-03
+
+### Fixed
+
+- **Backup Jeedom — exclusions affinées** : seuls les credentials Baileys
+  (`creds.json`, `pre-key-*`, `session-*`…) sont conservés dans le backup.
+  Les données volatiles sont désormais explicitement exclues :
+  - `history.json` — historique widget (reconstruit à l'usage)
+  - `events.json` — tampon debug live (données temps réel)
+  - `status.txt` — statut courant daemon
+  - `qr.txt` — QR code temporaire (expire en 30 s)
+  - `group_jid.txt` — JID du groupe en cache (retrouvé à la reconnexion)
+  - `data/` — statistiques 30j (reconstruites à l'usage)
+
+  **Règle** : un backup JeeWhatsApp contient uniquement ce qui est nécessaire
+  à la restauration de la session WhatsApp sans re-scanner le QR code.
+
+---
+
+## [0.6.2] — 2026-06-03
+
+### Fixed
+
+- **Taille des backups Jeedom** — ajout de `backupExclude()` pour exclure les
+  ressources lourdes installées par `install_dep.sh` et inutiles dans un backup
+  (re-téléchargées automatiquement à la prochaine installation des dépendances) :
+  - `resources/piper/piper` — binaire Piper TTS (~50 Mo)
+  - `resources/piper/voices` — modèles vocaux Piper (~100 Mo)
+  - `resources/piper/piper.tar.gz` — archive d'installation Piper
+  - `resources/stt/model-fr` — modèle Vosk STT français (~40 Mo)
+  - `resources/jeewhatsappd/node_modules` — dépendances Node.js
+  
+  Suggestion de la communauté : merci à **ddelec24** 🙏
+
+---
+
+## [0.6.1] — 2026-06-03
+
+### Added
+
+- **Commandes info cachées — statistiques 30 jours** (#30) : deux nouvelles commandes
+  `info/numeric`, non visibles sur le dashboard mais utilisables dans les scénarios :
+  - `stats_sent_30d` — nombre de messages envoyés sur les 30 derniers jours (historisé)
+  - `stats_received_30d` — nombre de messages reçus sur les 30 derniers jours (historisé)
+  Les valeurs sont mises à jour automatiquement à chaque envoi ou réception via `appendStats()`.
+  Les commandes sont créées idempotentiellement dans `postSave()`.
+
+---
+
+## [0.6.0] — 2026-06-03
+
 ### Added
 
 - **Bouton « Déconnexion »** (onglet Équipement → Connexion) — visible uniquement quand un

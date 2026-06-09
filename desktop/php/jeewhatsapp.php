@@ -69,21 +69,37 @@ sendVarToJS('eqType', 'jeewhatsapp');
 		<!-- Modal Don -->
 		<div class="modal fade" id="modal_donJeeWhatsApp" tabindex="-1" role="dialog">
 			<div class="modal-dialog" role="document">
-				<div class="modal-content">
-					<div class="modal-header" style="background-color:#25D366;border-radius:5px 5px 0 0;">
-						<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;"><span>&times;</span></button>
-						<h4 class="modal-title" style="color:#fff;"><i class="fas fa-mug-hot"></i> {{Soutenir JeeWhatsApp}}</h4>
+				<div class="modal-content" style="border-radius:10px;overflow:hidden;">
+					<div class="modal-header" style="background:linear-gradient(135deg,#075e54,#128c7e);border:none;padding:18px 20px;">
+						<button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:1;font-size:1.4em;margin-top:-2px;"><span>&times;</span></button>
+						<h4 class="modal-title" style="color:#fff;font-size:1.1em;">
+							<i class="fas fa-heart" style="color:#ff6b6b;margin-right:7px;"></i> {{Soutenir JeeWhatsApp}}
+						</h4>
 					</div>
-					<div class="modal-body" style="text-align:center;">
-						<p style="font-size:1.1em;">{{Ce plugin est gratuit et open-source.}}<br>
-						{{Si vous l'appréciez, offrez moi un café !}}</p>
-						<hr>
-						<a href="https://ko-fi.com/aldarande" target="_blank" class="btn btn-warning btn-lg" style="margin:8px;">
-							<i class="fas fa-coffee"></i> Ko-fi
-						</a>
-						<a href="https://github.com/sponsors/Aldarande" target="_blank" class="btn btn-default btn-lg" style="margin:8px;">
-							<i class="fab fa-github"></i> {{GitHub Sponsors}}
-						</a>
+					<div class="modal-body" style="padding:22px 24px;">
+						<p style="font-size:1em;color:#333;margin-bottom:6px;">
+							{{JeeWhatsApp est un plugin}} <strong>{{gratuit et open-source}}</strong> {{(AGPL v3), développé et maintenu bénévolement.}}
+						</p>
+						<p style="font-size:0.9em;color:#666;margin-bottom:18px;">
+							{{Un don, même modeste, aide à financer le temps de développement, les tests et les mises à jour. Merci !}}
+						</p>
+						<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:18px;">
+							<a href="https://ko-fi.com/aldarande" target="_blank" rel="noopener"
+							   class="btn btn-lg" style="background:#FF5E5B;color:#fff;border:none;min-width:140px;">
+								<i class="fas fa-mug-hot"></i> Ko-fi
+							</a>
+							<a href="https://github.com/sponsors/Aldarande" target="_blank" rel="noopener"
+							   class="btn btn-lg" style="background:#24292e;color:#fff;border:none;min-width:140px;">
+								<i class="fab fa-github"></i> Sponsors
+							</a>
+							<a href="https://liberapay.com/Aldarande/donate" target="_blank" rel="noopener"
+							   class="btn btn-lg" style="background:#F6C915;color:#111;border:none;min-width:140px;">
+								<i class="fas fa-hand-holding-heart"></i> Liberapay
+							</a>
+						</div>
+						<p style="font-size:0.82em;color:#aaa;text-align:center;margin:0;">
+							{{Ko-fi : don ponctuel &bull; Sponsors : mensuel &bull; Liberapay : récurrent et anonyme possible}}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -114,6 +130,33 @@ sendVarToJS('eqType', 'jeewhatsapp');
 				<?php endforeach; ?>
 			</div>
 		<?php endif; ?>
+		<!-- Compatibilité Notification Manager -->
+		<?php
+		$nmInstalled = file_exists(dirname(dirname(__FILE__)) . '/../notificationmanager/plugin_info/info.json')
+		           ||  file_exists(dirname(dirname(__FILE__)) . '/../jeeNotificationManager/plugin_info/info.json');
+		?>
+		<div style="margin:12px 4px 0;padding:10px 14px;border-radius:8px;
+		            background:<?php echo $nmInstalled ? '#e8f8f0' : '#f5f5f5'; ?>;
+		            border:1px solid <?php echo $nmInstalled ? '#25D366' : '#ddd'; ?>;
+		            display:flex;align-items:center;gap:10px;font-size:0.88em;">
+			<i class="fas fa-bell" style="font-size:1.3em;color:<?php echo $nmInstalled ? '#25D366' : '#aaa'; ?>;flex-shrink:0;"></i>
+			<div>
+				<?php if ($nmInstalled) : ?>
+					<strong>{{Notification Manager détecté}}</strong> —
+					{{JeeWhatsApp est compatible. Sélectionnez la commande}}
+					<code>{{Envoyer un message}}</code>
+					{{comme destination dans votre profil Notification Manager.}}
+					{{Le champ « Titre » = numéro destinataire (laisser vide = groupe canal).}}
+				<?php else : ?>
+					<strong>{{Compatible Notification Manager}}</strong> —
+					{{La commande}} <code>{{Envoyer un message}}</code>
+					{{(type action/message) est directement utilisable comme destination dans le plugin}}
+					<a href="https://community.jeedom.com/t/notification-manager/67090" target="_blank">{{Notification Manager}}</a>.
+					{{Champ Titre = numéro destinataire, champ Message = texte de la notification.}}
+				<?php endif; ?>
+			</div>
+		</div>
+
 	</div><!-- /.eqLogicThumbnailDisplay -->
 
 
@@ -160,6 +203,16 @@ sendVarToJS('eqType', 'jeewhatsapp');
 			<li role="presentation">
 				<a href="#templatestab" role="tab" data-toggle="tab">
 					<i class="fas fa-bookmark"></i> {{Templates}}
+				</a>
+			</li>
+			<li role="presentation">
+				<a href="#statstab" role="tab" data-toggle="tab">
+					<i class="fas fa-chart-bar"></i> {{Statistiques}}
+				</a>
+			</li>
+			<li role="presentation">
+				<a href="#livetab" role="tab" data-toggle="tab">
+					<i class="fas fa-satellite-dish"></i> {{Live}}
 				</a>
 			</li>
 		</ul>
@@ -774,17 +827,310 @@ sendVarToJS('eqType', 'jeewhatsapp');
 				</div>
 			</div><!-- /#templatestab -->
 
+		<!-- ── Onglet Statistiques (#30) ────────────────────────────────────── -->
+		<div role="tabpanel" class="tab-pane" id="statstab">
+			<div style="max-width:800px;margin:24px auto 32px;">
+
+				<!-- Cards totaux -->
+				<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+					<div class="jwa-stat-card" style="flex:1;min-width:140px;background:#e8f5e9;border:1px solid #a5d6a7;">
+						<div style="font-size:2em;font-weight:900;color:#2e7d32;" id="stat_total_sent">—</div>
+						<div style="font-size:0.82em;color:#388e3c;margin-top:2px;"><i class="fas fa-paper-plane"></i> {{Messages envoyés (30j)}}</div>
+					</div>
+					<div class="jwa-stat-card" style="flex:1;min-width:140px;background:#e3f2fd;border:1px solid #90caf9;">
+						<div style="font-size:2em;font-weight:900;color:#1565c0;" id="stat_total_received">—</div>
+						<div style="font-size:0.82em;color:#1976d2;margin-top:2px;"><i class="fas fa-inbox"></i> {{Messages reçus (30j)}}</div>
+					</div>
+					<div class="jwa-stat-card" style="flex:1;min-width:140px;background:#f3e5f5;border:1px solid #ce93d8;">
+						<div style="font-size:2em;font-weight:900;color:#6a1b9a;" id="stat_total_all">—</div>
+						<div style="font-size:0.82em;color:#7b1fa2;margin-top:2px;"><i class="fas fa-comments"></i> {{Total (30j)}}</div>
+					</div>
+				</div>
+
+				<!-- Graphique barres 30 jours -->
+				<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:18px 20px;margin-bottom:20px;">
+					<div style="font-weight:700;font-size:0.95em;margin-bottom:14px;color:#333;">
+						<i class="fas fa-chart-bar" style="color:#25D366;margin-right:6px;"></i>
+						{{Activité sur 30 jours}}
+					</div>
+					<div id="stat_chart" style="display:flex;align-items:flex-end;gap:3px;height:100px;overflow-x:auto;padding-bottom:4px;">
+						<div class="text-muted" style="font-size:0.85em;margin:auto;">{{Chargement…}}</div>
+					</div>
+					<div style="display:flex;gap:16px;margin-top:8px;font-size:0.78em;color:#888;">
+						<span><span style="display:inline-block;width:10px;height:10px;background:#25D366;border-radius:2px;margin-right:4px;"></span>{{Envoyés}}</span>
+						<span><span style="display:inline-block;width:10px;height:10px;background:#1976d2;border-radius:2px;margin-right:4px;"></span>{{Reçus}}</span>
+					</div>
+				</div>
+
+				<!-- Top contacts -->
+				<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:18px 20px;">
+					<div style="font-weight:700;font-size:0.95em;margin-bottom:12px;color:#333;">
+						<i class="fas fa-users" style="color:#25D366;margin-right:6px;"></i>
+						{{Top expéditeurs}}
+					</div>
+					<div id="stat_contacts">
+						<p class="text-muted" style="font-size:0.85em;">{{Chargement…}}</p>
+					</div>
+				</div>
+
+				<div style="text-align:right;margin-top:10px;">
+					<button class="btn btn-default btn-sm" id="btn_refresh_stats">
+						<i class="fas fa-sync-alt"></i> {{Actualiser}}
+					</button>
+				</div>
+
+			</div>
+		</div><!-- /#statstab -->
+
+		<!-- ── Onglet Live (#31) ─────────────────────────────────────────────── -->
+		<div role="tabpanel" class="tab-pane" id="livetab">
+			<div style="max-width:800px;margin:20px auto;">
+
+				<!-- Toolbar -->
+				<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+					<span style="font-weight:700;font-size:0.9em;">
+						<i class="fas fa-satellite-dish" style="color:#25D366;"></i>
+						{{Flux temps réel}}
+					</span>
+					<span id="live_status_badge" class="label label-default" style="font-size:0.78em;">
+						<i class="fas fa-pause"></i> {{En pause}}
+					</span>
+					<div style="margin-left:auto;display:flex;gap:6px;">
+						<button class="btn btn-success btn-sm" id="btn_live_start">
+							<i class="fas fa-play"></i> {{Démarrer}}
+						</button>
+						<button class="btn btn-default btn-sm" id="btn_live_pause" style="display:none;">
+							<i class="fas fa-pause"></i> {{Pause}}
+						</button>
+						<button class="btn btn-default btn-sm" id="btn_live_clear">
+							<i class="fas fa-trash-alt"></i> {{Vider}}
+						</button>
+					</div>
+				</div>
+
+				<!-- Légende -->
+				<div style="display:flex;gap:14px;margin-bottom:8px;font-size:0.78em;color:#666;flex-wrap:wrap;">
+					<span><span style="display:inline-block;width:8px;height:8px;background:#25D366;border-radius:50%;margin-right:4px;"></span>{{Reçu}}</span>
+					<span><span style="display:inline-block;width:8px;height:8px;background:#1976d2;border-radius:50%;margin-right:4px;"></span>{{Envoyé}}</span>
+					<span><span style="display:inline-block;width:8px;height=8px;background:#888;border-radius:50%;margin-right:4px;"></span>{{Système}}</span>
+					<span><span style="display:inline-block;width:8px;height:8px;background:#f57c00;border-radius:50%;margin-right:4px;"></span>{{Avertissement}}</span>
+					<span><span style="display:inline-block;width:8px;height:8px;background:#c62828;border-radius:50%;margin-right:4px;"></span>{{Erreur}}</span>
+				</div>
+
+				<!-- Flux -->
+				<div id="live_feed"
+				     style="background:#1e1e1e;border-radius:8px;padding:12px 16px;
+				            height:380px;overflow-y:auto;font-family:monospace;font-size:0.82em;
+				            line-height:1.6;color:#d4d4d4;">
+					<div class="text-muted" style="color:#666;font-style:italic;">
+						{{Cliquez sur « Démarrer » pour commencer à recevoir les événements en temps réel.}}
+					</div>
+				</div>
+
+				<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+					<small class="text-muted">{{Rafraîchissement automatique toutes les 2 secondes — 100 derniers événements conservés}}</small>
+					<span id="live_event_count" style="font-size:0.8em;color:#888;"></span>
+				</div>
+
+			</div>
+		</div><!-- /#livetab -->
+
 		</div><!-- /.tab-content -->
 	</div><!-- /.eqLogic -->
 
 </div><!-- /.row -->
 
+<style>
+.jwa-stat-card {
+  border-radius:10px;padding:14px 18px;
+}
+</style>
+
 <script>
-var _waQRInterval = null;
+var _waQRInterval  = null;
+var _liveInterval  = null;
+var _liveLastTs    = 0;
+var _liveRunning   = false;
+var _liveCount     = 0;
 
 // ── Bouton don ──────────────────────────────────────────────────────────────
 $('#bt_donJeeWhatsApp').on('click', function () {
   $('#modal_donJeeWhatsApp').modal('show');
+});
+
+// ── Statistiques (#30) ──────────────────────────────────────────────────────
+function loadStats() {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  if (!eqLogic_id) { return; }
+  $.ajax({
+    type: 'POST',
+    url:  'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data: { action: 'getStats', eqLogic_id: eqLogic_id },
+    dataType: 'json',
+    success: function (data) {
+      if (data.state !== 'ok') { return; }
+      var r = data.result;
+      $('#stat_total_sent').text(r.total_sent || 0);
+      $('#stat_total_received').text(r.total_received || 0);
+      $('#stat_total_all').text((r.total_sent || 0) + (r.total_received || 0));
+
+      // Graphique barres CSS
+      var days = r.days || [];
+      var maxVal = 1;
+      days.forEach(function (d) { maxVal = Math.max(maxVal, (d.s || 0) + (d.r || 0)); });
+      var html = '';
+      days.forEach(function (d) {
+        var sent = d.s || 0;
+        var recv = d.r || 0;
+        var total = sent + recv;
+        var hS = Math.round((sent / maxVal) * 90);
+        var hR = Math.round((recv / maxVal) * 90);
+        var label = d.d ? d.d.substring(5) : ''; // MM-DD
+        html += '<div title="' + d.d + ' — ' + sent + ' envoyés, ' + recv + ' reçus"'
+              + '     style="display:flex;flex-direction:column;align-items:center;gap:1px;min-width:18px;flex:1;cursor:default;">'
+              + (sent > 0 ? '<div style="background:#25D366;width:100%;height:' + hS + 'px;border-radius:2px 2px 0 0;"></div>' : '<div style="height:' + hS + 'px;"></div>')
+              + (recv > 0 ? '<div style="background:#1976d2;width:100%;height:' + hR + 'px;border-radius:2px 2px 0 0;"></div>' : '<div style="height:' + hR + 'px;"></div>')
+              + '<div style="font-size:8px;color:#888;transform:rotate(-45deg);transform-origin:top right;margin-top:2px;white-space:nowrap;">'
+              + (total > 0 ? label : '') + '</div>'
+              + '</div>';
+      });
+      $('#stat_chart').html(html || '<div class="text-muted" style="font-size:0.85em;margin:auto;">{{Aucune donnée}}</div>');
+
+      // Top contacts
+      var contacts = r.top_contacts || {};
+      var cKeys = Object.keys(contacts);
+      if (cKeys.length === 0) {
+        $('#stat_contacts').html('<p class="text-muted" style="font-size:0.85em;">{{Aucun message reçu}}</p>');
+      } else {
+        var maxC = 0;
+        cKeys.forEach(function (k) { maxC = Math.max(maxC, contacts[k].n || 0); });
+        var cHtml = '<table class="table" style="margin:0;"><tbody>';
+        cKeys.forEach(function (k) {
+          var label = contacts[k].l || k;
+          var cnt   = contacts[k].n || 0;
+          var pct   = Math.round((cnt / maxC) * 100);
+          cHtml += '<tr>'
+                 + '<td style="width:40%;padding:6px 8px;font-size:0.88em;">' + $('<div>').text(label).html() + '</td>'
+                 + '<td style="padding:6px 8px;vertical-align:middle;">'
+                 + '<div style="background:#e0e0e0;border-radius:4px;height:10px;"><div style="background:#25D366;width:' + pct + '%;height:10px;border-radius:4px;"></div></div>'
+                 + '</td>'
+                 + '<td style="width:40px;padding:6px 8px;font-size:0.88em;text-align:right;font-weight:700;">' + cnt + '</td>'
+                 + '</tr>';
+        });
+        cHtml += '</tbody></table>';
+        $('#stat_contacts').html(cHtml);
+      }
+    }
+  });
+}
+
+// Charger les stats quand l'onglet Stats devient visible
+$('a[href="#statstab"]').on('shown.bs.tab', function () { loadStats(); });
+$('#btn_refresh_stats').on('click', function () { loadStats(); });
+
+// ── Mode debug live (#31) ────────────────────────────────────────────────────
+var liveTypeColors = {
+  'in':   '#4caf50',
+  'out':  '#42a5f5',
+  'sys':  '#9e9e9e',
+  'warn': '#ff9800',
+  'err':  '#ef5350',
+};
+var liveTypeIcons = {
+  'in':   'fa-arrow-down',
+  'out':  'fa-arrow-up',
+  'sys':  'fa-info-circle',
+  'warn': 'fa-exclamation-triangle',
+  'err':  'fa-times-circle',
+};
+
+function formatLiveTs(isoTs) {
+  try {
+    var d = new Date(isoTs);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + ':' + ('0' + d.getSeconds()).slice(-2);
+  } catch (e) { return isoTs || ''; }
+}
+
+function appendLiveEvents(events) {
+  var $feed   = $('#live_feed');
+  var atBottom = ($feed[0].scrollHeight - $feed.scrollTop() - $feed.outerHeight()) < 40;
+  // Supprimer le message "en attente"
+  $feed.find('.live-hint').remove();
+
+  events.forEach(function (ev) {
+    var ts   = new Date(ev.ts).getTime();
+    if (ts <= _liveLastTs) { return; }
+    _liveLastTs = ts;
+    _liveCount++;
+
+    var col  = liveTypeColors[ev.type] || '#9e9e9e';
+    var ico  = liveTypeIcons[ev.type]  || 'fa-circle';
+    var time = formatLiveTs(ev.ts);
+    var text = String(ev.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    $feed.append(
+      '<div style="margin-bottom:3px;">'
+      + '<span style="color:#888;font-size:0.85em;margin-right:8px;">' + time + '</span>'
+      + '<i class="fas ' + ico + '" style="color:' + col + ';margin-right:6px;font-size:0.78em;"></i>'
+      + '<span style="color:' + col + ';">' + text + '</span>'
+      + '</div>'
+    );
+  });
+
+  if (atBottom) { $feed[0].scrollTop = $feed[0].scrollHeight; }
+  if (_liveCount > 0) { $('#live_event_count').text(_liveCount + ' {{événement(s)}}'); }
+}
+
+function fetchLiveEvents() {
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  if (!eqLogic_id || !_liveRunning) { return; }
+  $.ajax({
+    type: 'POST',
+    url:  'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+    data: { action: 'getLiveEvents', eqLogic_id: eqLogic_id, since: _liveLastTs },
+    dataType: 'json',
+    success: function (data) {
+      if (data.state === 'ok' && Array.isArray(data.result)) {
+        appendLiveEvents(data.result);
+      }
+    }
+  });
+}
+
+$('#btn_live_start').on('click', function () {
+  _liveRunning = true;
+  $('#btn_live_start').hide();
+  $('#btn_live_pause').show();
+  $('#live_status_badge').removeClass('label-default').addClass('label-success')
+    .html('<i class="fas fa-satellite-dish fa-pulse"></i> {{En direct}}');
+  // Charger tous les événements existants
+  _liveLastTs = 0;
+  fetchLiveEvents();
+  if (_liveInterval) { clearInterval(_liveInterval); }
+  _liveInterval = setInterval(fetchLiveEvents, 2000);
+});
+
+$('#btn_live_pause').on('click', function () {
+  _liveRunning = false;
+  if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+  $('#btn_live_start').show();
+  $('#btn_live_pause').hide();
+  $('#live_status_badge').removeClass('label-success').addClass('label-default')
+    .html('<i class="fas fa-pause"></i> {{En pause}}');
+});
+
+$('#btn_live_clear').on('click', function () {
+  $('#live_feed').html('<div class="live-hint" style="color:#666;font-style:italic;">{{Flux vidé — cliquez sur « Démarrer » pour continuer.}}</div>');
+  _liveLastTs = 0;
+  _liveCount  = 0;
+  $('#live_event_count').text('');
+});
+
+// Arrêter le live quand l'équipement se ferme
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden && _liveRunning) {
+    $('#btn_live_pause').trigger('click');
+  }
 });
 
 // ── Aperçu templates (#29) ──────────────────────────────────────────────────
@@ -1157,9 +1503,17 @@ $('#bk_backup').on('click', function () {
     })
     .then(function (blob) {
       var url = URL.createObjectURL(blob);
+      var now = new Date();
+      var ts = now.getFullYear()
+        + ('0' + (now.getMonth() + 1)).slice(-2)
+        + ('0' + now.getDate()).slice(-2)
+        + '-' + ('0' + now.getHours()).slice(-2)
+        + ('0' + now.getMinutes()).slice(-2);
       var a = document.createElement('a');
-      a.href = url; a.download = 'jeewhatsapp-session-' + eqLogic_id + '.jwab';
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      a.href = url; a.download = 'jeewhatsapp-session-' + eqLogic_id + '-' + ts + '.jwab';
+      document.body.appendChild(a);
+      a.dispatchEvent(new MouseEvent('click', { bubbles: false, cancelable: true }));
+      a.remove(); URL.revokeObjectURL(url);
       $btn.prop('disabled', false);
       $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
         .append(' {{Sauvegarde téléchargée — conservez le fichier et la phrase de passe en lieu sûr}}')
@@ -1191,7 +1545,7 @@ $('#bk_restore').on('click', function () {
       $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}');
       if (data.state === 'ok') {
         $result.empty().append($('<i>').addClass('fas fa-check-circle').css('color', '#25D366'))
-          .append(' {{Session restaurée — démon redémarré. Vérifiez le statut de connexion.}}')
+          .append(' {{Session restaurée — relancez le démon depuis Plugins → Gestion des démons, puis vérifiez le statut de connexion.}}')
           .css('color', '#25D366').show();
       } else {
         $result.text('{{Erreur : }}' + (data.result || data.error || '?')).css('color', 'red').show();
