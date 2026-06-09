@@ -69,6 +69,15 @@ class jeewhatsapp extends eqLogic {
 
       // ── Statistiques (data/) ──────────────────────────────────────────────
       'data/',           // stats_sent_30d / stats_received_30d — reconstruites
+
+      // ── Sauvegardes de session pré-restauration ───────────────────────────
+      // auth/{id}.bak_YYYYmmddHHMMSS : copie de l'ancienne session faite par
+      // restoreSession() avant écrasement (rollback LOCAL uniquement). La session
+      // active est déjà dans le backup — inutile d'y dupliquer d'anciens
+      // credentials WhatsApp. Le chemin est complet et contigu : GNU tar exclut
+      // alors bien le dossier daté et son contenu (motif vérifié sur tar 1.34).
+      // Complément à jeewhatsapp::pruneSessionBackups() qui borne leur nombre.
+      'resources/jeewhatsappd/auth/*.bak_*',
     ];
   }
 
@@ -1023,6 +1032,22 @@ class jeewhatsapp extends eqLogic {
   // Cron daily : supprime les médias entrants > 30 jours dans data/jeewhatsapp/incoming/
   // Évite l'accumulation infinie. Le seuil 30j est en dur (modifiable plus tard).
   public static function cronCleanupIncoming() {
+    // Filet de sécurité : purge les anciennes sauvegardes de session
+    // auth/{id}.bak_* même pour les instances jamais re-restaurées et les
+    // backups orphelins d'équipements supprimés (que restoreSession() ne
+    // toucherait plus). Placé AVANT le return anticipé ci-dessous.
+    try {
+      $purgedBak = self::pruneSessionBackups();
+      if ($purgedBak > 0) {
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::cronCleanupIncoming() l.' . __LINE__
+          . ' — ' . $purgedBak . ' ancienne(s) sauvegarde(s) de session purgée(s)');
+      }
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::cronCleanupIncoming() l.' . __LINE__ . ' — purge backups : ' . $e->getMessage());
+    }
+
     $base = __DIR__ . '/../../../../data/jeewhatsapp/incoming';
     if (!is_dir($base)) { return; }
     $maxAge  = 30 * 86400;
@@ -1275,8 +1300,93 @@ class jeewhatsapp extends eqLogic {
 
   const BACKUP_KDF_ITERATIONS = 200000;
 
+  // Nombre maximum de sauvegardes de session `{id}.bak_*` conservées par
+  // instance (la plus récente d'abord). Les .bak_ sont créés par restoreSession()
+  // avant chaque écrasement ; sans purge ils s'accumulent indéfiniment dans
+  // resources/jeewhatsappd/auth/ et gonflent les sauvegardes Jeedom (auth/ n'en
+  // est pas exclu) tout en y laissant traîner des credentials WhatsApp.
+  const MAX_SESSION_BACKUPS = 1;
+
+  // Dossier parent des sessions Baileys (un sous-dossier par équipement + les
+  // backups `{id}.bak_*`). Source unique du chemin auth/ (statique pour être
+  // réutilisable depuis les crons et la purge sans instance).
+  private static function authBaseDir() {
+    return __DIR__ . '/../../resources/jeewhatsappd/auth';
+  }
+
   private function authDir() {
-    return __DIR__ . '/../../resources/jeewhatsappd/auth/' . $this->getId();
+    return self::authBaseDir() . '/' . $this->getId();
+  }
+
+  // -------------------------------------------------------------------------
+  // Purge des anciennes sauvegardes de session `{id}.bak_YYYYmmddHHMMSS`.
+  // Ne conserve que les $_keep plus récentes par instance (la plus récente
+  // d'abord). Appelée après chaque restauration réussie et par le cron daily.
+  //
+  // $_id  : limite la purge à cette instance (null = balayage de toutes).
+  // $_keep: nombre de backups conservés par instance (défaut MAX_SESSION_BACKUPS).
+  // Retourne le nombre de dossiers supprimés.
+  // -------------------------------------------------------------------------
+
+  public static function pruneSessionBackups($_id = null, $_keep = self::MAX_SESSION_BACKUPS) {
+    return self::pruneSessionBackupsIn(self::authBaseDir(), $_id, $_keep);
+  }
+
+  // Cœur testable de la purge — opère sur un dossier parent arbitraire, sans
+  // dépendance Jeedom (pas de log::, pas de config::), pour pouvoir être validé
+  // en isolation. Ne PAS appeler directement : passer par pruneSessionBackups().
+  private static function pruneSessionBackupsIn($_parent, $_id = null, $_keep = self::MAX_SESSION_BACKUPS) {
+    if (!is_dir($_parent)) { return 0; }
+    $keep = max(0, (int) $_keep);
+
+    // Filtre STRICT : `{id}.bak_` suivi d'EXACTEMENT 14 chiffres (date YmdHis).
+    // - les sessions actives (`{id}` numérique seul, sans suffixe) ne matchent jamais ;
+    // - un id différent dont le préfixe coïnciderait (5 vs 55) est exclu car l'id
+    //   est ancré (^...) et suivi obligatoirement de `.bak_` ;
+    // - tout nom non conforme (`{id}.bak_notadate`, `{id}.backup_…`) est ignoré.
+    // L'id est capturé en groupe 1 pour regrouper les backups par instance.
+    $idPat = ($_id === null) ? '(\d+)' : '(' . preg_quote((string) $_id, '#') . ')';
+    $regex = '#^' . $idPat . '\.bak_(\d{14})$#';
+
+    $byId = [];
+    foreach (scandir($_parent) as $entry) {
+      if ($entry === '.' || $entry === '..') { continue; }
+      if (!is_dir($_parent . '/' . $entry)) { continue; }
+      if (!preg_match($regex, $entry, $m)) { continue; }
+      $byId[$m[1]][] = $entry;
+    }
+
+    $deleted = 0;
+    foreach ($byId as $dirs) {
+      if (count($dirs) <= $keep) { continue; }
+      // Suffixe YmdHis lexicographiquement ordonnable → tri décroissant =
+      // du plus récent au plus ancien. On garde les $keep premiers.
+      rsort($dirs);
+      foreach (array_slice($dirs, $keep) as $old) {
+        if (self::rrmdir($_parent . '/' . $old)) { $deleted++; }
+      }
+    }
+    return $deleted;
+  }
+
+  // Suppression récursive best-effort d'un dossier et de son contenu.
+  // Retourne true si le dossier n'existe plus à la fin. Ne suit pas les liens
+  // symboliques (les supprime sans descendre dedans).
+  private static function rrmdir($_dir) {
+    if (is_link($_dir)) { return @unlink($_dir); }
+    if (!is_dir($_dir)) { return !file_exists($_dir); }
+    $items = @scandir($_dir);
+    if ($items === false) { return false; }
+    foreach ($items as $item) {
+      if ($item === '.' || $item === '..') { continue; }
+      $path = $_dir . '/' . $item;
+      if (is_dir($path) && !is_link($path)) {
+        self::rrmdir($path);
+      } else {
+        @unlink($path);
+      }
+    }
+    return @rmdir($_dir);
   }
 
   public function backupSession($_passphrase) {
@@ -1410,6 +1520,22 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Archive de restauration illisible : ', __FILE__) . $e->getMessage());
     }
     @unlink($tarPath);
+
+    // Purge des anciennes sauvegardes de session : on ne conserve que la plus
+    // récente (celle créée juste au-dessus, état pré-restauration utile pour un
+    // rollback). Best-effort — un échec de purge ne doit pas faire échouer une
+    // restauration par ailleurs réussie.
+    try {
+      $purged = self::pruneSessionBackups($this->getId());
+      if ($purged > 0) {
+        log::add('jeewhatsapp', 'info',
+          'jeewhatsapp.class.php::restoreSession() l.' . __LINE__
+          . ' — ' . $purged . ' ancienne(s) sauvegarde(s) de session purgée(s) pour l\'instance ' . $this->getId());
+      }
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::restoreSession() l.' . __LINE__ . ' — purge backups : ' . $e->getMessage());
+    }
 
     // Arrête le daemon pour qu'il recharge les credentials restaurés au prochain démarrage.
     // On ne redémarre PAS ici : deamon_start() bloque ~60 s en AJAX (timeout HTTP)
