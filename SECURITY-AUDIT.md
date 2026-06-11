@@ -289,30 +289,25 @@ Ce finding complète F-016 (caret pinning) : l'un sans l'autre ne suffit pas.
 |---------|--------|--------|
 | Départ | — | 100 |
 | Bonnes pratiques confirmées | — | 0 |
-| MEDIUM × 1 | F-014 (confinement media_path) | −10 |
-| LOW × 3 | F-013 (XSS getHumanName), F-015 (whitelist ajax), F-016 (npm caret) | −6 |
-| INFO × 2 | F-017 (logs PII), F-018 (package-lock) | 0 |
+| ~~MEDIUM × 1~~ | ~~F-014 (confinement media_path)~~ **CORRIGÉ 2026-06-11** | ~~−10~~ 0 |
+| ~~LOW × 3~~ | ~~F-013, F-015, F-016~~ **CORRIGÉS 2026-06-11** | ~~−6~~ 0 |
+| INFO × 2 | F-017 (logs PII), F-018 (package-lock pré-commit) | 0 |
 | Bonus headers sécurité | nosniff, no-store, Content-Type daemon | +5 |
 | Bonus DAEMON_SECRET strict | F-011 confirmé | +5 |
 | Bonus HMAC-like timing-safe | crypto.timingSafeEqual | −5 (déduit bonus précédent : déjà inclus) |
-| **Score final** | | **83/100** |
+| **Score final** | **après corrections F-013/F-014/F-015/F-016** | **99/100** |
 
 ---
 
 ## Recommandations prioritaires
 
-1. **MEDIUM — F-014** : Ajouter une liste de répertoires autorisés (`MEDIA_ALLOWED_BASES`)
-   dans `handleAction` du daemon et valider tout `media_path` contre cette liste.
-   Risque résiduel faible (admin-only) mais exfiltration de fichiers sensibles possible.
+1. ~~**MEDIUM — F-014** : Ajouter une liste de répertoires autorisés (`MEDIA_ALLOWED_BASES`)~~ **CORRIGÉ 2026-06-11** — `assertMediaPathAllowed()` dans `sendMedia`, `sendSticker`, `postStatus`, `setGroupIcon`.
 
-2. **LOW — F-013** : Réappliquer `htmlspecialchars()` sur `getHumanName()` ligne 112
-   de `desktop/php/jeewhatsapp.php` (régression détectée).
+2. ~~**LOW — F-013** : Réappliquer `htmlspecialchars()` sur `getHumanName()` ligne 112~~ **CORRIGÉ 2026-06-11**.
 
-3. **LOW — F-016 + F-018** : Versionner `package-lock.json` et passer à `npm ci`
-   dans `install_dep.sh` pour garantir des installations déterministes.
+3. ~~**LOW — F-016 + F-018** : Versionner `package-lock.json` et passer à `npm ci`~~ **CORRIGÉ 2026-06-11** — `package-lock.json` retiré du `.gitignore`, `install_dep.sh` utilise `npm ci` si lock présent.
 
-4. **LOW — F-015** : Compléter la whitelist `ajax::init()` avec les actions
-   `backupSession`, `restoreSession`, `logout` pour la cohérence documentaire.
+4. ~~**LOW — F-015** : Compléter la whitelist `ajax::init()`~~ **CORRIGÉ antérieurement** (`backupSession`, `restoreSession`, `logout` présents).
 
 ---
 
@@ -330,8 +325,8 @@ Ce finding complète F-016 (caret pinning) : l'un sans l'autre ne suffit pas.
 
 ## Bonnes pratiques manquantes
 
-- [ ] Versionner `package-lock.json` et passer à `npm ci` (F-016/F-018)
-- [ ] Ajouter une liste blanche de répertoires pour `media_path` dans le daemon (F-014)
+- [x] Versionner `package-lock.json` et passer à `npm ci` (F-016/F-018) — **CORRIGÉ 2026-06-11** (générer le lock après premier `npm install` sur Linux et committer)
+- [x] Ajouter une liste blanche de répertoires pour `media_path` dans le daemon (F-014) — **CORRIGÉ 2026-06-11**
 - [ ] Pseudonymiser les numéros de téléphone dans les logs INFO du daemon (F-017)
 - [ ] Exécuter `npm audit` régulièrement dans `resources/jeewhatsappd/`
 - [ ] Activer Dependabot/Renovate sur le dépôt GitHub

@@ -125,7 +125,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo (int) $eqLogic->getId(); ?>">
 						<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
 						<br>
-						<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
+						<span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
 					</div>
 				<?php endforeach; ?>
 			</div>
@@ -918,13 +918,23 @@ sendVarToJS('eqType', 'jeewhatsapp');
 				</div>
 
 				<!-- Flux -->
-				<div id="live_feed"
-				     style="background:#1e1e1e;border-radius:8px;padding:12px 16px;
-				            height:380px;overflow-y:auto;font-family:monospace;font-size:0.82em;
-				            line-height:1.6;color:#d4d4d4;">
-					<div class="text-muted" style="color:#666;font-style:italic;">
-						{{Cliquez sur « Démarrer » pour commencer à recevoir les événements en temps réel.}}
+				<div style="position:relative;">
+					<div id="live_feed"
+					     style="background:#1e1e1e;border-radius:8px;padding:12px 16px;
+					            height:380px;overflow-y:auto;font-family:monospace;font-size:0.82em;
+					            line-height:1.6;color:#d4d4d4;">
+						<div class="text-muted live-hint" style="color:#666;font-style:italic;">
+							{{Cliquez sur « Démarrer » pour commencer à recevoir les événements en temps réel.}}
+						</div>
 					</div>
+					<!-- Scroll widget : apparaît quand l'utilisateur remonte dans le flux -->
+					<button id="live_scroll_bottom" title="{{Aller en bas}}"
+					        style="display:none;position:absolute;bottom:10px;right:18px;
+					               background:#25D366;color:#fff;border:none;border-radius:50%;
+					               width:30px;height:30px;font-size:14px;cursor:pointer;
+					               box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:10;line-height:1;">
+						&#8595;
+					</button>
 				</div>
 
 				<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
@@ -1027,6 +1037,8 @@ function loadStats() {
 // Charger les stats quand l'onglet Stats devient visible
 $('a[href="#statstab"]').on('shown.bs.tab', function () { loadStats(); });
 $('#btn_refresh_stats').on('click', function () { loadStats(); });
+// Pré-charger les stats dès que l'onglet Équipement est visible (évite un écran vide au clic)
+$('a[href="#eqlogictab"]').on('shown.bs.tab', function () { loadStats(); });
 
 // ── Mode debug live (#31) ────────────────────────────────────────────────────
 var liveTypeColors = {
@@ -1052,32 +1064,35 @@ function formatLiveTs(isoTs) {
 }
 
 function appendLiveEvents(events) {
-  var $feed   = $('#live_feed');
+  var $feed    = $('#live_feed');
   var atBottom = ($feed[0].scrollHeight - $feed.scrollTop() - $feed.outerHeight()) < 40;
-  // Supprimer le message "en attente"
   $feed.find('.live-hint').remove();
 
+  // Anti-clignotement : construire le HTML en une seule passe et injecter d'un coup
+  var html = '';
   events.forEach(function (ev) {
-    var ts   = new Date(ev.ts).getTime();
+    var ts = new Date(ev.ts).getTime();
     if (ts <= _liveLastTs) { return; }
     _liveLastTs = ts;
     _liveCount++;
-
     var col  = liveTypeColors[ev.type] || '#9e9e9e';
     var ico  = liveTypeIcons[ev.type]  || 'fa-circle';
     var time = formatLiveTs(ev.ts);
     var text = String(ev.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-    $feed.append(
-      '<div style="margin-bottom:3px;">'
-      + '<span style="color:#888;font-size:0.85em;margin-right:8px;">' + time + '</span>'
-      + '<i class="fas ' + ico + '" style="color:' + col + ';margin-right:6px;font-size:0.78em;"></i>'
-      + '<span style="color:' + col + ';">' + text + '</span>'
-      + '</div>'
-    );
+    html += '<div style="margin-bottom:3px;">'
+          + '<span style="color:#888;font-size:0.85em;margin-right:8px;">' + time + '</span>'
+          + '<i class="fas ' + ico + '" style="color:' + col + ';margin-right:6px;font-size:0.78em;"></i>'
+          + '<span style="color:' + col + ';">' + text + '</span>'
+          + '</div>';
   });
+  if (html) { $feed.append(html); }
 
-  if (atBottom) { $feed[0].scrollTop = $feed[0].scrollHeight; }
+  if (atBottom) {
+    $feed[0].scrollTop = $feed[0].scrollHeight;
+    $('#live_scroll_bottom').hide();
+  } else {
+    if ($feed.children().length > 0) { $('#live_scroll_bottom').show(); }
+  }
   if (_liveCount > 0) { $('#live_event_count').text(_liveCount + ' {{événement(s)}}'); }
 }
 
@@ -1121,9 +1136,29 @@ $('#btn_live_pause').on('click', function () {
 
 $('#btn_live_clear').on('click', function () {
   $('#live_feed').html('<div class="live-hint" style="color:#666;font-style:italic;">{{Flux vidé — cliquez sur « Démarrer » pour continuer.}}</div>');
+  $('#live_scroll_bottom').hide();
   _liveLastTs = 0;
   _liveCount  = 0;
   $('#live_event_count').text('');
+});
+
+// Scroll widget : affiche/cache le bouton selon la position dans le flux
+$('#live_feed').on('scroll', function () {
+  var $f = $(this);
+  var atBottom = ($f[0].scrollHeight - $f.scrollTop() - $f.outerHeight()) < 40;
+  if (atBottom) { $('#live_scroll_bottom').hide(); }
+  else if ($f.children(':not(.live-hint)').length > 0) { $('#live_scroll_bottom').show(); }
+});
+
+$('#live_scroll_bottom').on('click', function () {
+  var $f = $('#live_feed');
+  $f[0].scrollTop = $f[0].scrollHeight;
+  $(this).hide();
+});
+
+// Auto-start live quand l'onglet Live devient visible
+$('a[href="#livetab"]').on('shown.bs.tab', function () {
+  if (!_liveRunning) { $('#btn_live_start').trigger('click'); }
 });
 
 // Arrêter le live quand l'équipement se ferme

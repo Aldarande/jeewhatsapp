@@ -26,6 +26,23 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// SECURITY (F-014, CWE-73) : liste blanche de répertoires autorisés pour les
+// fichiers médias (sendMedia, sendSticker, postStatus, setGroupIcon).
+// Empêche l'exfiltration de fichiers système arbitraires via media_path.
+const MEDIA_ALLOWED_BASES = [
+  path.resolve(__dirname, '../../../../data/jeewhatsapp'),
+  path.resolve(__dirname, '../../../../tmp/jeewhatsapp'),
+  '/tmp',
+];
+
+function assertMediaPathAllowed(filePath) {
+  const resolved = path.resolve(filePath);
+  for (const base of MEDIA_ALLOWED_BASES) {
+    if (resolved.startsWith(base + path.sep) || resolved === base) { return; }
+  }
+  throw new Error('Chemin de fichier non autorisé (hors des répertoires permis) : ' + filePath);
+}
+
 // ---------------------------------------------------------------------------
 // Arguments CLI
 // ---------------------------------------------------------------------------
@@ -993,6 +1010,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       if (!path.isAbsolute(media_path)) {
         throw new Error('media_path doit être un chemin absolu : ' + media_path);
       }
+      assertMediaPathAllowed(media_path);
       if (!fs.existsSync(media_path)) {
         throw new Error('Fichier introuvable : ' + media_path);
       }
@@ -1053,6 +1071,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         throw new Error('Paramètre media_path obligatoire (chemin absolu .webp/.png/.jpg)');
       }
       if (!path.isAbsolute(media_path)) { throw new Error('media_path doit être un chemin absolu : ' + media_path); }
+      assertMediaPathAllowed(media_path);
       if (!fs.existsSync(media_path)) { throw new Error('Fichier introuvable : ' + media_path); }
       const sStat = fs.statSync(media_path);
       if (!sStat.isFile() || sStat.size === 0) { throw new Error('Fichier invalide/vide : ' + media_path); }
@@ -1251,6 +1270,10 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       }
 
       let content;
+      if (media_path) {
+        if (!path.isAbsolute(media_path)) { throw new Error('media_path doit être un chemin absolu : ' + media_path); }
+        assertMediaPathAllowed(media_path);
+      }
       if (media_path && fs.existsSync(media_path)) {
         content = { image: fs.readFileSync(media_path) };
         if (message && String(message).trim() !== '') { content.caption = message; }
@@ -1337,7 +1360,11 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       if (!String(jid).endsWith('@g.us')) {
         throw new Error('La cible n\'est pas un groupe — l\'icône ne s\'applique qu\'aux groupes');
       }
-      if (!media_path || !fs.existsSync(media_path)) {
+      if (!media_path || !path.isAbsolute(media_path)) {
+        throw new Error('media_path doit être un chemin absolu valide');
+      }
+      assertMediaPathAllowed(media_path);
+      if (!fs.existsSync(media_path)) {
         throw new Error('Image introuvable : ' + media_path);
       }
       let sharp;

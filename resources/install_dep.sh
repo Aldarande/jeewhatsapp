@@ -49,12 +49,22 @@ if ! cd "$DAEMON_DIR"; then
   echo "error" > "$PROGRESS_FILE"
   exit 1
 fi
-# --omit=dev : ignore les devDependencies (build local plus rapide, moins de Mo)
-# --no-audit --no-fund : silencieux et plus rapide en CI/box Jeedom
-if ! npm install --omit=dev --no-audit --no-fund 2>&1; then
-  log "ERREUR : npm install a échoué"
-  echo "error" > "$PROGRESS_FILE"
-  exit 1
+# SECURITY (F-016) : utiliser npm ci si package-lock.json est présent (builds
+# reproductibles, bloque les mises à jour non intentionnelles). Sinon npm install.
+if [ -f "$DAEMON_DIR/package-lock.json" ]; then
+  log "package-lock.json présent — utilisation de npm ci (builds reproductibles)"
+  if ! npm ci --omit=dev --no-audit --no-fund 2>&1; then
+    log "ERREUR : npm ci a échoué"
+    echo "error" > "$PROGRESS_FILE"
+    exit 1
+  fi
+else
+  log "Aucun package-lock.json — utilisation de npm install"
+  if ! npm install --omit=dev --no-audit --no-fund 2>&1; then
+    log "ERREUR : npm install a échoué"
+    echo "error" > "$PROGRESS_FILE"
+    exit 1
+  fi
 fi
 
 echo 90 > "$PROGRESS_FILE"
