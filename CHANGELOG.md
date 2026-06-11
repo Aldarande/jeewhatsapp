@@ -7,6 +7,20 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **Retrait du dossier-artefact `jeewhatsapp/` dupliqué à la racine du plugin** —
+  une vieille copie partielle du plugin (prototype initial) traînait dans
+  `plugins/jeewhatsapp/jeewhatsapp/` : `core/php/callback.php` (version
+  pré-audit : clé API en query string `$_GET['apikey']`, aucun rate-limit,
+  dispatch sur `$_GET['action']` — donc sans les correctifs F-001..F-012),
+  `plugin_info/` et un ancien `resources/jeewhatsappd/jeewhatsappd.js`. Ce
+  dossier était servi par le serveur web à l'URL
+  `plugins/jeewhatsapp/jeewhatsapp/core/php/callback.php` et constituait une
+  surface d'attaque inutile. Jamais suivi par git (artefact local de
+  développement, absent des versions distribuées), il a été supprimé du disque.
+  Le `SECURITY-AUDIT.md` l'excluait déjà du périmètre d'analyse.
+
 ### Fixed
 
 - **Accumulation des sauvegardes de session `auth/{id}.bak_*`** — `restoreSession()`
