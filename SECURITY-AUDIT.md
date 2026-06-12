@@ -66,10 +66,28 @@ revenue sans `htmlspecialchars()` dans un commit ultérieur.
 <span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
 ```
 
-**Code corrigé :**
+**Code initialement « corrigé » (2026-06-11) — RÉGRESSION FONCTIONNELLE :**
 ```php
 <span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
 ```
+
+> **RÉÉVALUATION 2026-06-12 — FAUX POSITIF, correctif annulé.**
+> `eqLogic::getHumanName($_tag, $_prettify)` (core, `eqLogic.class.php` l.1097)
+> **construit du HTML** quand `$_tag`/`$_prettify` valent `true` : badge d'objet
+> coloré (`<span class="label" …>`) + `<br/><strong>` + nom. Ce balisage est
+> destiné à être rendu tel quel — le core Jeedom et tous les plugins l'échogent
+> sans échappement. L'envelopper dans `htmlspecialchars()` affiche les balises
+> en **texte brut** (`&lt;span class="label"&gt;…`), cassant la page du plugin.
+>
+> Le seul fragment réellement contrôlé par l'utilisateur est `getName()` (le nom
+> de l'équipement). Or sa modification exige le rôle **admin** (`isConnect('admin')`
+> en tête de page) : un attaquant capable d'injecter un script y aurait déjà un
+> contrôle total → **auto-XSS, risque négligeable**. L'échappement de la seule
+> sous-chaîne du nom imposerait de reconstruire à la main le HTML du badge
+> (duplication fragile de la logique core), sans bénéfice de sécurité réel.
+>
+> **Décision : rendu brut conservé** (`echo $eqLogic->getHumanName(true, true);`),
+> aligné sur le core. Finding reclassé **FAUX POSITIF / WON'T-FIX**.
 
 ---
 
@@ -295,7 +313,7 @@ Ce finding complète F-016 (caret pinning) : l'un sans l'autre ne suffit pas.
 | Départ | — | 100 |
 | Bonnes pratiques confirmées | — | 0 |
 | ~~MEDIUM × 1~~ | ~~F-014 (confinement media_path)~~ **CORRIGÉ 2026-06-11** | ~~−10~~ 0 |
-| ~~LOW × 3~~ | ~~F-013, F-015, F-016~~ **CORRIGÉS 2026-06-11** | ~~−6~~ 0 |
+| ~~LOW × 3~~ | F-015, F-016 **CORRIGÉS 2026-06-11** ; F-013 **FAUX POSITIF** (réévalué 2026-06-12) | ~~−6~~ 0 |
 | INFO × 2 | F-017 (logs PII), F-018 (package-lock pré-commit) | 0 |
 | Bonus headers sécurité | nosniff, no-store, Content-Type daemon | +5 |
 | Bonus DAEMON_SECRET strict | F-011 confirmé | +5 |
@@ -308,7 +326,7 @@ Ce finding complète F-016 (caret pinning) : l'un sans l'autre ne suffit pas.
 
 1. ~~**MEDIUM — F-014** : Ajouter une liste de répertoires autorisés (`MEDIA_ALLOWED_BASES`)~~ **CORRIGÉ 2026-06-11** — `assertMediaPathAllowed()` dans `sendMedia`, `sendSticker`, `postStatus`, `setGroupIcon`.
 
-2. ~~**LOW — F-013** : Réappliquer `htmlspecialchars()` sur `getHumanName()` ligne 112~~ **CORRIGÉ 2026-06-11**.
+2. ~~**LOW — F-013** : Réappliquer `htmlspecialchars()` sur `getHumanName()` ligne 112~~ **FAUX POSITIF (réévalué 2026-06-12)** — `getHumanName(true, true)` retourne du HTML de confiance (badge d'objet) ; l'échappement cassait l'affichage. Rendu brut rétabli, aligné sur le core. Risque auto-XSS admin-only négligeable.
 
 3. ~~**LOW — F-016 + F-018** : Versionner `package-lock.json` et passer à `npm ci`~~ **CORRIGÉ 2026-06-11** — `package-lock.json` retiré du `.gitignore`, `install_dep.sh` utilise `npm ci` si lock présent.
 

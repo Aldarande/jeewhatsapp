@@ -57,6 +57,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Fixed
 
+- **Affichage des noms d'équipements cassé sur la page du plugin** — le correctif
+  F-013 enveloppait `getHumanName(true, true)` dans `htmlspecialchars()`, or cette
+  méthode retourne du **HTML de confiance** (badge d'objet coloré + `<strong>nom</strong>`)
+  destiné à être rendu tel quel. L'échappement affichait les balises en texte brut
+  (`<span class="label">…</span><br/><strong>…`). Rendu brut rétabli, comme dans le
+  core Jeedom. F-013 était un faux positif : le seul élément contrôlé par l'utilisateur
+  est le nom de l'équipement, défini par l'admin sur une page **admin-only**
+  (auto-XSS négligeable). Voir `SECURITY-AUDIT.md`.
+
 - **Accumulation des sauvegardes de session `auth/{id}.bak_*`** — `restoreSession()`
   renomme l'ancienne session en `{id}.bak_YYYYmmddHHMMSS` avant chaque
   restauration, mais ces dossiers n'étaient jamais supprimés : ils

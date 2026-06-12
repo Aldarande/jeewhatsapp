@@ -125,7 +125,13 @@ sendVarToJS('eqType', 'jeewhatsapp');
 					<div class="eqLogicDisplayCard cursor <?php echo $opacity; ?>" data-eqLogic_id="<?php echo (int) $eqLogic->getId(); ?>">
 						<img src="<?php echo htmlspecialchars($eqLogic->getImage(), ENT_QUOTES, 'UTF-8'); ?>"/>
 						<br>
-						<span class="name"><?php echo htmlspecialchars($eqLogic->getHumanName(true, true), ENT_QUOTES, 'UTF-8'); ?></span>
+						<?php /* getHumanName(true, true) retourne du HTML de confiance (badge d'objet
+						         coloré + <strong>nom</strong>) destiné à être rendu tel quel, comme dans
+						         le core Jeedom. Ne PAS l'envelopper dans htmlspecialchars() : cela
+						         échappe le balisage et affiche les balises en texte brut. Le seul
+						         élément contrôlé par l'utilisateur est le nom de l'équipement, défini
+						         par l'admin sur cette page admin-only (auto-XSS négligeable — cf. F-013). */ ?>
+						<span class="name"><?php echo $eqLogic->getHumanName(true, true); ?></span>
 					</div>
 				<?php endforeach; ?>
 			</div>
