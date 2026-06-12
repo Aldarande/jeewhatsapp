@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>JeeWhatsApp — Documentación</title>
 <style>
+  /* ── Reset & base ─────────────────────────────────────────── */
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -15,7 +16,10 @@
   }
   a { color: #075e54; text-decoration: none; }
   a:hover { text-decoration: underline; }
+
+  /* ── Layout ───────────────────────────────────────────────── */
   .page-wrapper { display: flex; min-height: 100vh; }
+
   nav {
     width: 260px;
     flex-shrink: 0;
@@ -27,7 +31,11 @@
     height: 100vh;
     overflow-y: auto;
   }
-  nav .logo { padding: 0 20px 20px; border-bottom: 1px solid #444; margin-bottom: 16px; }
+  nav .logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #444;
+    margin-bottom: 16px;
+  }
   nav .logo h1 { font-size: 1.3em; font-weight: 900; color: #fff; letter-spacing: 1px; }
   nav .logo .version { font-size: 0.75em; color: #888; margin-top: 2px; }
   nav ul { list-style: none; }
@@ -53,7 +61,10 @@
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  main { flex: 1; padding: 40px 48px; min-width: 0; max-width: 900px; }
+
+  main { flex: 1; padding: 40px 48px; min-width: 0; }
+
+  /* ── Typography ──────────────────────────────────────────── */
   h1 { font-size: 2em; font-weight: 900; color: #2d2d2d; margin-bottom: 8px; }
   h2 {
     font-size: 1.4em; font-weight: 800; color: #2d2d2d;
@@ -63,9 +74,11 @@
   }
   h3 { font-size: 1.1em; font-weight: 700; color: #414141; margin: 28px 0 10px; }
   h4 { font-size: 0.95em; font-weight: 700; color: #555; margin: 20px 0 8px; }
-  p { margin-bottom: 12px; }
+  p  { margin-bottom: 12px; }
   ul, ol { padding-left: 20px; margin-bottom: 12px; }
   li { margin-bottom: 4px; }
+
+  /* ── Page header ─────────────────────────────────────────── */
   .page-header {
     background: linear-gradient(135deg, #075e54 0%, #128c7e 100%);
     color: #fff;
@@ -78,7 +91,7 @@
   }
   .page-header .icon { font-size: 3em; flex-shrink: 0; }
   .page-header h1 { color: #fff; margin: 0 0 4px; font-size: 1.9em; }
-  .page-header p { color: rgba(255,255,255,.85); margin: 0; font-size: 0.95em; }
+  .page-header p  { color: rgba(255,255,255,.85); margin: 0; font-size: 0.95em; }
   .badge {
     display: inline-block;
     padding: 2px 10px;
@@ -90,6 +103,8 @@
     margin-left: 8px;
     vertical-align: middle;
   }
+
+  /* ── Callouts ─────────────────────────────────────────────── */
   .callout {
     padding: 14px 18px;
     border-radius: 8px;
@@ -100,6 +115,9 @@
   .callout.info    { background: #e8f4fd; border-color: #2196f3; color: #1a4a6b; }
   .callout.tip     { background: #e8f8e8; border-color: #4caf50; color: #1a4a1a; }
   .callout.warning { background: #fff8e1; border-color: #ff9800; color: #5a3800; }
+  .callout strong  { display: block; margin-bottom: 4px; }
+
+  /* ── Tables ───────────────────────────────────────────────── */
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
   th {
     background: #2d2d2d;
@@ -108,11 +126,14 @@
     text-align: left;
     font-weight: 700;
     font-size: 0.85em;
+    letter-spacing: 0.3px;
   }
   td { padding: 9px 14px; border-bottom: 1px solid #e8e8e8; vertical-align: top; }
   tr:nth-child(even) td { background: #fafafa; }
   tr:hover td { background: #f0fff4; }
   td code { background: #eef; padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
+
+  /* ── Code ─────────────────────────────────────────────────── */
   code {
     font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
     font-size: 0.88em;
@@ -130,1052 +151,848 @@
     margin: 16px 0;
     font-size: 0.85em;
     line-height: 1.6;
-    white-space: pre;
   }
   pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+  /* ── Steps ────────────────────────────────────────────────── */
+  .steps { list-style: none; margin: 16px 0; padding: 0; }
+  .steps li { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
+  .step-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: #075e54;
+    color: #fff;
+    font-weight: 900;
+    font-size: 0.85em;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-body { flex: 1; padding-top: 3px; }
+
+  /* ── Feature grid ─────────────────────────────────────────── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .feature-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 0.88em;
+  }
+  .feature-card .fc-icon { font-size: 1.5em; margin-bottom: 6px; }
+  .feature-card .fc-name { font-weight: 700; color: #2d2d2d; }
+  .feature-card .fc-desc { color: #666; font-size: 0.9em; margin-top: 3px; }
+
+  /* ── Canal diagram ────────────────────────────────────────── */
+  .canal-diagram {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-size: 0.9em;
+  }
+  .canal-box {
+    background: #f5f5f5;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    flex: 1;
+  }
+  .canal-box.jeedom { border-color: #128c7e; background: #e8f8f5; }
+  .canal-box.group  { border-color: #25d366; background: #f0fff4; }
+  .canal-box .cb-icon { font-size: 1.8em; }
+  .canal-box .cb-name { font-weight: 700; font-size: 0.9em; margin-top: 4px; }
+  .canal-arrow {
+    flex: 0 0 60px;
+    text-align: center;
+    color: #25d366;
+    font-size: 1.4em;
+    font-weight: 900;
+  }
+  .canal-arrow .arrow-label { font-size: 0.55em; color: #888; display: block; margin-top: 2px; }
+
+  /* ── Scenario box ─────────────────────────────────────────── */
+  .scenario {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin: 12px 0;
+    font-size: 0.88em;
+  }
+  .scenario h4 { margin: 0 0 10px; color: #075e54; font-size: 0.95em; }
+  .scenario .sc-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .scenario .sc-label { font-weight: 700; color: #555; min-width: 110px; font-size: 0.85em; }
+  .scenario .sc-val { color: #333; }
+
+  /* ── Troubleshooting ──────────────────────────────────────── */
+  .trouble-item { margin-bottom: 20px; }
+  .trouble-item .problem { font-weight: 700; color: #c7254e; margin-bottom: 6px; }
+  .trouble-item ul { padding-left: 18px; }
+  .trouble-item li { margin-bottom: 4px; }
+
+  /* ── Architecture diagram ─────────────────────────────────── */
+  .arch-diagram {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: monospace;
+    font-size: 0.85em;
+    line-height: 1.8;
+    margin: 16px 0;
+  }
+  .arch-diagram .c-green  { color: #4ec9b0; }
+  .arch-diagram .c-yellow { color: #dcdcaa; }
+  .arch-diagram .c-blue   { color: #9cdcfe; }
+  .arch-diagram .c-red    { color: #f48771; }
+
+  /* ── Responsive ───────────────────────────────────────────── */
   @media (max-width: 768px) {
     nav { display: none; }
-    main { padding: 20px 18px; }
+    main { padding: 20px 18px; max-width: 100%; }
+    .page-header { padding: 20px; }
+    .feature-grid { grid-template-columns: 1fr 1fr; }
+    .canal-diagram { flex-direction: column; gap: 8px; }
+    .canal-arrow { transform: rotate(90deg); }
   }
 </style>
 </head>
 <body>
 <div class="page-wrapper">
 
+<!-- ── Sidebar ────────────────────────────────────────────────────────── -->
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
     <div class="version">Plugin Jeedom — v0.6</div>
   </div>
   <ul>
-    <li class="section-title">Inicio</li>
+    <li class="section-title">Primeros pasos</li>
+    <li><a href="#presentation">Presentación</a></li>
+    <li><a href="#principe">Grupo canal</a></li>
+    <li><a href="#prerequis">Requisitos previos</a></li>
     <li><a href="#installation">Instalación</a></li>
-    <li><a href="#overview">Presentación</a></li>
-    <li><a href="#prerequisites">Requisitos previos</a></li>
 
     <li class="section-title">Uso</li>
     <li><a href="#configuration">Configuración</a></li>
-    <li><a href="#qr-code-connection">Código QR</a></li>
-    <li><a href="#commands">Comandos</a></li>
+    <li><a href="#groupe-canal">Vincular el grupo</a></li>
+    <li><a href="#qrcode">Conexión por QR</a></li>
+    <li><a href="#commandes">Comandos</a></li>
+    <li><a href="#interactions">Interacciones</a></li>
     <li><a href="#scenarios">Escenarios</a></li>
+    <li><a href="#templates">Plantillas</a></li>
 
     <li class="section-title">Referencia</li>
-    <li><a href="#troubleshooting">Solución de problemas</a></li>
-    <li><a href="#about">About</a></li>
+    <li><a href="#limitation-notifications">⚠️ Notificaciones</a></li>
+    <li><a href="#depannage">Resolución de problemas</a></li>
+    <li><a href="#architecture">Arquitectura</a></li>
+    <li><a href="#changelog">Changelog</a></li>
+
+    <li class="section-title">Proyecto</li>
+    <li><a href="#don">Hacer una donación</a></li>
+    <li><a href="#apropos">Acerca de</a></li>
   </ul>
 </nav>
 
+<!-- ── Main content ───────────────────────────────────────────────────── -->
 <main>
+
+  <!-- Header -->
   <div class="page-header">
     <div class="icon">💬</div>
     <div>
       <h1>JeeWhatsApp <span class="badge">Self-hosted</span></h1>
-      <p>Integración WhatsApp bidireccional para Jeedom a través de Baileys.<br>100&nbsp;% local — ningún dato pasa por servidores de terceros.</p>
+      <p>Integración bidireccional de WhatsApp para Jeedom a través de Baileys.<br>
+         Un canal de comunicación dedicado — 100&nbsp;% local, sin datos en terceros.</p>
     </div>
   </div>
 
-<h1 id="jeewhatsapp-documentaci-n">JeeWhatsApp — Documentación</h1>
-<div class="callout info">ID del plugin : <code>jeewhatsapp</code>  </div>
-<div class="callout info">Autor : Aldarande — Licencia : AGPL v3</div>
-<h2 id="instalaci-n">Instalación</h2>
-<h3 id="requisitos-previos">Requisitos previos</h3>
-<table>
-<thead><tr>
-<th>Componente</th>
-<th>Versión</th>
-<th>¿Obligatorio?</th>
-</tr></thead><tbody>
-<tr>
-<td>Jeedom</td>
-<td>≥ 4.4.0</td>
-<td>✅</td>
-</tr>
-<tr>
-<td>Node.js</td>
-<td>≥ 18</td>
-<td>✅ (ya presente en las cajas Jeedom recientes)</td>
-</tr>
-<tr>
-<td><code>ffmpeg</code></td>
-<td>cualquiera</td>
-<td>⚠️ opcional (notas de voz/TTS/STT) — instalado automáticamente</td>
-</tr>
-<tr>
-<td><code>python3</code> + <code>pip3</code></td>
-<td>3.8+</td>
-<td>⚠️ opcional (STT Vosk) — ya presente en Jeedom</td>
-</tr>
-<tr>
-<td><code>tesseract-ocr</code></td>
-<td>4+</td>
-<td>⚠️ opcional (OCR de imágenes) — instalado automáticamente</td>
-</tr>
-</tbody></table>
-<div class="callout info">Compatibilidad de hardware : x86_64 (VM/PC/NUC/Docker) y <strong>ARM</strong> (Raspberry Pi, cajas Jeedom</div>
-<div class="callout info">Smart/Atlas/Luna). El binario de Piper se obtiene via <code>uname -m</code> para la arquitectura destino.</div>
-<h3 id="pasos">Pasos</h3>
-<ol>
-<li><strong>Instalar el plugin</strong> a través del market de Jeedom (o subiendo manualmente el zip) y luego <strong>activarlo</strong>.</li>
-<li><strong>Instalar las dependencias</strong> : botón « Instalar las dependencias » en la página del plugin —</li>
-</ol>
-<p>esto instala Baileys + ffmpeg + Piper (TTS) + Tesseract (OCR) + Vosk (STT) de una sola vez.</p>
-<p>- Contar <strong>5 a 15 minutos</strong> según la conexión y el equipo (descargas ~150 MB).</p>
-<p>- Los componentes de IA son <strong>no bloqueantes</strong> : si uno falla, el plugin funciona sin esa función.</p>
-<ol>
-<li><strong>Crear un equipo</strong> JeeWhatsApp (cualquier nombre), luego <strong>guardarlo</strong>.</li>
-<li><strong>Iniciar el demonio</strong> : Jeedom lo lanza automáticamente tras la creación del equipo.</li>
-</ol>
-<p>En caso de problema, reinícielo manualmente mediante el botón « Iniciar el demonio ».</p>
-<ol>
-<li><strong>Escanear el QR code</strong> : abra el equipo → pestaña <strong>Configuración</strong> → aparece un QR code.</li>
-</ol>
-<p>En su teléfono : WhatsApp → <strong>Ajustes → Dispositivos vinculados → Vincular un dispositivo</strong>,</p>
-<p>luego escanee. El estado pasa a <strong>« conectado »</strong> en 5 segundos.</p>
-<ol>
-<li><strong>Crear o buscar el grupo canal</strong> : botón « Crear » en la sección <em>Grupo vinculado</em></li>
-</ol>
-<p>(crea un grupo vacío llamado <code>jeewhatsapp</code> por defecto), o « Buscar » si ya lo ha</p>
-<p>creado manualmente. Luego añada sus contactos a ese grupo de WhatsApp.</p>
-<ol>
-<li><strong>Probar</strong> : pestaña <strong>Test</strong> → botón « Enviar al grupo canal ». Debe recibir</li>
-</ol>
-<p><code>🏠 Test JeeWhatsApp 🚀</code> en el grupo.</p>
-<h3 id="actualizaci-n">Actualización</h3>
-<p>El plugin gestiona la actualización automáticamente mediante <code>jeewhatsapp_update()</code> (creación de los crons faltantes</p>
-<p>si los hay nuevos). Tras una actualización mayor, vuelva a lanzar <strong>« Instalar las dependencias »</strong> si</p>
-<p>se anuncian nuevos componentes en el changelog.</p>
-<h3 id="desinstalaci-n">Desinstalación</h3>
-<p>La desinstalación <strong>conserva</strong> la carpeta <code>resources/jeewhatsappd/auth/</code> (sesiones de WhatsApp)</p>
-<p>para evitar tener que volver a escanear el QR tras una reinstalación. Para borrar todo :</p>
-<p>elimine esta carpeta manualmente tras la desinstalación.</p>
-<h2 id="presentaci-n">Presentación</h2>
-<p>JeeWhatsApp integra <strong>WhatsApp</strong> en Jeedom a través de <a href="https://github.com/WhiskeySockets/Baileys" target="_blank" rel="noopener">Baileys</a>,</p>
-<p>una biblioteca open-source que se conecta directamente a WhatsApp Web.</p>
-<p><strong>Ningún dato pasa por un servidor de terceros</strong> — todo permanece entre su servidor Jeedom y los servidores de WhatsApp.</p>
-<h3 id="principio-de-funcionamiento-el-grupo-canal">Principio de funcionamiento — el grupo canal</h3>
-<p>JeeWhatsApp se basa en un <strong>grupo de WhatsApp dedicado</strong> que sirve como canal de comunicación bidireccional entre Jeedom y el usuario.</p>
-<ul>
-<li><strong>Jeedom → usted</strong> : cada mensaje enviado desde un escenario llega al grupo, con un prefijo (ej. : <code>🏠 </code>)</li>
-<li><strong>Usted → Jeedom</strong> : sus mensajes en el grupo son recibidos por Jeedom y activan sus escenarios o el motor de interacciones</li>
-<li>Los mensajes fuera del grupo (mensajes directos, otros grupos) son ignorados</li>
-</ul>
-<div class="callout info">Este grupo puede ser creado automáticamente por el plugin desde la interfaz de configuración.</div>
-<h3 id="funcionalidades">Funcionalidades</h3>
-<ul>
-<li>💬 <strong>Envío de mensajes</strong> desde un escenario de Jeedom al grupo canal</li>
-<li>📥 <strong>Recepción en tiempo real</strong> — WebSocket persistente, sin polling</li>
-<li>🔄 <strong>Bidireccional</strong> — controle Jeedom a través de WhatsApp desde el grupo</li>
-<li>🤖 <strong>Interacciones Jeedom</strong> — respuestas automáticas a través del motor de interacciones integrado</li>
-<li>📱 <strong>Su número</strong> — conexión por QR code, no se requiere número dedicado</li>
-<li>🔒 <strong>100 % self-hosted</strong> — sin cuentas de terceros, sin clave API, sin suscripción</li>
-<li>⚡ <strong>Tiempo real</strong> — conexión WebSocket persistente, recepción instantánea</li>
-</ul>
-<h3 id="lo-que-el-plugin-no-hace-actualmente">Lo que el plugin no hace (actualmente)</h3>
-<ul>
-<li>Envío de medios (imágenes, vídeos, documentos, notas de voz)</li>
-<li>Envío a un número no registrado en WhatsApp</li>
-<li>Recepción de mensajes fuera del grupo canal</li>
-<li><strong>Notificaciones push para el propietario de la cuenta</strong> (véase más abajo)</li>
-</ul>
-<h3 id="limitaci-n-notificaciones-push">⚠️ Limitación — notificaciones push</h3>
-<p>JeeWhatsApp usa <strong>su propia cuenta de WhatsApp</strong> (vinculada por QR code).</p>
-<p>WhatsApp nunca notifica al propietario de la cuenta por los mensajes que él mismo envía —</p>
-<p>esta regla también se aplica a las menciones (<code>@usted</code>), que han sido probadas y tampoco generan notificación.</p>
-<p><strong>Consecuencia :</strong> cuando Jeedom publica en el grupo canal, usted <strong>no recibe ninguna notificación push</strong> en su teléfono.</p>
-<p>Puede ver los mensajes abriendo el grupo, pero no hay alerta de sonido ni banner.</p>
-<p><strong>Solución : usar una segunda cuenta de WhatsApp dedicada a Jeedom</strong></p>
-<table>
-<thead><tr>
-<th>Configuración</th>
-<th>Notificaciones</th>
-<th>Complejidad</th>
-</tr></thead><tbody>
-<tr>
-<td>Cuenta única (su número)</td>
-<td>❌ Ninguna para usted</td>
-<td>Simple</td>
-</tr>
-<tr>
-<td>Dos cuentas (bot Jeedom + su número)</td>
-<td>✅ Notificaciones reales</td>
-<td>Requiere un 2.º número</td>
-</tr>
-</tbody></table>
-<p>Con dos cuentas :</p>
-<ul>
-<li>La cuenta "bot Jeedom" (número virtual o SIM dedicada) está conectada en Jeedom</li>
-<li>Esta cuenta envía los mensajes al grupo</li>
-<li>Su cuenta personal es <strong>miembro del grupo</strong> y recibe las notificaciones normalmente</li>
-<li>El comando "Enviar un mensaje" en un escenario notifica su teléfono como cualquier mensaje de grupo</li>
-</ul>
-<div class="callout info">Un número virtual (Google Voice, número eSIM de bajo coste) es suficiente — no necesita estar activo permanentemente para WhatsApp.</div>
-<h2 id="requisitos-previos">Requisitos previos</h2>
-<ul>
-<li>Jeedom 4.4 o superior</li>
-<li>Node.js <strong>18 o superior</strong> en la máquina Jeedom</li>
-<li>Un teléfono con la aplicación WhatsApp para escanear el QR code</li>
-</ul>
-<h2 id="instalaci-n">Instalación</h2>
-<h3 id="paso-1-instalar-el-plugin">Paso 1 — Instalar el plugin</h3>
-<p>Copie la carpeta <code>jeewhatsapp</code> en <code>plugins/</code> de su instalación de Jeedom,</p>
-<p>luego vaya a <strong>Plugins → Gestión de plugins</strong> y active <strong>JeeWhatsApp</strong>.</p>
-<h3 id="paso-2-instalar-las-dependencias">Paso 2 — Instalar las dependencias</h3>
-<p>En la página del plugin, haga clic en <strong>Instalar las dependencias</strong>.</p>
-<p>El script instala <code>@whiskeysockets/baileys</code>, <code>qrcode</code> y <code>pino</code> vía npm.</p>
-<p>Este paso puede tardar <strong>2 a 5 minutos</strong> según su conexión a internet.</p>
-<div class="callout info"><strong>Requisito Node.js</strong>  </div>
-<div class="callout info">El script verifica la versión de Node.js. Si es inferior a 18, la instalación falla.  </div>
-<div class="callout info">Para verificar : <code>node --version</code> en un terminal.</div>
-<h3 id="paso-3-iniciar-el-demonio">Paso 3 — Iniciar el demonio</h3>
-<p>Haga clic en <strong>Iniciar el demonio</strong> en la página de configuración del plugin.</p>
-<p>El estado debe pasar a <strong>OK</strong>.</p>
-<h2 id="configuraci-n">Configuración</h2>
-<h3 id="crear-un-equipo">Crear un equipo</h3>
-<p>Vaya a <strong>Plugins → Comunicación → JeeWhatsApp</strong> y haga clic en <strong>Añadir</strong>.</p>
-<table>
-<thead><tr>
-<th>Campo</th>
-<th>Descripción</th>
-</tr></thead><tbody>
-<tr>
-<td>Nombre</td>
-<td>Nombre mostrado en Jeedom (ej. : Mi WhatsApp)</td>
-</tr>
-<tr>
-<td>Objeto padre</td>
-<td>Objeto Jeedom al que asociar el equipo</td>
-</tr>
-<tr>
-<td>Activar</td>
-<td>Debe estar marcado para que el demonio tenga en cuenta este equipo</td>
-</tr>
-<tr>
-<td><strong>Grupo canal</strong></td>
-<td>Nombre exacto del grupo de WhatsApp usado como canal (por defecto : <code>jeewhatsapp</code>)</td>
-</tr>
-<tr>
-<td><strong>Grupo vinculado</strong></td>
-<td>JID del grupo rellenado automáticamente tras búsqueda o creación — solo lectura</td>
-</tr>
-<tr>
-<td>Interacciones Jeedom</td>
-<td>Activa las respuestas automáticas a través del motor de interacciones</td>
-</tr>
-<tr>
-<td><strong>Indicador "escribiendo"</strong></td>
-<td>(v0.3) Muestra <code>escribiendo…</code> / <code>grabando…</code> durante ~1 s antes de cada envío automático. Humaniza los mensajes.</td>
-</tr>
-<tr>
-<td><strong>Mensajes efímeros</strong></td>
-<td>(v0.3) Desactivado / 24 h / 7 d / 90 d. Todos los mensajes enviados por Jeedom desaparecen automáticamente tras el tiempo elegido.</td>
-</tr>
-<tr>
-<td><strong>Prefijo Jeedom</strong></td>
-<td>Texto añadido al inicio de cada mensaje enviado por Jeedom (por defecto : <code>🏠 </code>)</td>
-</tr>
-</tbody></table>
-<p>Guarde. Los comandos se crean automáticamente.</p>
-<h3 id="configurar-el-grupo-canal">Configurar el grupo canal</h3>
-<p>Tras guardar el equipo, debe vincular un grupo de WhatsApp.</p>
-<p><strong>Primero debe estar conectado a WhatsApp (QR code escaneado).</strong></p>
-<p>Dos opciones en el campo <strong>Grupo canal</strong> :</p>
-<p><strong>Opción A — Grupo existente</strong></p>
-<ol>
-<li>Cree manualmente un grupo de WhatsApp desde su teléfono y nómbrelo (ej. : <code>jeewhatsapp</code>)</li>
-<li>Indique este nombre en el campo <strong>Grupo canal</strong></li>
-<li>Haga clic en <strong>Buscar</strong> — el JID se rellena automáticamente</li>
-<li>Guarde</li>
-</ol>
-<p><strong>Opción B — Crear el grupo desde Jeedom</strong></p>
-<ol>
-<li>Indique el nombre deseado en <strong>Grupo canal</strong></li>
-<li>Haga clic en <strong>Crear</strong> — el grupo se crea en WhatsApp y el JID se rellena</li>
-<li>Guarde</li>
-<li>Desde su teléfono, añada los miembros deseados al grupo</li>
-</ol>
-<div class="callout info"><strong>El campo "Grupo vinculado" (JID)</strong>  </div>
-<div class="callout info">Este campo de solo lectura contiene el identificador técnico del grupo de WhatsApp (formato <code>120363…@g.us</code>).</div>
-<div class="callout info">Se rellena automáticamente mediante los botones <strong>Buscar</strong> / <strong>Crear</strong> y no debe modificarse manualmente.</div>
-<h2 id="conexi-n-por-qr-code-primera-conexi-n">Conexión por QR code (primera conexión)</h2>
-<p>Tras crear y guardar el equipo, vaya a la pestaña <strong>Conexión WhatsApp</strong>.</p>
-<ol>
-<li>Un QR code se muestra automáticamente (actualización cada 8 segundos)</li>
-<li>Abra WhatsApp en su teléfono</li>
-<li>Vaya a <strong>Ajustes → Dispositivos vinculados → Vincular un dispositivo</strong></li>
-<li>Escanee el QR code</li>
-<li>El estado pasa a <strong>Conectado</strong> ✅</li>
-</ol>
-<div class="callout info"><strong>Sesión persistente</strong>  </div>
-<div class="callout info">Una vez conectado, las credenciales se guardan localmente en <code>resources/jeewhatsappd/auth/{id}/</code>.</div>
-<div class="callout info">No tendrá que volver a escanear el QR code en cada reinicio del demonio.</div>
-<div class="callout info"><strong>Búsqueda automática del grupo</strong>  </div>
-<div class="callout info">En cuanto se establece la conexión con WhatsApp, el demonio busca automáticamente el grupo canal configurado.</div>
-<div class="callout info">El resultado se muestra en los logs <code>jeewhatsapp</code> : <code>✓ Grupo "jeewhatsapp" → 120363…@g.us</code>.</div>
-<h2 id="comandos">Comandos</h2>
-<h3 id="comandos-info-lectura">Comandos INFO (lectura)</h3>
-<table>
-<thead><tr>
-<th>Nombre</th>
-<th>logicalId</th>
-<th>Subtipo</th>
-<th>Historizado</th>
-<th>Descripción</th>
-</tr></thead><tbody>
-<tr>
-<td>Último mensaje</td>
-<td><code>last_message</code></td>
-<td>string</td>
-<td>no</td>
-<td>Texto del último mensaje recibido en el grupo canal</td>
-</tr>
-<tr>
-<td>Remitente</td>
-<td><code>last_sender</code></td>
-<td>string</td>
-<td>no</td>
-<td>Número del remitente del último mensaje</td>
-</tr>
-<tr>
-<td>Nombre del remitente</td>
-<td><code>last_sender_name</code></td>
-<td>string</td>
-<td>no</td>
-<td>Apodo de WhatsApp del remitente</td>
-</tr>
-<tr>
-<td>Recibido el</td>
-<td><code>last_received_at</code></td>
-<td>string</td>
-<td>no</td>
-<td>Marca de tiempo del último mensaje recibido</td>
-</tr>
-<tr>
-<td>Enviados (hora actual)</td>
-<td><code>sent_hour</code></td>
-<td>numeric</td>
-<td>sí</td>
-<td>Contador de envíos durante la hora en curso (reset cada hora)</td>
-</tr>
-<tr>
-<td>Recibidos hoy</td>
-<td><code>messages_today</code></td>
-<td>numeric</td>
-<td>sí</td>
-<td>Contador de mensajes recibidos desde medianoche (reset cron daily 00:02)</td>
-</tr>
-<tr>
-<td>Conectado desde</td>
-<td><code>connected_since</code></td>
-<td>string</td>
-<td>no</td>
-<td>Fecha/hora de la última conexión de WhatsApp Web (refresh cron 5 min)</td>
-</tr>
-<tr>
-<td>Última reacción</td>
-<td><code>last_reaction</code></td>
-<td>string</td>
-<td>no</td>
-<td>Emoji de la última reacción recibida en el grupo (vacío = reacción eliminada)</td>
-</tr>
-<tr>
-<td>Reacción — remitente</td>
-<td><code>last_reaction_from</code></td>
-<td>string</td>
-<td>no</td>
-<td>Número del autor de la última reacción</td>
-</tr>
-<tr>
-<td>Reacción — fecha</td>
-<td><code>last_reaction_at</code></td>
-<td>string</td>
-<td>no</td>
-<td>Marca de tiempo de la última reacción</td>
-</tr>
-<tr>
-<td>Último medio — ruta</td>
-<td><code>last_attachment_path</code></td>
-<td>string</td>
-<td>no</td>
-<td>Ruta absoluta del servidor del último medio recibido (imagen/vídeo/audio/documento/sticker)</td>
-</tr>
-<tr>
-<td>Último medio — tipo</td>
-<td><code>last_attachment_type</code></td>
-<td>string</td>
-<td>no</td>
-<td><code>image</code> / <code>video</code> / <code>audio</code> / <code>document</code> / <code>sticker</code></td>
-</tr>
-<tr>
-<td>Último medio — mime</td>
-<td><code>last_attachment_mime</code></td>
-<td>string</td>
-<td>no</td>
-<td>Tipo MIME del último medio recibido (<code>image/jpeg</code>, <code>audio/ogg; codecs=opus</code>, ...)</td>
-</tr>
-<tr>
-<td>Último medio — tamaño</td>
-<td><code>last_attachment_size</code></td>
-<td>numeric</td>
-<td>no</td>
-<td>Tamaño en bytes del último medio recibido</td>
-</tr>
-<tr>
-<td>Encuesta — pregunta</td>
-<td><code>poll_question</code></td>
-<td>string</td>
-<td>no</td>
-<td>Pregunta de la última encuesta cuyo voto se recibió</td>
-</tr>
-<tr>
-<td>Encuesta — resultados</td>
-<td><code>poll_results</code></td>
-<td>string</td>
-<td>no</td>
-<td>Resultados en formato JSON <code>[{name, votes}]</code></td>
-</tr>
-<tr>
-<td>Encuesta — total votos</td>
-<td><code>poll_total</code></td>
-<td>numeric</td>
-<td>sí</td>
-<td>Número total de votos recibidos en la última encuesta</td>
-</tr>
-<tr>
-<td>Último grupo — etiqueta</td>
-<td><code>last_group</code></td>
-<td>string</td>
-<td>no</td>
-<td>(v0.3) Etiqueta del grupo de origen del último mensaje recibido (vacío = grupo canal principal)</td>
-</tr>
-<tr>
-<td>Último grupo — nombre</td>
-<td><code>last_group_name</code></td>
-<td>string</td>
-<td>no</td>
-<td>(v0.3) Nombre del grupo de WhatsApp de origen del último mensaje recibido</td>
-</tr>
-</tbody></table>
-<h3 id="comandos-acci-n">Comandos ACCIÓN</h3>
-<table>
-<thead><tr>
-<th>Nombre</th>
-<th>logicalId</th>
-<th>Subtipo</th>
-<th>Descripción</th>
-</tr></thead><tbody>
-<tr>
-<td>Enviar un mensaje</td>
-<td><code>send_message</code></td>
-<td>message</td>
-<td>Envía un mensaje al grupo canal. Campo <strong>Título</strong> = destinatario opcional (vacío = grupo canal, de lo contrario número directo).</td>
-</tr>
-<tr>
-<td>Responder</td>
-<td><code>reply</code></td>
-<td>message</td>
-<td>Respuesta "citada" al último mensaje recibido en el grupo (cita visible).</td>
-</tr>
-<tr>
-<td>Enviar un medio</td>
-<td><code>send_media</code></td>
-<td>message</td>
-<td>Envía un archivo (imagen, vídeo, audio, documento). Campo <strong>Título</strong> = ruta absoluta, <strong>Mensaje</strong> = leyenda opcional.</td>
-</tr>
-<tr>
-<td>Enviar una ubicación</td>
-<td><code>send_location</code></td>
-<td>message</td>
-<td>Envía una posición GPS. Campo <strong>Título</strong> = `lat\</td>
-<td>long<code> o </code>lat\</td>
-<td>long\</td>
-<td>nombre`.</td>
-</tr>
-<tr>
-<td>Enviar un contacto</td>
-<td><code>send_contact</code></td>
-<td>message</td>
-<td>Envía una tarjeta vCard. Campo <strong>Título</strong> = número, <strong>Mensaje</strong> = nombre mostrado (opcional).</td>
-</tr>
-<tr>
-<td>Reaccionar al último mensaje</td>
-<td><code>react_last</code></td>
-<td>message</td>
-<td>Envía una reacción emoji al último mensaje recibido. Campo <strong>Mensaje</strong> = emoji (❤️ 👍 🎉 …) o vacío para eliminar la reacción.</td>
-</tr>
-<tr>
-<td>Editar el último mensaje</td>
-<td><code>edit_last</code></td>
-<td>message</td>
-<td>(v0.3) Reemplaza el texto del último mensaje <strong>enviado</strong> por Jeedom. Campo <strong>Mensaje</strong> = nuevo texto.</td>
-</tr>
-<tr>
-<td>Eliminar el último mensaje</td>
-<td><code>revoke_last</code></td>
-<td>other</td>
-<td>(v0.3) Elimina "para todos" el último mensaje <strong>enviado</strong> por Jeedom (botón, sin parámetros).</td>
-</tr>
-<tr>
-<td>Reenviar el último mensaje recibido</td>
-<td><code>forward_to</code></td>
-<td>message</td>
-<td>(v0.3) Reenvía el último mensaje <strong>recibido</strong> a un destinatario. Campo <strong>Título</strong> = destinatario opcional (vacío = grupo canal).</td>
-</tr>
-<tr>
-<td>Enviar un sticker</td>
-<td><code>send_sticker</code></td>
-<td>message</td>
-<td>(v0.3) Envía un sticker. Campo <strong>Título</strong> = ruta absoluta de un <code>.webp</code> (o <code>.png</code>/<code>.jpg</code> convertido en WebP 512×512).</td>
-</tr>
-<tr>
-<td>Enviar una encuesta</td>
-<td><code>send_poll</code></td>
-<td>message</td>
-<td>(v0.3) Envía una encuesta. Campo <strong>Título</strong> = pregunta, <strong>Mensaje</strong> = opciones separadas por `\</td>
-<td><code> (ej. : </code>Sí\</td>
-<td>No\</td>
-<td>Quizás<code>, 2 a 12 opciones). Los votos alimentan los comandos info </code>poll_*`.</td>
-</tr>
-<tr>
-<td>Enviar en un grupo adicional</td>
-<td><code>send_group</code></td>
-<td>message</td>
-<td>(v0.3) Envía un mensaje en un grupo adicional. Campo <strong>Título</strong> = etiqueta del grupo (ver config « Grupos adicionales »), <strong>Mensaje</strong> = texto.</td>
-</tr>
-</tbody></table>
-<div class="callout tip"><strong>💡 Campo "Título" del comando Enviar un mensaje</strong>  </div>
-<div class="callout info">Jeedom muestra dos campos para los comandos de tipo <code>message</code> : <strong>Título</strong> y <strong>Mensaje</strong>.  </div>
-<div class="callout info">En JeeWhatsApp, el campo <strong>Título</strong> es un <strong>override opcional</strong> :  </div>
-<div class="callout info">— Vacío → el mensaje se envía al <strong>grupo canal</strong>  </div>
-<div class="callout info">— Número (ej. : <code>33612345678</code>) → envío directo a ese número (fuera del grupo)  </div>
-<div class="callout info">— JID de grupo (ej. : <code>120363…@g.us</code>) → envío a ese grupo específico</div>
-<div class="callout tip"><strong>💡 Comando Responder</strong>  </div>
-<div class="callout info">En modo grupo canal, <code>reply</code> envía al grupo (visible para todos los miembros).</div>
-<div class="callout info">La respuesta no es privada — es un mensaje público en el canal.</div>
-<div class="callout tip"><strong>💡 Prefijo Jeedom</strong>  </div>
-<div class="callout info">Todos los mensajes enviados por Jeedom se prefijan automáticamente (ej. : <code>🏠 </code>).</div>
-<div class="callout info">Los miembros del grupo pueden así distinguir las alertas de Jeedom de sus propios mensajes.</div>
-<div class="callout info">El demonio ignora los mensajes <code>fromMe</code> en el grupo, evitando que Jeedom procese sus propios envíos.</div>
-<div class="callout info"><strong>📍 Enviar una ubicación (<code>send_location</code>)</strong>  </div>
-<div class="callout info">Formato del campo <strong>Título</strong> : <code>lat|long</code> o <code>lat|long|nombre</code> (separador <code>|</code>).  </div>
-<div class="callout info">Ejemplos :</div>
-<div class="callout info">- <code>48.8566|2.3522</code> → Torre Eiffel sin etiqueta</div>
-<div class="callout info">- <code>48.8566|2.3522|Tour Eiffel</code> → con nombre del lugar</div>
-<div class="callout info">- <code>45.7640|4.8357|Place Bellecour, Lyon</code> → con dirección</div>
-<p>></p>
-<div class="callout info">Validación : lat ∈ [-90, 90], long ∈ [-180, 180]. El campo <strong>Mensaje</strong> se ignora.</div>
-<div class="callout info"><strong>👤 Enviar un contacto (<code>send_contact</code>)</strong>  </div>
-<div class="callout info">Formato del campo <strong>Título</strong> : número internacional sin <code>+</code> ni espacios (ej. : <code>33612345678</code>).  </div>
-<div class="callout info">Formato español aceptado : <code>0612345678</code> (convertido automáticamente a <code>33612345678</code>).  </div>
-<div class="callout info">Campo <strong>Mensaje</strong> = nombre mostrado de la vCard (opcional, de lo contrario se usa el número).</div>
-<div class="callout info"><strong>👥 Grupos adicionales (<code>send_group</code>) — v0.3</strong>  </div>
-<div class="callout info">Por defecto, un equipo solo escucha y escribe en <strong>un</strong> grupo canal. Para gestionar</div>
-<div class="callout info">varios grupos (alertas, información, familia…) con la <strong>misma</strong> cuenta de WhatsApp, indique el</div>
-<div class="callout info">campo <strong>Grupos adicionales</strong> del equipo, una línea por grupo en el formato</div>
-<div class="callout info"><code>etiqueta=Nombre exacto del grupo WhatsApp</code> :</div>
-<div class="callout info">```</div>
-<div class="callout info">alertas=Alertas Casa</div>
-<div class="callout info">familia=Grupo Familia</div>
-<div class="callout info">```</div>
-<div class="callout info">- La <strong>etiqueta</strong> (<code>alertas</code>, <code>familia</code>…) sirve para apuntar al grupo mediante el comando</div>
-<div class="callout info">  <strong>Enviar en un grupo adicional</strong> (<code>send_group</code>) : campo <strong>Título</strong> = etiqueta, <strong>Mensaje</strong> = texto.</div>
-<div class="callout info">- Los mensajes <strong>recibidos</strong> en estos grupos también alimentan los comandos info,</div>
-<div class="callout info">  y el grupo de origen se expone mediante <code>last_group</code> (etiqueta, vacío = grupo principal) y <code>last_group_name</code>.</div>
-<div class="callout info">- El grupo canal <strong>principal</strong> permanece sin cambios ; esta función es puramente aditiva</div>
-<div class="callout info">  (retrocompatible con las configuraciones existentes).</div>
-<h2 id="interacciones-jeedom">Interacciones Jeedom</h2>
-<p>Cuando la opción <strong>Interacciones Jeedom</strong> está activada, cada mensaje recibido en el grupo canal</p>
-<p>se transmite al motor de interacciones de Jeedom. Si una interacción coincide, la respuesta se</p>
-<p>envía automáticamente <strong>en el grupo canal</strong>.</p>
-<h3 id="filtro-por-palabra-clave-activadora-v02">Filtro por palabra clave activadora (v0.2)</h3>
-<p>Campo <strong>« Palabra clave activadora »</strong> en la configuración del equipo. Si se indica, solo los mensajes</p>
-<p>que <strong>comiencen</strong> por esta palabra clave (insensible a mayúsculas/minúsculas) activan las interacciones. La palabra clave se</p>
-<p><strong>elimina</strong> del mensaje antes de transmitirlo al motor de interacciones de Jeedom — permite tener</p>
-<p>formulaciones naturales en Jeedom evitando el ruido en el grupo.</p>
-<table>
-<thead><tr>
-<th>Configuración</th>
-<th>Mensaje recibido</th>
-<th>Comportamiento</th>
-</tr></thead><tbody>
-<tr>
-<td>keyword vacío</td>
-<td><code>enciende salon</code></td>
-<td>→ interactQuery busca <code>enciende salon</code></td>
-</tr>
-<tr>
-<td>keyword = <code>!jeedom</code></td>
-<td><code>hola familia</code></td>
-<td>→ ignorado (log debug)</td>
-</tr>
-<tr>
-<td>keyword = <code>!jeedom</code></td>
-<td><code>!jeedom enciende salon</code></td>
-<td>→ interactQuery busca <code>enciende salon</code></td>
-</tr>
-<tr>
-<td>keyword = <code>@jeedom</code></td>
-<td><code>@JEEDOM estado</code></td>
-<td>→ interactQuery busca <code>estado</code> (mayúsculas ignoradas)</td>
-</tr>
-</tbody></table>
-<h3 id="lista-blanca-de-remitentes-v02-seguridad">Lista blanca de remitentes (v0.2 — seguridad)</h3>
-<p>Campo <strong>« Lista blanca de remitentes »</strong> : si se indica, solo los números listados pueden activar</p>
-<p>las interacciones de Jeedom. Los demás miembros del grupo son <strong>ignorados silenciosamente</strong> (log debug).</p>
-<p><strong>Formato aceptado</strong> : 1 número por línea o separados por coma, en cualquier formato :</p>
-<ul>
-<li><code>0612345678</code> (español corto)</li>
-<li><code>33612345678</code> (internacional)</li>
-<li><code>+33 6 12 34 56 78</code> (con espacios y +)</li>
-</ul>
-<p>Todos los formatos se normalizan al formato internacional antes de la comparación.</p>
-<div class="callout info"><strong>🛡️ Seguridad</strong> : la lista blanca protege contra un miembro malintencionado que se una al grupo e intente</div>
-<div class="callout info">enviar comandos de Jeedom. Combinada con el filtro de palabra clave, ofrece una doble capa de protección.</div>
-<p>Ejemplos de interacciones configurables en Jeedom :</p>
-<table>
-<thead><tr>
-<th>Mensaje recibido</th>
-<th>Respuesta automática</th>
-</tr></thead><tbody>
-<tr>
-<td><code>temperatura salón</code></td>
-<td><code>La temperatura del salón es de 21°C</code></td>
-</tr>
-<tr>
-<td><code>enciende la luz</code></td>
-<td><code>Luz encendida</code></td>
-</tr>
-<tr>
-<td><code>estado</code></td>
-<td><code>Todos los equipos están OK</code></td>
-</tr>
-</tbody></table>
-<div class="callout info">Configure sus interacciones en <strong>Herramientas → Interacciones</strong> en Jeedom.</div>
-<h3 id="comandos-shortcuts-slash-v04">Comandos shortcuts — « slash » (v0.4)</h3>
-<p>Campo <strong>« Comandos shortcuts »</strong> : atajos rápidos activados por un mensaje</p>
-<p>que comienza por <code>/</code>. Son <strong>prioritarios</strong> sobre el motor de interacciones (NLP) y no</p>
-<p>requieren ninguna configuración en <em>Herramientas → Interacciones</em> — ideal para comandos</p>
-<p>frecuentes.</p>
-<p><strong>Formato</strong> : una línea por atajo, <code>/activador=destino</code>. El destino puede ser :</p>
-<table>
-<thead><tr>
-<th>Tipo de destino</th>
-<th>Ejemplo de línea</th>
-<th>Efecto del mensaje <code>/activador</code></th>
-</tr></thead><tbody>
-<tr>
-<td><strong>Comando acción</strong> <code>#id#</code></td>
-<td><code>/escena=#9012#</code></td>
-<td>Ejecuta el comando acción <code>9012</code>, responde <code>✅ Nombre del comando</code></td>
-</tr>
-<tr>
-<td><strong>Comando info</strong> <code>#id#</code></td>
-<td><code>/temp=#1234#</code></td>
-<td>Responde el valor actual : <code>Temperatura salón : 21 °C</code></td>
-</tr>
-<tr>
-<td><strong>Texto modelo</strong></td>
-<td><code>/hola=Hola #args# !</code></td>
-<td><code>/hola Pablo</code> → responde <code>Hola Pablo !</code></td>
-</tr>
-<tr>
-<td><strong>Modelo + tags Jeedom</strong></td>
-<td><code>/casa=Salón #1234# / Ext #5678#</code></td>
-<td>Reemplaza los <code>#id#</code> de infos por su valor</td>
-</tr>
-</tbody></table>
-<p><strong>Variables disponibles en un texto modelo</strong> :</p>
-<ul>
-<li><code>#args#</code> : todos los argumentos tras el activador (<code>/echo hola mundo</code> → <code>#args#</code> = <code>hola mundo</code>)</li>
-<li><code>#1#</code>, <code>#2#</code>, … : cada palabra de argumento por separado</li>
-</ul>
-<p>Para un comando acción de subtipo <em>message</em>, el argumento se pasa como texto del</p>
-<p>mensaje ; para un <em>slider</em>, como valor ; para un <em>color</em>, como código de color.</p>
-<p>Un activador desconocido devuelve <code>❓ Atajo desconocido : /xxx</code>.</p>
-<div class="callout info"><strong>Ejemplo completo</strong> :</div>
-<div class="callout info">```</div>
-<div class="callout info">/salon=#1234#</div>
-<div class="callout info">/encender=#1057#</div>
-<div class="callout info">/estado=🏠 Salón : #1234# °C — Alarma : #1099#</div>
-<div class="callout info">/di=Mensaje recibido : #args#</div>
-<div class="callout info">```</div>
-<div class="callout info">Luego en el grupo : <code>/salon</code> → <code>Temperatura salón : 21 °C</code>, <code>/di Hola</code> → <code>Mensaje recibido : Hola</code>.</div>
-<h3 id="reconocimiento-de-usuario-v04">Reconocimiento de usuario (v0.4)</h3>
-<p>Campo <strong>« Reconocimiento de usuario »</strong> : asocia el número de un remitente a un **perfil</p>
-<p>de Jeedom**. Una línea por correspondencia, en el formato <code>número=perfil</code>.</p>
-<pre><code class="language-">
-33612345678=Papá
-0698765432=Mamá
-33700000000=Hijo
-</code></pre>
-<p>Los números se normalizan al formato internacional (<code>0612345678</code>, <code>+33 6 12 34 56 78</code> y</p>
-<p><code>33612345678</code> son equivalentes).</p>
-<p>Cuando llega un mensaje de un número mapeado :</p>
-<ul>
-<li>el perfil resuelto se expone en el comando info <strong>« Remitente — perfil »</strong></li>
-</ul>
-<p>(<code>last_sender_profile</code>) — utilizable en escenarios para personalizar las respuestas ;</p>
-<ul>
-<li>se transmite al motor de interacciones de Jeedom a través de la opción <code>profile</code>, lo que lo hace</li>
-</ul>
-<p><strong>compatible con el plugin Perfiles</strong> (reglas de acceso, restricciones, personalización por</p>
-<p>persona).</p>
-<p>Si ningún mapeo coincide, el perfil recae sobre el nombre de WhatsApp del remitente,</p>
-<p>luego sobre su número en bruto. El comando info permanece vacío cuando el remitente no está mapeado.</p>
-<div class="callout info"><strong>Ejemplo</strong> : con <code>33612345678=Papá</code>, un mensaje « apaga la habitación » enviado desde este</div>
-<div class="callout info">número es tratado por las interacciones de Jeedom como proveniente del perfil <em>Papá</em> — puede</div>
-<div class="callout info">así autorizar ciertos comandos solo a este perfil mediante el plugin Perfiles.</div>
-<h3 id="respuestas-de-voz-s-ntesis-de-voz-tts-v04">Respuestas de voz — síntesis de voz / TTS (v0.4)</h3>
-<p>El plugin puede <strong>hablar</strong> : un texto se sintetiza en <strong>nota de voz</strong> (Opus <code>.ogg</code>,</p>
-<p>mostrada como mensaje de voz en WhatsApp) gracias a <strong>Piper</strong>, un motor de síntesis</p>
-<p><strong>100 % local</strong> (sin servicios de terceros, sin datos enviados al exterior).</p>
-<p><strong>Dos usos :</strong></p>
-<ol>
-<li><strong>Comando acción « Enviar una nota de voz »</strong> (<code>send_voice</code>) — para usar en un</li>
-</ol>
-<p>escenario : el campo <em>Mensaje</em> contiene el texto a decir, el campo <em>Título</em> un destinatario</p>
-<p>opcional (vacío = grupo canal). Ejemplo : <code>[Mi WhatsApp][Enviar una nota de voz]</code> →</p>
-<p>Mensaje : <code>La temperatura del salón es de 21 grados.</code></p>
-<ol>
-<li><strong>Modo « vocal-first »</strong> — marque <strong>« Respuestas de voz (TTS) → Activar el modo vocal »</strong></li>
-</ol>
-<p>en la configuración del equipo. Todas las respuestas automáticas (interacciones</p>
-<p>Jeedom y atajos <code>/</code>) se envían entonces como nota de voz en lugar de texto. En caso</p>
-<p>de fallo de la síntesis, el plugin <strong>recae automáticamente en texto</strong>.</p>
-<p><strong>Voz</strong> : la voz francesa <code>fr_FR-siwis-medium</code> se instala por defecto. Para usar</p>
-<p>otra, coloque un modelo Piper (<code>.onnx</code> + <code>.onnx.json</code>) en <code>resources/piper/voices/</code> e</p>
-<p>indique su nombre de archivo en el campo <strong>« Voz de síntesis »</strong> (o una ruta absoluta).</p>
-<div class="callout info"><strong>Requisito</strong> : <code>ffmpeg</code> debe estar instalado en el servidor (presente por defecto en la</div>
-<div class="callout info">mayoría de instalaciones Jeedom). El binario Piper y la voz francesa se descargan</div>
-<div class="callout info">automáticamente durante la instalación de las dependencias del plugin. Si la instalación de</div>
-<div class="callout info">Piper falla, el plugin continúa funcionando — solo las respuestas de voz están</div>
-<div class="callout info">desactivadas (replegado en texto).</div>
-<h3 id="ocr-en-im-genes-recibidas-v04">OCR en imágenes recibidas (v0.4)</h3>
-<p>El plugin puede <strong>leer el texto de las imágenes</strong> recibidas gracias a <strong>Tesseract</strong>, un motor OCR</p>
-<p><strong>100 % local</strong> (sin servicios de terceros).</p>
-<p><strong>Activación</strong> : marque <strong>« OCR imágenes recibidas → Activar »</strong> en la configuración del</p>
-<p>equipo. A partir de ese momento, cada imagen recibida en el grupo canal se analiza y el texto</p>
-<p>reconocido se coloca en el comando info <strong>« OCR — texto de imagen »</strong> (<code>last_ocr_text</code>).</p>
-<p><strong>Idioma</strong> : <code>fra</code> (francés) por defecto. El campo acepta varios idiomas combinados con</p>
-<p><code>+</code>, por ejemplo <code>fra+eng</code> para texto que mezcla francés e inglés. Para español use <code>spa</code>.</p>
-<p><strong>Casos de uso</strong> : lectura de contador (agua, gas, electricidad), lectura de un ticket de caja,</p>
-<p>de un cartel, de un número de serie… Puede reaccionar al cambio de</p>
-<p><code>last_ocr_text</code> en un escenario (extracción de cifras, archivado, alerta…).</p>
-<div class="callout info"><strong>Requisito</strong> : los paquetes <code>tesseract-ocr</code> y <code>tesseract-ocr-fra</code> se instalan</div>
-<div class="callout info">automáticamente (apt) durante la instalación de las dependencias del plugin. Si la instalación</div>
-<div class="callout info">falla, el OCR simplemente se desactiva — la recepción de medios continúa normalmente.</div>
-<h3 id="transcripci-n-de-voz-stt-v04">Transcripción de voz — STT (v0.4)</h3>
-<p>El plugin puede <strong>transcribir notas de voz</strong> recibidas gracias a <strong>Vosk</strong>, un motor de</p>
-<p>reconocimiento de voz <strong>100 % local y sin conexión</strong> (sin servicios de terceros).</p>
-<p><strong>Activación</strong> : marque <strong>« Transcripción de voz (STT) → Activar »</strong> en la configuración</p>
-<p>del equipo. A partir de ese momento, cada nota de voz recibida en el grupo canal se transcribe :</p>
-<ul>
-<li>el texto se coloca en el comando info <strong>« STT — nota de voz »</strong> (<code>last_voice_text</code>) ;</li>
-<li>se <strong>reinyecta como mensaje de texto</strong>, lo que activa los <strong>atajos</strong> (<code>/</code>) y</li>
-</ul>
-<p>las <strong>interacciones de Jeedom</strong> exactamente como si hubiera escrito el mensaje.</p>
-<p>Por lo tanto puede <strong>controlar Jeedom por voz</strong> : envíe una nota de voz « *enciende la luz</p>
-<p>del salón* » y la interacción de Jeedom correspondiente se ejecuta.</p>
-<div class="callout info"><strong>Asistente de voz completo</strong> : active tanto <strong>« Transcripción de voz (STT) »</strong> como</div>
-<div class="callout info"><strong>« Respuestas de voz (TTS) »</strong>. El ciclo se convierte en : nota de voz entrante → transcripción →</div>
-<div class="callout info">comando Jeedom → <strong>respuesta sintetizada como nota de voz</strong>. Todo permanece local en su servidor.</div>
-<div class="callout info"><strong>Requisito</strong> : el módulo Python <code>vosk</code> y el modelo francés ligero se instalan</div>
-<div class="callout info">automáticamente durante la instalación de las dependencias del plugin (<code>ffmpeg</code> requerido). Si</div>
-<div class="callout info">la instalación falla, la transcripción simplemente se desactiva — la recepción de notas</div>
-<div class="callout info">de voz continúa normalmente.</div>
-<h3 id="acuses-de-recibo-v05">Acuses de recibo (v0.5)</h3>
-<p>Dos mecanismos complementarios :</p>
-<ul>
-<li><strong>Marcar como leído</strong> : el comando acción <strong>« Marcar como leído »</strong> (<code>mark_read</code>) pone las</li>
-</ul>
-<p>marcas de verificación azules en el último mensaje recibido en el grupo canal. Útil para indicar a sus</p>
-<p>contactos que Jeedom (o usted) ha tomado conocimiento del mensaje.</p>
-<ul>
-<li><strong>« Leído el »</strong> : el comando info <strong><code>last_read_at</code></strong> se actualiza automáticamente cuando un</li>
-</ul>
-<p>destinatario <strong>lee o escucha</strong> un mensaje <em>enviado</em> por Jeedom. Puede así saber, en</p>
-<p>un escenario, si su alerta ha sido consultada.</p>
-<h3 id="archivar-fijar-silenciar-v05">Archivar / Fijar / Silenciar (v0.5)</h3>
-<p>Tres comandos acción controlan el estado de la conversación del grupo canal :</p>
-<ul>
-<li><strong>Archivar la conversación</strong> (<code>archive_chat</code>) — <em>Título</em> vacío = archivar, <code>0</code> = desarchivar.</li>
-<li><strong>Fijar la conversación</strong> (<code>pin_chat</code>) — <em>Título</em> vacío = fijar, <code>0</code> = desfijar.</li>
-<li><strong>Silenciar</strong> (<code>mute_chat</code>) — <em>Título</em> = duración en horas (vacío = 8 h), <code>0</code> = reactivar.</li>
-</ul>
-<p>Útil por ejemplo para silenciar automáticamente el grupo por la noche mediante un escenario,</p>
-<p>luego reactivarlo por la mañana.</p>
-<h3 id="publicar-un-estado-de-whatsapp-v05">Publicar un estado de WhatsApp (v0.5)</h3>
-<p>El comando acción <strong>« Publicar un estado »</strong> (<code>post_status</code>) publica un <strong>estado efímero de 24 h</strong></p>
-<p>(como una historia) :</p>
-<ul>
-<li><em>Mensaje</em> : el texto del estado (o el pie de foto si se proporciona una imagen) ;</li>
-<li><em>Título</em> : ruta absoluta de una <strong>imagen</strong> opcional (estado imagen).</li>
-</ul>
-<p>La audiencia está formada por los <strong>participantes del grupo canal</strong> (son ellos quienes verán el</p>
-<p>estado en su hilo). Ejemplo : publicar cada mañana un estado « Casa asegurada ✅ » mediante un</p>
-<p>escenario.</p>
-<h3 id="gesti-n-del-grupo-v05">Gestión del grupo (v0.5)</h3>
-<p>La sección <strong>« Gestión del grupo »</strong> (configuración del equipo) agrupa las operaciones</p>
-<p>de administración del grupo canal. <strong>La cuenta de WhatsApp vinculada debe ser administrador del grupo.</strong></p>
-<ul>
-<li><strong>Participantes</strong> : introduzca un número y use los botones para <strong>añadir</strong>, <strong>retirar</strong>,</li>
-</ul>
-<p><strong>promover a administrador</strong> o <strong>degradar</strong> a un miembro.</p>
-<ul>
-<li><strong>Tema</strong> : cambie el nombre/tema del grupo.</li>
-<li><strong>Enlace de invitación</strong> : genera el enlace <code>https://chat.whatsapp.com/…</code> (mostrado y clicable),</li>
-</ul>
-<p>o <strong>revoque</strong> el enlace antiguo para crear uno nuevo.</p>
-<ul>
-<li><strong>Salir</strong> : hace que la cuenta vinculada salga del grupo (acción irreversible, se pide confirmación).</li>
-<li><strong>Icono</strong> : el botón « Icono » (junto a Buscar/Crear) aplica el icono del plugin como</li>
-</ul>
-<p>foto del grupo.</p>
-<h3 id="widget-del-dashboard-v06">Widget del dashboard (v0.6)</h3>
-<p>En el dashboard de Jeedom, el equipo se muestra como una <strong>tarjeta al estilo WhatsApp</strong> :</p>
-<ul>
-<li><strong>Cabecera</strong> : avatar (icono del plugin), nombre del equipo y <strong>estado de conexión</strong> en</li>
-</ul>
-<p>directo (punto verde = conectado, naranja = conexión/QR pendiente, rojo = fuera de línea) ;</p>
-<ul>
-<li><strong>Chat</strong> : el último mensaje recibido en forma de burbuja (remitente + hora) ;</li>
-<li><strong>Contadores</strong> : mensajes recibidos hoy y enviados en la hora actual ;</li>
-<li><strong>Envío rápido</strong> : un campo de texto + botón de envío para escribir directamente en el grupo</li>
-</ul>
-<p>canal desde el dashboard ;</p>
-<ul>
-<li><strong>Botón silenciar</strong> : silencia el grupo (8 h) con un clic.</li>
-</ul>
-<p>No se necesita ninguna configuración : el widget está activo en cuanto el equipo es visible en el</p>
-<p>dashboard.</p>
-<h3 id="copia-de-seguridad-restauraci-n-de-sesi-n-v05">Copia de seguridad / restauración de sesión (v0.5)</h3>
-<p>La conexión de WhatsApp se basa en credenciales almacenadas localmente (<code>auth/{id}/</code>). Para no</p>
-<p>tener que <strong>volver a escanear el QR code</strong> tras una reinstalación del servidor o una migración, puede</p>
-<p>exportar una <strong>copia de seguridad cifrada</strong> de la sesión :</p>
-<ul>
-<li><strong>Guardar</strong> : introduzca una <strong>frase de contraseña</strong> (mínimo 6 caracteres) y haga clic en</li>
-</ul>
-<p><em>Guardar</em> → se descarga un archivo <code>.jwab</code> cifrado (AES-256). Guarde el archivo <strong>y</strong></p>
-<p>la frase de contraseña en un lugar seguro (la frase es indispensable para restaurar).</p>
-<ul>
-<li><strong>Restaurar</strong> : seleccione el archivo <code>.jwab</code>, introduzca la <strong>misma frase de contraseña</strong>, luego</li>
-</ul>
-<p>haga clic en <em>Restaurar</em>. La sesión actual se sobrescribe (la antigua se conserva en <code>.bak</code>),</p>
-<p>luego el demonio se reinicia automáticamente.</p>
-<div class="callout info">El cifrado es completamente local (PHP nativo, sin servicios de terceros). Sin la frase de</div>
-<div class="callout info">contraseña correcta, el archivo de copia de seguridad es inutilizable.</div>
-<h2 id="escenarios">Escenarios</h2>
-<h3 id="alerta-de-intruso-mensaje-en-el-grupo">Alerta de intruso — mensaje en el grupo</h3>
-<p><strong>Disparador :</strong> Detector de movimiento activo entre las 23h y las 6h</p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li><code>[Mi WhatsApp][Enviar un mensaje]</code> → Mensaje : <code>⚠️ ¡Movimiento detectado en el salón!</code></li>
-</ul>
-<p>El mensaje llega al grupo canal con el prefijo de Jeedom.</p>
-<h3 id="comando-por-palabra-clave-con-respuesta-en-el-grupo">Comando por palabra clave con respuesta en el grupo</h3>
-<p><strong>Disparador :</strong> <code>[Mi WhatsApp][Último mensaje]</code> cambia</p>
-<p><strong>Condición :</strong> <code>[Mi WhatsApp][Último mensaje]</code> contiene <code>luz</code></p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li>Encender la luz del salón</li>
-<li><code>[Mi WhatsApp][Responder]</code> → Mensaje : <code>💡 ¡Luz encendida!</code></li>
-</ul>
-<h3 id="informe-diario-en-el-grupo">Informe diario en el grupo</h3>
-<p><strong>Disparador :</strong> Todos los días a las 8:00</p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li><code>[Mi WhatsApp][Enviar un mensaje]</code> → Mensaje : <code>☀️ ¡Buenos días! Temperatura salón : [Salón][Temperatura]°C</code></li>
-</ul>
-<h3 id="compartir-una-ubicaci-n">Compartir una ubicación 📍</h3>
-<p><strong>Disparador :</strong> Botón virtual "Compartir mi casa"</p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li><code>[Mi WhatsApp][Enviar una ubicación]</code> → Título : <code>48.8566|2.3522|Casa</code></li>
-</ul>
-<h3 id="enviar-la-tarjeta-de-contacto-del-m-dico">Enviar la tarjeta de contacto del médico</h3>
-<p><strong>Disparador :</strong> Palabra clave "médico" recibida en el grupo</p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li><code>[Mi WhatsApp][Enviar un contacto]</code> → Título : <code>33112345678</code>, Mensaje : <code>Dr. García — consulta</code></li>
-</ul>
-<h3 id="confirmar-la-recepci-n-de-un-comando-con-una-reacci-n">Confirmar la recepción de un comando con una reacción ❤️</h3>
-<p><strong>Disparador :</strong> Un miembro del grupo envía la palabra "gracias"</p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li><code>[Mi WhatsApp][Reaccionar al último mensaje]</code> → Mensaje : <code>❤️</code></li>
-</ul>
-<h3 id="encender-un-ambiente-seg-n-la-reacci-n-recibida">Encender un ambiente según la reacción recibida</h3>
-<p><strong>Disparador :</strong> <code>[Mi WhatsApp][Última reacción]</code> cambia</p>
-<p><strong>Condiciones :</strong></p>
-<ul>
-<li>Si <code>[Mi WhatsApp][Última reacción]</code> = <code>❤️</code> → encender ambiente romántico</li>
-<li>Si <code>[Mi WhatsApp][Última reacción]</code> = <code>🎉</code> → encender ambiente fiesta</li>
-<li>Si <code>[Mi WhatsApp][Última reacción]</code> = <code>🌙</code> → modo noche</li>
-</ul>
-<h3 id="procesar-una-foto-de-contador-enviada-por-whatsapp">Procesar una foto de contador enviada por WhatsApp</h3>
-<p><strong>Disparador :</strong> <code>[Mi WhatsApp][Último medio — tipo]</code> cambia</p>
-<p><strong>Condiciones :</strong> si <code>[...][Último medio — tipo]</code> = <code>image</code></p>
-<p><strong>Acciones :</strong></p>
-<ul>
-<li>Copiar <code>[...][Último medio — ruta]</code> a <code>/var/www/html/data/contadores/</code></li>
-<li>(avanzado) Llamar a un script OCR en la imagen, extraer el valor, actualizar un virtual</li>
-</ul>
-<div class="callout info"><strong>📥 Recepción de medios (v0.2)</strong></div>
-<div class="callout info">Las imágenes, vídeos, notas de voz, documentos y stickers recibidos en el grupo canal</div>
-<div class="callout info">se descargan automáticamente en <code>data/jeewhatsapp/incoming/{eqId}/{YYYY-MM-DD}/{uuid}.ext</code>.</div>
-<div class="callout info">Los archivos se conservan <strong>30 días</strong> y luego se eliminan por cron (<code>cronCleanupIncoming</code> a las 03:15).</div>
-<div class="callout info">La ruta se expone a través de los 4 cmds info <code>last_attachment_*</code> — sus escenarios pueden</div>
-<div class="callout info">copiarlos a otro lugar, analizarlos (OCR, visión), o transferirlos.</div>
-<h2 id="resoluci-n-de-problemas">Resolución de problemas</h2>
-<h3 id="no-recibo-notificaciones-de-whatsapp-cuando-jeedom-env-a-un-mensaje">No recibo notificaciones de WhatsApp cuando Jeedom envía un mensaje</h3>
-<p>Es una limitación de WhatsApp : una cuenta no recibe notificaciones por sus propios mensajes,</p>
-<p>ni siquiera con una mención <code>@usted</code>. La única solución es usar una segunda cuenta de WhatsApp dedicada a Jeedom</p>
-<p>(consulte la sección "Limitación — notificaciones push" en la Presentación).</p>
-<h3 id="el-demonio-no-se-inicia">El demonio no se inicia</h3>
-<ul>
-<li>Verifique que Node.js 18+ está instalado : <code>node --version</code> en un terminal</li>
-<li>Relance la instalación de las dependencias</li>
-<li>Consulte el log <code>jeewhatsapp</code> en <strong>Análisis → Logs</strong></li>
-<li>Verifique que el puerto <code>55148</code> no está ya en uso</li>
-</ul>
-<h3 id="el-qr-code-no-se-muestra">El QR code no se muestra</h3>
-<ul>
-<li>Verifique que el demonio está iniciado (estado OK en la gestión del plugin)</li>
-<li>Reinicie el demonio y luego actualice la página</li>
-<li>Consulte el log <code>jeewhatsapp</code> para detectar un error de Baileys</li>
-</ul>
-<h3 id="el-grupo-canal-no-se-encuentra-al-inicio">El grupo canal no se encuentra al inicio</h3>
-<ul>
-<li>Verifique que el nombre en <strong>Grupo canal</strong> corresponde exactamente al nombre del grupo de WhatsApp (sensible a mayúsculas/minúsculas)</li>
-<li>El grupo debe existir en WhatsApp y su cuenta debe ser miembro del mismo</li>
-<li>Haga clic en <strong>Buscar</strong> en la página de configuración para forzar la búsqueda manualmente</li>
-<li>Consulte el log <code>jeewhatsapp</code> : el demonio muestra <code>Grupo "xxx" no encontrado</code> con el nombre buscado</li>
-</ul>
-<h3 id="los-mensajes-no-se-reciben">Los mensajes no se reciben</h3>
-<ul>
-<li>Verifique que el estado en la pestaña <strong>Conexión WhatsApp</strong> muestra <strong>Conectado</strong></li>
-<li>Verifique que el grupo canal está bien vinculado (campo <strong>Grupo vinculado</strong> rellenado)</li>
-<li>Solo los mensajes de texto del grupo canal se procesan — los medios se ignoran</li>
-<li>Consulte el log <code>jeewhatsapp</code> para verificar que el demonio recibe bien los mensajes</li>
-</ul>
-<h3 id="no-se-recibe-ning-n-mensaje-y-el-log-est-saturado-de-bad-mac">No se recibe ningún mensaje y el log está saturado de « Bad MAC »</h3>
-<p>Si el log <code>jeewhatsapp</code> muestra en bucle <code>Failed to decrypt message with any known session</code></p>
-<p>o <code>Session error: Bad MAC</code>, es que la <strong>sesión cifrada (Signal) está corrompida</strong> :</p>
-<p>WhatsApp envía bien los mensajes pero el demonio ya no puede descifrarlos, por lo que se</p>
-<p>abandonan silenciosamente. Esto ocurre en particular tras reinicios rápidos del demonio</p>
-<p>o un uso concurrente de la misma sesión.</p>
-<p><strong>Solución : volver a vincular el dispositivo.</strong></p>
-<ol>
-<li>En su teléfono : <strong>WhatsApp → Dispositivos conectados</strong>, elimine el dispositivo « JeeWhatsApp ».</li>
-<li>En el servidor, elimine (o renombre) la carpeta de sesión del equipo :</li>
-</ol>
-<p><code>plugins/jeewhatsapp/resources/jeewhatsappd/auth/{ID_equipo}/</code></p>
-<ol>
-<li>Reinicie el demonio desde la gestión del plugin.</li>
-<li>Un nuevo QR code aparece en la pestaña <strong>Conexión WhatsApp</strong> — vuelva a escanearlo.</li>
-</ol>
-<p>Las claves de cifrado se regeneran y la recepción vuelve a funcionar.</p>
-<h3 id="el-env-o-falla">El envío falla</h3>
-<ul>
-<li>Verifique que el estado de WhatsApp es <strong>Conectado</strong></li>
-<li>Verifique que el grupo vinculado está indicado (campo <strong>Grupo vinculado</strong> no vacío)</li>
-<li>Pruebe desde la pestaña <strong>Test</strong> de la página de equipo (deje Destinatario vacío para enviar al grupo)</li>
-<li>Consulte el log <code>jeewhatsapp</code></li>
-</ul>
-<h3 id="whatsapp-ha-desconectado-la-sesi-n-logout">WhatsApp ha desconectado la sesión (logout)</h3>
-<p>Cuando WhatsApp revoca el acceso al dispositivo vinculado :</p>
-<ol>
-<li>El demonio detecta la desconexión y elimina las credenciales</li>
-<li>En la pestaña <strong>Conexión WhatsApp</strong>, aparece automáticamente un nuevo QR code</li>
-<li>Vuelva a escanear el QR code para reconectar</li>
-<li>Al reconectar, el demonio busca automáticamente el grupo canal</li>
-</ol>
-<h2 id="arquitectura-t-cnica">Arquitectura técnica</h2>
-<pre><code class="language-">
-Grupo WhatsApp "jeewhatsapp"
-       │
-       │  (WebSocket Baileys — conexión directa)
-       │
-  jeewhatsappd.js
-       │
-       ├─ messages.upsert
-       │    ├─ Filtro : remoteJid === groupJid ? → si no, ignorado
-       │    ├─ Filtro : fromMe ? → ignorado (mensaje de Jeedom)
-       │    └─ POST callback.php?apikey=
-       │         └─ jeewhatsapp::callback()
-       │              └─ cmd.event() → [last_message, last_sender, …]
-       │
-       └─ /action (HTTP local 127.0.0.1:55148)
-            ├─ send        → sock.sendMessage(jid, { text: prefijo + mensaje })
-            ├─ findGroup   → sock.groupFetchAllParticipating()
-            ├─ createGroup → sock.groupCreate(name, [])
-            ├─ getQR       → lee auth/{id}/qr.txt
-            └─ getStatus   → lee auth/{id}/status.txt
-</code></pre>
-<h3 id="componentes">Componentes</h3>
-<table>
-<thead><tr>
-<th>Componente</th>
-<th>Tecnología</th>
-<th>Función</th>
-</tr></thead><tbody>
-<tr>
-<td><code>jeewhatsappd.js</code></td>
-<td>Node.js (ESM)</td>
-<td>Demonio — conexión Baileys + servidor HTTP local</td>
-</tr>
-<tr>
-<td><code>jeewhatsapp.class.php</code></td>
-<td>PHP</td>
-<td>Lógica Jeedom, ciclo de vida del demonio, comandos</td>
-</tr>
-<tr>
-<td><code>callback.php</code></td>
-<td>PHP</td>
-<td>Endpoint de recepción de mensajes del demonio</td>
-</tr>
-<tr>
-<td><code>jeewhatsapp.ajax.php</code></td>
-<td>PHP</td>
-<td>Acciones AJAX (test, QR code, findGroup, createGroup)</td>
-</tr>
-</tbody></table>
-<h3 id="auth-y-sesiones">Auth y sesiones</h3>
-<p>Las credenciales de Baileys se almacenan en <code>resources/jeewhatsappd/auth/{eqLogicId}/</code>.</p>
-<p>Una subcarpeta por equipo permite gestionar varias cuentas de WhatsApp simultáneamente.</p>
-<table>
-<thead><tr>
-<th>Archivo</th>
-<th>Contenido</th>
-</tr></thead><tbody>
-<tr>
-<td><code>*.json</code></td>
-<td>Credenciales Baileys (multi-file auth state)</td>
-</tr>
-<tr>
-<td><code>qr.txt</code></td>
-<td>QR code base64 temporal (eliminado al conectar)</td>
-</tr>
-<tr>
-<td><code>status.txt</code></td>
-<td>Estado actual : <code>connecting</code>, <code>connected</code>, <code>qr_pending</code>, <code>reconnecting</code>, <code>logged_out</code></td>
-</tr>
-<tr>
-<td><code>group_jid.txt</code></td>
-<td>JID del grupo canal (en caché para acelerar el reinicio)</td>
-</tr>
-</tbody></table>
-<h2 id="acerca-de">Acerca de</h2>
-<ul>
-<li><strong>Plugin :</strong> JeeWhatsApp v0.1</li>
-<li><strong>Licencia :</strong> AGPL v3</li>
-<li><strong>Backend :</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank" rel="noopener">Baileys</a> — open-source, licencia MIT</li>
-<li><strong>WhatsApp</strong> es una marca registrada de Meta Platforms, Inc.</li>
-<li>Este plugin no está afiliado a Meta ni a WhatsApp.</li>
-</ul>
+  <!-- ── Presentación ─────────────────────────────────────────────────── -->
+  <h2 id="presentation">Presentación</h2>
+
+  <p>JeeWhatsApp conecta tu instalación de Jeedom con <strong>WhatsApp</strong> a través de
+  <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a>,
+  una biblioteca de código abierto que establece una conexión WebSocket directa con WhatsApp Web.
+  <strong>Sin cuenta de terceros, sin clave API, sin suscripción</strong> — todo ocurre entre
+  tu servidor Jeedom y los servidores de WhatsApp.</p>
+
+  <div class="callout warning">
+    <strong>⚠️ Aplicación no oficial — riesgo de bloqueo</strong>
+    JeeWhatsApp utiliza <strong>Baileys</strong>, una biblioteca que emula WhatsApp Web. Este plugin
+    <strong>no está afiliado a Meta</strong> y no utiliza la API oficial de WhatsApp Business.
+    Un uso excesivo o robótico puede provocar la <strong>suspensión temporal o permanente</strong>
+    de la cuenta de WhatsApp utilizada, por parte de Meta.<br><br>
+
+    <strong>✅ Usos de bajo riesgo (recomendados):</strong>
+    <ul style="margin:6px 0 10px;">
+      <li>Enviar algunas alertas domóticas al día a un grupo privado (movimiento, temperatura, apertura de puerta…)</li>
+      <li>Responder a tus propios mensajes en el grupo canal mediante las interacciones</li>
+      <li>Usar el plugin en una cuenta de WhatsApp personal activa desde hace tiempo</li>
+      <li>Enviar mensajes a un grupo del que eres miembro, con contactos conocidos</li>
+    </ul>
+
+    <strong>❌ Usos a evitar:</strong>
+    <ul style="margin:6px 0 0;">
+      <li>Enviar cientos de mensajes al día de forma automática</li>
+      <li>Enviar mensajes a desconocidos o a números no guardados en tus contactos</li>
+      <li>Usar una cuenta de WhatsApp reciente o sin historial de conversaciones humanas</li>
+      <li>Enviar mensajes con un ritmo perfectamente regular (cada X segundos)</li>
+    </ul>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="fc-icon">💬</div>
+      <div class="fc-name">Grupo canal</div>
+      <div class="fc-desc">Un grupo de WhatsApp dedicado como canal bidireccional</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">📥</div>
+      <div class="fc-name">Recepción en tiempo real</div>
+      <div class="fc-desc">WebSocket persistente, sin sondeo</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🔄</div>
+      <div class="fc-name">Bidireccional</div>
+      <div class="fc-desc">Controla Jeedom desde WhatsApp a través del grupo</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🤖</div>
+      <div class="fc-name">Interacciones automáticas</div>
+      <div class="fc-desc">Motor de interacciones de Jeedom integrado</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">📱</div>
+      <div class="fc-name">Tu número</div>
+      <div class="fc-desc">Conexión por código QR, sin número dedicado</div>
+    </div>
+    <div class="feature-card">
+      <div class="fc-icon">🔒</div>
+      <div class="fc-name">100 % self-hosted</div>
+      <div class="fc-desc">Sin datos en terceros</div>
+    </div>
+  </div>
+
+  <h3>Lo que el plugin no hace (actualmente)</h3>
+  <ul>
+    <li>Envío de medios (imágenes, vídeos, documentos, mensajes de voz)</li>
+    <li>Recepción de mensajes fuera del grupo canal</li>
+    <li>Envío a un número no registrado en WhatsApp</li>
+    <li><strong>Notificaciones push para el propietario de la cuenta</strong> — ver limitación abajo</li>
+  </ul>
+
+  <div class="callout warning" id="limitation-notifications">
+    <strong>⚠️ Limitación — notificaciones push</strong>
+    JeeWhatsApp utiliza <strong>tu propia cuenta de WhatsApp</strong> (vinculada por código QR).
+    WhatsApp nunca notifica al propietario de la cuenta sobre sus propios mensajes — esta regla
+    también se aplica a las menciones (<code>@tú</code>), probado y confirmado sin efecto.<br><br>
+    <strong>Consecuencia:</strong> cuando Jeedom publica en el grupo canal, no recibes
+    <strong>ninguna notificación push</strong>. Los mensajes son visibles abriendo el grupo,
+    pero no hay alerta sonora ni banner.<br><br>
+    <strong>Solución: una segunda cuenta de WhatsApp dedicada a Jeedom.</strong>
+    Un número virtual (Google Voice, una eSIM económica…) conectado como "bot Jeedom",
+    miembro del grupo canal — tu cuenta principal recibe entonces los mensajes como cualquier
+    otro mensaje de grupo, con notificación normal.
+  </div>
+
+  <!-- ── Principio Grupo canal ────────────────────────────────────────── -->
+  <h2 id="principe">Principio — el grupo canal</h2>
+
+  <p>JeeWhatsApp se basa en un <strong>grupo de WhatsApp dedicado</strong> que sirve de canal
+  de comunicación bidireccional entre Jeedom y tú.</p>
+
+  <div class="canal-diagram">
+    <div class="canal-box jeedom">
+      <div class="cb-icon">🏠</div>
+      <div class="cb-name">Jeedom</div>
+    </div>
+    <div class="canal-arrow">⇄<span class="arrow-label">grupo canal</span></div>
+    <div class="canal-box group">
+      <div class="cb-icon">👥</div>
+      <div class="cb-name">Grupo de WhatsApp<br><small style="font-weight:400;color:#666;">"jeewhatsapp"</small></div>
+    </div>
+    <div class="canal-arrow">⇄<span class="arrow-label">notificaciones</span></div>
+    <div class="canal-box">
+      <div class="cb-icon">📱</div>
+      <div class="cb-name">Tu teléfono</div>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong>Jeedom → grupo:</strong> cada alerta o informe enviado desde un escenario aparece en el grupo, con prefijo (ej.: <code>🏠 ¡Movimiento detectado!</code>)</li>
+    <li><strong>Grupo → Jeedom:</strong> tus mensajes en el grupo son recibidos por Jeedom y activan tus escenarios o el motor de interacciones</li>
+    <li>Los mensajes fuera del grupo (mensajes directos, otros grupos) se ignoran</li>
+    <li>Recibes una <strong>notificación de WhatsApp</strong> como para cualquier otro mensaje de grupo</li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>💡 Prefijo Jeedom</strong>
+    Todos los mensajes enviados por Jeedom llevan automáticamente un prefijo (ej.: <code>🏠 </code>).
+    Esto te permite distinguir visualmente las alertas de Jeedom de tus propios mensajes en el grupo.
+    El daemon ignora sus propios mensajes (fromMe) para evitar bucles.
+  </div>
+
+  <!-- ── Requisitos previos ───────────────────────────────────────────── -->
+  <h2 id="prerequis">Requisitos previos</h2>
+
+  <ul>
+    <li>Jeedom <strong>4.4</strong> o superior</li>
+    <li><strong>Node.js 18 o superior</strong> instalado en la máquina de Jeedom</li>
+    <li>Un smartphone con la aplicación <strong>WhatsApp</strong> para escanear el código QR</li>
+  </ul>
+
+  <div class="callout info">
+    <strong>ℹ️ Comprobar Node.js</strong>
+    En un terminal en tu máquina de Jeedom: <code>node --version</code><br>
+    La versión mostrada debe ser <code>v18.x</code> o superior.
+  </div>
+
+  <!-- ── Instalación ──────────────────────────────────────────────────── -->
+  <h2 id="installation">Instalación</h2>
+
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <strong>Instalar el plugin</strong><br>
+        Copia la carpeta <code>jeewhatsapp/</code> en el directorio <code>plugins/</code>
+        de tu Jeedom y luego actívalo en <strong>Plugins → Gestión de plugins</strong>.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <strong>Instalar las dependencias</strong><br>
+        En la página del plugin, haz clic en <strong>Instalar dependencias</strong>.
+        El script instala <code>@whiskeysockets/baileys</code>, <code>qrcode</code> y <code>pino</code> mediante npm.<br>
+        <em>Este paso puede tardar de 2 a 5 minutos según tu conexión a internet.</em>
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <strong>Iniciar el daemon</strong><br>
+        En la página de configuración del plugin, haz clic en <strong>Iniciar el daemon</strong>.
+        El estado debe pasar a <strong>OK</strong> en unos segundos.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <strong>Crear un equipo y escanear el código QR</strong><br>
+        Crea un equipo, configura el grupo canal, guarda
+        y luego ve a la pestaña <strong>Conexión WhatsApp</strong>.
+      </div>
+    </li>
+  </ol>
+
+  <!-- ── Configuración ────────────────────────────────────────────────── -->
+  <h2 id="configuration">Configuración del equipo</h2>
+
+  <p>Ve a <strong>Plugins → Comunicación → JeeWhatsApp</strong>
+  y haz clic en <strong>Añadir</strong>.</p>
+
+  <table>
+    <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Nombre</strong></td><td>Nombre mostrado en Jeedom (ej.: Mi WhatsApp)</td></tr>
+      <tr><td><strong>Objeto padre</strong></td><td>Objeto Jeedom al que vincular el equipo</td></tr>
+      <tr><td><strong>Activar</strong></td><td>Debe estar marcado para que el daemon gestione esta cuenta</td></tr>
+      <tr><td><strong>Grupo canal</strong></td><td>Nombre exacto del grupo de WhatsApp dedicado (predeterminado: <code>jeewhatsapp</code>)</td></tr>
+      <tr><td><strong>Grupo vinculado</strong></td><td>JID del grupo — rellenado automáticamente, solo lectura</td></tr>
+      <tr><td><strong>Interacciones Jeedom</strong></td><td>Activa las respuestas automáticas mediante el motor de interacciones</td></tr>
+      <tr><td><strong>Prefijo Jeedom</strong></td><td>Texto añadido al inicio de cada mensaje enviado por Jeedom (predeterminado: <code>🏠 </code>)</td></tr>
+    </tbody>
+  </table>
+
+  <p>Guarda. Los comandos se crean automáticamente.</p>
+
+  <!-- ── Grupo canal ───────────────────────────────────────────────────── -->
+  <h2 id="groupe-canal">Vincular el grupo canal</h2>
+
+  <p>Después de guardar, debes vincular un grupo de WhatsApp al equipo.
+  <strong>Primero debes estar conectado a WhatsApp (código QR escaneado).</strong></p>
+
+  <h3>Opción A — Grupo existente</h3>
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">Crea un grupo de WhatsApp desde tu teléfono y dale un nombre (ej.: <code>jeewhatsapp</code>).</div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">En la página del equipo, introduce este nombre en el campo <strong>Grupo canal</strong>.</div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">Haz clic en <strong>Buscar</strong> — el campo <strong>Grupo vinculado</strong> se rellena automáticamente con el JID.</div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">Guarda el equipo.</div>
+    </li>
+  </ol>
+
+  <h3>Opción B — Crear el grupo desde Jeedom</h3>
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">Introduce el nombre deseado en el campo <strong>Grupo canal</strong>.</div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">Haz clic en <strong>Crear</strong> — el grupo se crea en WhatsApp y se rellena el JID.</div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">Guarda el equipo.</div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">Desde tu teléfono, añade los miembros deseados al grupo.</div>
+    </li>
+  </ol>
+
+  <div class="callout info">
+    <strong>ℹ️ El campo "Grupo vinculado" (JID)</strong>
+    Este campo de solo lectura contiene el identificador técnico del grupo de WhatsApp (formato <code>120363…@g.us</code>).
+    Se rellena automáticamente y no debe modificarse manualmente.
+    El daemon lo guarda en <code>auth/{id}/group_jid.txt</code> para acelerar los reinicios.
+  </div>
+
+  <div class="callout tip">
+    <strong>💡 Búsqueda automática al iniciar</strong>
+    En cuanto se establece la conexión con WhatsApp, el daemon busca automáticamente el grupo por su nombre.
+    El resultado aparece en los logs <code>jeewhatsapp</code>: <em>✓ Grupo "jeewhatsapp" → 120363…@g.us</em>.
+  </div>
+
+  <!-- ── QR Code ──────────────────────────────────────────────────────── -->
+  <h2 id="qrcode">Conexión por código QR</h2>
+
+  <p>Ve a la pestaña <strong>Conexión WhatsApp</strong> de la página del equipo.</p>
+
+  <ol class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        Un código QR se muestra automáticamente (actualización cada 8 segundos).
+        Si el daemon acaba de iniciarse, espera unos segundos.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        Abre <strong>WhatsApp</strong> en tu teléfono →
+        <strong>Ajustes → Dispositivos vinculados → Vincular un dispositivo</strong>.
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">Escanea el código QR mostrado en Jeedom.</div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">
+        El estado pasa a <strong>✅ Conectado</strong>.
+        El daemon busca entonces automáticamente el grupo canal.
+      </div>
+    </li>
+  </ol>
+
+  <div class="callout tip">
+    <strong>💡 Sesión persistente</strong>
+    Una vez conectado, las credenciales se guardan en
+    <code>resources/jeewhatsappd/auth/{id}/</code>.
+    No tendrás que volver a escanear el código QR en cada reinicio del daemon.
+  </div>
+
+  <div class="callout info">
+    <strong>ℹ️ Desconexión por WhatsApp</strong>
+    Si WhatsApp revoca el acceso (raro), la sesión se elimina automáticamente
+    y aparece un nuevo código QR en la pestaña. Simplemente vuelve a escanearlo.
+  </div>
+
+  <!-- ── Comandos ──────────────────────────────────────────────────────── -->
+  <h2 id="commandes">Comandos</h2>
+
+  <h3>Comandos INFO (lectura)</h3>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>logicalId</th><th>Tipo</th><th>Descripción</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Último mensaje</td>
+        <td><code>last_message</code></td>
+        <td>string</td>
+        <td>Texto del último mensaje recibido en el grupo canal</td>
+      </tr>
+      <tr>
+        <td>Remitente</td>
+        <td><code>last_sender</code></td>
+        <td>string</td>
+        <td>Número del miembro del grupo que envió el mensaje</td>
+      </tr>
+      <tr>
+        <td>Nombre del remitente</td>
+        <td><code>last_sender_name</code></td>
+        <td>string</td>
+        <td>Nombre de WhatsApp del remitente</td>
+      </tr>
+      <tr>
+        <td>Recibido el</td>
+        <td><code>last_received_at</code></td>
+        <td>string</td>
+        <td>Marca de tiempo del último mensaje (<code>YYYY-MM-DD HH:MM:SS</code>)</td>
+      </tr>
+      <tr>
+        <td>Enviados (hora)</td>
+        <td><code>sent_hour</code></td>
+        <td>numeric</td>
+        <td>Número de mensajes enviados durante la hora en curso (historizado)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Comandos ACCIÓN</h3>
+  <table>
+    <thead>
+      <tr><th>Nombre</th><th>logicalId</th><th>Subtipo</th><th>Descripción</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Enviar un mensaje</td>
+        <td><code>send_message</code></td>
+        <td>message</td>
+        <td>
+          Envía un mensaje al grupo canal.<br>
+          <strong>Título</strong> = anulación opcional (vacío = grupo canal, número = envío directo).<br>
+          <strong>Mensaje</strong> = texto a enviar.
+        </td>
+      </tr>
+      <tr>
+        <td>Responder</td>
+        <td><code>reply</code></td>
+        <td>message</td>
+        <td>Envía el mensaje al grupo canal. La respuesta es visible para todos los miembros.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <strong>💡 Campo "Título" — anulación opcional</strong>
+    Jeedom muestra dos campos para los comandos de tipo <code>message</code>: <strong>Título</strong> y <strong>Mensaje</strong>.<br>
+    En JeeWhatsApp, el campo <strong>Título</strong> es una anulación opcional:<br>
+    — Vacío → envío al <strong>grupo canal</strong> (comportamiento predeterminado)<br>
+    — Número (ej.: <code>33612345678</code>) → envío directo a ese número<br>
+    — JID de grupo (ej.: <code>120363…@g.us</code>) → envío a ese grupo específico
+  </div>
+
+  <!-- ── Interacciones ─────────────────────────────────────────────────── -->
+  <h2 id="interactions">Interacciones Jeedom</h2>
+
+  <p>Cuando la opción <strong>Interacciones Jeedom</strong> está activada, cada mensaje recibido
+  en el grupo canal se somete al motor de interacciones de Jeedom.
+  Si una interacción coincide, la respuesta se envía automáticamente <strong>al grupo canal</strong>.</p>
+
+  <table>
+    <thead><tr><th>Mensaje recibido en el grupo</th><th>Respuesta automática de Jeedom</th></tr></thead>
+    <tbody>
+      <tr><td><em>temperatura salón</em></td><td><code>🏠 La temperatura del salón es de 21°C</code></td></tr>
+      <tr><td><em>enciende la luz</em></td><td><code>🏠 Luz encendida</code></td></tr>
+      <tr><td><em>estado alarma</em></td><td><code>🏠 Alarma desactivada</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout info">
+    <strong>ℹ️ Configurar las interacciones</strong>
+    Las interacciones se configuran en <strong>Herramientas → Interacciones</strong> en Jeedom.
+    Funcionan con los comandos de todos tus equipos.
+  </div>
+
+  <div class="callout warning">
+    <strong>⚠️ Respuestas públicas en el grupo</strong>
+    Las respuestas automáticas se envían al grupo, visibles para todos los miembros.
+    Si el grupo contiene varias personas, todos verán las respuestas de Jeedom.
+  </div>
+
+  <!-- ── Escenarios ────────────────────────────────────────────────────── -->
+  <h2 id="scenarios">Escenarios</h2>
+
+  <div class="scenario">
+    <h4>🚨 Alerta de intruso — mensaje en el grupo</h4>
+    <div class="sc-row"><span class="sc-label">Disparador</span><span class="sc-val">Detector de movimiento activo entre las 23 h y las 6 h</span></div>
+    <div class="sc-row"><span class="sc-label">Acción</span><span class="sc-val"><code>[Mi WhatsApp][Enviar un mensaje]</code></span></div>
+    <div class="sc-row"><span class="sc-label">Mensaje</span><span class="sc-val">⚠️ ¡Movimiento detectado en el salón!</span></div>
+    <div class="sc-row"><span class="sc-label">Título</span><span class="sc-val"><em>(dejar vacío — envío al grupo canal)</em></span></div>
+  </div>
+
+  <div class="scenario">
+    <h4>💡 Comando por palabra clave desde el grupo</h4>
+    <div class="sc-row"><span class="sc-label">Disparador</span><span class="sc-val"><code>[Mi WhatsApp][Último mensaje]</code> cambia</span></div>
+    <div class="sc-row"><span class="sc-label">Condición</span><span class="sc-val"><code>[Mi WhatsApp][Último mensaje]</code> contiene <em>luz</em></span></div>
+    <div class="sc-row"><span class="sc-label">Acción 1</span><span class="sc-val">Encender la luz del salón</span></div>
+    <div class="sc-row"><span class="sc-label">Acción 2</span><span class="sc-val"><code>[Mi WhatsApp][Responder]</code> — Mensaje: <em>💡 ¡Luz encendida!</em></span></div>
+  </div>
+
+  <div class="scenario">
+    <h4>☀️ Informe diario automático</h4>
+    <div class="sc-row"><span class="sc-label">Disparador</span><span class="sc-val">Todos los días a las 8:00</span></div>
+    <div class="sc-row"><span class="sc-label">Acción</span><span class="sc-val"><code>[Mi WhatsApp][Enviar un mensaje]</code></span></div>
+    <div class="sc-row"><span class="sc-label">Mensaje</span><span class="sc-val">☀️ ¡Buenos días! Salón: <code>#[Salón][Temperatura]#</code>°C — Puerta: <code>#[Entrada][Apertura]#</code></span></div>
+  </div>
+
+  <!-- ── Plantillas ───────────────────────────────────────────────────────── -->
+  <h2 id="templates">Plantillas de mensajes</h2>
+
+  <p>La pestaña <strong>Plantillas</strong> permite definir mensajes reutilizables con variables
+  de Jeedom. En lugar de reescribir el mismo texto en cada escenario, defines una plantilla una vez
+  y la llamas por su clave.</p>
+
+  <h3>Formato</h3>
+  <p>Una plantilla por línea, en el formato <code>clave=Texto del mensaje</code>:</p>
+  <pre><code>bienvenida=¡Bienvenido a casa!
+alerta=⚠️ Alerta: #[Casa][Detector][Presencia]# !
+noche=Buenas noches — cierre automático de las persianas
+informe=☀️ Salón: #[Salón][Temperatura][Valor]#°C — Puerta: #[Entrada][Apertura][Valor]#
+# Las líneas que empiezan por # son comentarios</code></pre>
+
+  <ul>
+    <li>La <strong>clave de la plantilla</strong> no distingue mayúsculas y minúsculas (<code>Alerta</code> = <code>alerta</code>)</li>
+    <li>Las <strong>etiquetas de Jeedom</strong> <code>#[Objeto][Equipo][Comando]#</code> se resuelven automáticamente al enviar.
+        ⚠️ Los nombres de <strong>objeto</strong>, <strong>equipo</strong> y <strong>comando</strong>
+        <strong>distinguen mayúsculas y minúsculas</strong> (como en todo Jeedom): deben coincidir
+        <strong>exactamente</strong> — <code>#[Salón][Temperatura][Valor]#</code> ≠ <code>#[salón][temperatura][valor]#</code></li>
+    <li>Las líneas vacías y las que empiezan por <code>#</code> se ignoran</li>
+  </ul>
+
+  <h3>Uso en un escenario</h3>
+  <p>Usa el comando de acción <strong>Enviar una plantilla</strong> e introduce la clave en el campo <em>Mensaje</em>:</p>
+
+  <div class="scenario">
+    <h4>📋 Enviar una plantilla desde un escenario</h4>
+    <div class="sc-row"><span class="sc-label">Acción</span><span class="sc-val"><code>[Mi WhatsApp][Enviar una plantilla]</code></span></div>
+    <div class="sc-row"><span class="sc-label">Mensaje</span><span class="sc-val"><code>alerta</code> <span style="color:#888;font-size:0.9em;">(clave de la plantilla)</span></span></div>
+    <div class="sc-row"><span class="sc-label">Título</span><span class="sc-val"><em>(vacío = grupo canal)</em></span></div>
+  </div>
+
+  <div class="callout tip">
+    <strong>💡 Vista previa sin guardar</strong>
+    El botón <strong>Vista previa de plantillas</strong> en la pestaña muestra la lista de plantillas reconocidas
+    en tiempo real, sin tener que guardar — práctico para validar la sintaxis antes de registrar.
+  </div>
+
+  <div class="callout info">
+    <strong>ℹ️ Diferencia con Enviar un mensaje</strong>
+    <strong>Enviar un mensaje</strong> envía el texto introducido directamente.<br>
+    <strong>Enviar una plantilla</strong> primero resuelve la clave para recuperar el texto de la plantilla,
+    luego resuelve las etiquetas de Jeedom antes de enviar. Esto permite centralizar tus mensajes y
+    modificarlos en un solo lugar sin tocar los escenarios.
+  </div>
+
+  <!-- ── Resolución de problemas ───────────────────────────────────────── -->
+  <h2 id="depannage">Resolución de problemas</h2>
+
+  <div class="trouble-item">
+    <div class="problem">No recibo ninguna notificación de WhatsApp cuando Jeedom envía un mensaje</div>
+    <ul>
+      <li>Es una <strong>limitación de WhatsApp</strong>: una cuenta nunca recibe notificación de sus propios mensajes</li>
+      <li>Las menciones <code>@tú</code> no eluden esta regla — probado y confirmado</li>
+      <li><strong>Única solución:</strong> usar una segunda cuenta de WhatsApp dedicada a Jeedom (número virtual o SIM dedicada), miembro del grupo canal</li>
+      <li>Tu cuenta principal recibe entonces los mensajes de Jeedom como cualquier otro mensaje de grupo, con notificación normal</li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">El daemon no se inicia</div>
+    <ul>
+      <li>Comprueba que <strong>Node.js 18+</strong> está instalado: <code>node --version</code></li>
+      <li>Vuelve a lanzar la instalación de dependencias desde la página del plugin</li>
+      <li>Consulta el log <strong>jeewhatsapp</strong> en <strong>Análisis → Logs</strong></li>
+      <li>Comprueba que el puerto <strong>55148</strong> (puerto predeterminado) no esté ya en uso por otro servicio — si es así, cámbialo en <strong>Plugins → JeeWhatsApp → Configuración</strong></li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">El código QR no aparece</div>
+    <ul>
+      <li>Comprueba que el daemon está iniciado (estado OK en la gestión del plugin)</li>
+      <li>Reinicia el daemon y luego actualiza la página del equipo</li>
+      <li>Consulta el log <code>jeewhatsapp</code> para detectar un error de Baileys</li>
+      <li>Si ya existe una sesión, el código QR no aparece — el estado debe ser <em>Conectado</em></li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">No se encuentra el grupo canal</div>
+    <ul>
+      <li>Comprueba que el nombre en <strong>Grupo canal</strong> corresponde exactamente al nombre del grupo de WhatsApp (distingue mayúsculas y minúsculas)</li>
+      <li>El grupo debe existir en WhatsApp y tu cuenta debe ser miembro de él</li>
+      <li>Haz clic en <strong>Buscar</strong> en la página de configuración para forzar la búsqueda</li>
+      <li>Consulta el log <code>jeewhatsapp</code>: el daemon muestra <em>Grupo "xxx" no encontrado</em> con el nombre buscado</li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">No se reciben los mensajes</div>
+    <ul>
+      <li>Comprueba que el estado en la pestaña <strong>Conexión WhatsApp</strong> muestra <strong>Conectado</strong></li>
+      <li>Comprueba que el campo <strong>Grupo vinculado</strong> está rellenado</li>
+      <li>Solo se procesan los mensajes de texto del grupo canal — los medios se ignoran</li>
+      <li>Consulta el log <code>jeewhatsapp</code> para ver si el daemon recibe bien los mensajes</li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">El envío falla</div>
+    <ul>
+      <li>Comprueba que el estado de WhatsApp es <strong>Conectado</strong></li>
+      <li>Comprueba que el campo <strong>Grupo vinculado</strong> está rellenado</li>
+      <li>Prueba desde la pestaña <strong>Test</strong> (deja <em>Destinatario</em> vacío para enviar al grupo)</li>
+      <li>Consulta el log <code>jeewhatsapp</code></li>
+    </ul>
+  </div>
+
+  <div class="trouble-item">
+    <div class="problem">WhatsApp ha desconectado la sesión (logout)</div>
+    <ul>
+      <li>El daemon detecta la desconexión y elimina las credenciales automáticamente</li>
+      <li>Aparece un nuevo código QR en la pestaña <strong>Conexión WhatsApp</strong></li>
+      <li>Vuelve a escanear el código QR — al reconectar, el grupo canal se reencuentra automáticamente</li>
+    </ul>
+  </div>
+
+  <!-- ── Arquitectura ──────────────────────────────────────────────────── -->
+  <h2 id="architecture">Arquitectura técnica</h2>
+
+  <div class="arch-diagram">
+<span class="c-green">Grupo de WhatsApp "jeewhatsapp"</span>
+    │
+    │══════════ WebSocket Baileys (conexión directa) ══════════│ <span class="c-red">jeewhatsappd.js</span>
+    │
+    │── messages.upsert ──────────────────────────────────────▶ │
+    │     ├─ <span class="c-yellow">filtro: remoteJid === groupJid ?</span>  → si no, ignorado
+    │     ├─ <span class="c-yellow">filtro: fromMe ?</span>               → ignorado (mensaje de Jeedom)
+    │     └─ POST <span class="c-yellow">callback.php?apikey=</span>
+    │          └─ <span class="c-blue">jeewhatsapp::callback()</span>
+    │               └─ <span class="c-green">cmd.event(last_message, last_sender…)</span>
+    │
+    │◀── sock.sendMessage(<span class="c-green">groupJid</span>, { text: <span class="c-yellow">prefijo</span> + message })
+    │         POST 127.0.0.1:55148/action {"action":"send",…}
+    │         ← escenario → cmd::execute() → sendToDaemon()
+  </div>
+
+  <h3>Componentes</h3>
+  <table>
+    <thead><tr><th>Componente</th><th>Tecnología</th><th>Función</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>jeewhatsappd.js</code></td>
+        <td>Node.js (ESM)</td>
+        <td>Daemon — conexión Baileys, filtro grupo canal, servidor HTTP local puerto 55148</td>
+      </tr>
+      <tr>
+        <td><code>jeewhatsapp.class.php</code></td>
+        <td>PHP</td>
+        <td>Lógica Jeedom: ciclo de vida del daemon, comandos, envío al grupo</td>
+      </tr>
+      <tr>
+        <td><code>callback.php</code></td>
+        <td>PHP</td>
+        <td>Endpoint HTTP local llamado por el daemon en cada mensaje recibido en el grupo</td>
+      </tr>
+      <tr>
+        <td><code>jeewhatsapp.ajax.php</code></td>
+        <td>PHP</td>
+        <td>Acciones AJAX: prueba de envío, código QR, findGroup, createGroup, estado</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Archivos de estado por instancia (<code>auth/{id}/</code>)</h3>
+  <table>
+    <thead><tr><th>Archivo</th><th>Contenido</th></tr></thead>
+    <tbody>
+      <tr><td><code>*.json</code></td><td>Credenciales Baileys (multi-file auth state)</td></tr>
+      <tr><td><code>qr.txt</code></td><td>Código QR base64 temporal — eliminado al conectar</td></tr>
+      <tr><td><code>status.txt</code></td><td>Estado actual: <code>connecting</code>, <code>connected</code>, <code>qr_pending</code>, <code>reconnecting</code>, <code>logged_out</code></td></tr>
+      <tr><td><code>group_jid.txt</code></td><td>JID del grupo canal — caché para acelerar los reinicios</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ── Changelog ─────────────────────────────────────────────────────── -->
+  <h2 id="changelog">Changelog</h2>
+
+  <h3>v0.6 <span class="badge">latest</span></h3>
+  <ul>
+    <li>Auditoría de seguridad completa — puntuación 100/100</li>
+    <li>Refuerzo de la autenticación del callback (verificación de IP local, cabeceras)</li>
+    <li>Endurecimiento del daemon: permisos <code>auth/</code> a 700, clave API ausente de la línea de comandos</li>
+    <li>Corrección de fugas de listeners en reconexiones repetidas (<code>MaxListenersExceededWarning</code>)</li>
+    <li>Nuevo icono del plugin</li>
+  </ul>
+
+  <h3>v0.1 <span class="badge" style="background:#888;">initial</span></h3>
+  <ul>
+    <li>Primera versión pública</li>
+    <li>Conexión a WhatsApp por código QR (Baileys, WebSocket directo)</li>
+    <li>Grupo canal bidireccional (envío y recepción de mensajes de texto)</li>
+    <li>Comandos Jeedom: <code>send_message</code>, <code>reply</code>, <code>last_message</code>, <code>last_sender</code>…</li>
+    <li>Interacciones Jeedom integradas</li>
+    <li>Multi-instancia (varias cuentas de WhatsApp simultáneas)</li>
+    <li>Búsqueda y creación del grupo canal desde la interfaz</li>
+    <li>Sesión persistente (reconexión sin nuevo QR)</li>
+  </ul>
+
+  <!-- ── Donación ──────────────────────────────────────────────────────── -->
+  <h2 id="don">Hacer una donación</h2>
+
+  <div style="background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:28px 32px;margin:16px 0;text-align:center;">
+    <div style="font-size:2.5em;margin-bottom:12px;">☕</div>
+    <p style="font-size:1.05em;font-weight:700;color:#2d2d2d;margin-bottom:8px;">Este plugin es gratuito y de código abierto</p>
+    <p style="color:#555;max-width:480px;margin:0 auto 20px;">
+      Si JeeWhatsApp te resulta útil y quieres apoyar su desarrollo,
+      una donación siempre se agradece — ¡incluso simbólica, motiva!
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="https://ko-fi.com/aldarande" target="_blank"
+         style="display:inline-block;background:#ff5e5b;color:#fff;font-weight:700;padding:12px 28px;border-radius:8px;font-size:0.95em;text-decoration:none;">
+        ☕ Ko-fi
+      </a>
+      <a href="https://github.com/sponsors/Aldarande" target="_blank"
+         style="display:inline-block;background:#24292e;color:#fff;font-weight:700;padding:12px 28px;border-radius:8px;font-size:0.95em;text-decoration:none;">
+        &#10084; GitHub Sponsors
+      </a>
+    </div>
+    <p style="color:#aaa;font-size:0.8em;margin-top:14px;">ko-fi.com/aldarande · github.com/sponsors/Aldarande</p>
+  </div>
+
+  <!-- ── Acerca de ─────────────────────────────────────────────────────── -->
+  <h2 id="apropos">Acerca de</h2>
+
+  <ul>
+    <li><strong>Plugin:</strong> JeeWhatsApp v0.6 — Licencia AGPL v3 — Autor: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Backend:</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — código abierto, licencia MIT</li>
+    <li><strong>Jeedom</strong> es una marca registrada de Jeedom SAS. Este plugin es un desarrollo comunitario independiente, no afiliado a Jeedom SAS.</li>
+    <li><strong>WhatsApp</strong> es una marca registrada de Meta Platforms, Inc. Este plugin no está afiliado a Meta.</li>
+  </ul>
+
 </main>
 </div>
 
 <script>
+// Scroll spy sidebar
 const links = document.querySelectorAll('nav a[href^="#"]');
 const sections = Array.from(links).map(l => document.querySelector(l.getAttribute('href'))).filter(Boolean);
 function onScroll() {

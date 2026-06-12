@@ -7,7 +7,83 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **File d'envoi persistante avec retry (outbox)** — fiabilise les envois quand
+  WhatsApp est déconnecté (ex. scénario d'alarme pendant une coupure réseau).
+  Auparavant le message était perdu silencieusement.
+  - Daemon : si la socket n'est pas connectée (ou si l'envoi échoue sur une
+    erreur réseau), le message est poussé dans `data/outbox.json` au lieu de
+    lever une erreur, et le daemon répond `{queued:true}` à Jeedom. File bornée
+    à **100 messages**, **TTL 1 h** (au-delà : droppé avec un log warning),
+    écriture **atomique** (tmp + rename).
+  - À la reconnexion Baileys (`connection === 'open'`), la file est rejouée en
+    séquence (**500 ms** entre messages pour éviter le flood), **3 tentatives**
+    max par message.
+  - Nouvelle commande info cachée **`outbox_pending`** (numérique, non
+    historisée) : nombre de messages en attente, alimentée par `getStatus` du
+    daemon. Créée idempotentiellement dans `postSave()`.
+  - Côté PHP, `sendMessage()` traite `{queued:true}` comme un succès et journalise
+    « Message mis en file (WhatsApp déconnecté) ».
+
+### Changed
+
+- **Documentation — synchronisation complète des traductions (en/de/es/it)** :
+  les versions anglaise, allemande, espagnole et italienne de `docs/*/index.html`
+  étaient basées sur une version antérieure du doc FR (12 sections sur 16). Elles
+  sont désormais alignées intégralement sur `docs/fr_FR/index.html` (16 sections,
+  même structure HTML), incluant les sections jusque-là absentes — *Principe du
+  groupe canal*, *Lier le groupe canal*, *Templates de messages*, *Changelog*,
+  *Faire un don* — et la clarification sur la casse des tags ci-dessous.
+
+- **Documentation — casse des tags dans les templates** (suite au signalement
+  forum #149438) : la doc et l'aide in-app précisaient seulement que la *clé*
+  d'un template est insensible à la casse, ce qui pouvait laisser croire que les
+  **tags de commande** l'étaient aussi. Clarification ajoutée : les noms
+  d'objet/équipement/commande dans `#[Objet][Équipement][Commande]#` sont
+  **sensibles à la casse** (comportement Jeedom par défaut, conservé) et doivent
+  correspondre exactement. Aucun changement de code : la résolution passe par
+  `cmd::cmdToValue(jeedom::fromHumanReadable())` (fonctions core sensibles à la
+  casse) ; seules la *clé* de template et le *déclencheur* de raccourci sont
+  volontairement normalisés en minuscules.
+
+- **Debounce des écritures JSON du daemon (perf / usure SD)** — `events.json`
+  était réécrit intégralement à chaque événement (message envoyé/reçu, connexion…),
+  générant une I/O permanente qui use prématurément la carte SD sur Raspberry Pi.
+  - Nouveau helper `scheduleWrite(file, dataGetter, delayMs=5000)` : regroupe les
+    réécritures d'un même fichier — **au plus une écriture toutes les 5 s**.
+    `dataGetter()` est évalué au flush pour sérialiser l'état le plus récent.
+  - Écriture **atomique** systématique (`fs.writeFileSync(tmp)` + `fs.renameSync`)
+    partagée avec l'outbox.
+  - Les événements live sont désormais tamponnés en mémoire (`eventsBuf`) et
+    écrits via `scheduleWrite`. Flush forcé de toutes les écritures en attente
+    sur **SIGTERM** (arrêt propre du daemon) pour ne rien perdre.
+  - L'outbox (P2) reste en écriture immédiate : sa durabilité prime sur l'I/O.
+
+### Security
+
+- **Retrait du dossier-artefact `jeewhatsapp/` dupliqué à la racine du plugin** —
+  une vieille copie partielle du plugin (prototype initial) traînait dans
+  `plugins/jeewhatsapp/jeewhatsapp/` : `core/php/callback.php` (version
+  pré-audit : clé API en query string `$_GET['apikey']`, aucun rate-limit,
+  dispatch sur `$_GET['action']` — donc sans les correctifs F-001..F-012),
+  `plugin_info/` et un ancien `resources/jeewhatsappd/jeewhatsappd.js`. Ce
+  dossier était servi par le serveur web à l'URL
+  `plugins/jeewhatsapp/jeewhatsapp/core/php/callback.php` et constituait une
+  surface d'attaque inutile. Jamais suivi par git (artefact local de
+  développement, absent des versions distribuées), il a été supprimé du disque.
+  Le `SECURITY-AUDIT.md` l'excluait déjà du périmètre d'analyse.
+
 ### Fixed
+
+- **Affichage des noms d'équipements cassé sur la page du plugin** — le correctif
+  F-013 enveloppait `getHumanName(true, true)` dans `htmlspecialchars()`, or cette
+  méthode retourne du **HTML de confiance** (badge d'objet coloré + `<strong>nom</strong>`)
+  destiné à être rendu tel quel. L'échappement affichait les balises en texte brut
+  (`<span class="label">…</span><br/><strong>…`). Rendu brut rétabli, comme dans le
+  core Jeedom. F-013 était un faux positif : le seul élément contrôlé par l'utilisateur
+  est le nom de l'équipement, défini par l'admin sur une page **admin-only**
+  (auto-XSS négligeable). Voir `SECURITY-AUDIT.md`.
 
 - **Accumulation des sauvegardes de session `auth/{id}.bak_*`** — `restoreSession()`
   renomme l'ancienne session en `{id}.bak_YYYYmmddHHMMSS` avant chaque

@@ -23,7 +23,8 @@ tools/
 # ── Dépendances Node.js — installées par install_dep.sh ──────────────────────
 # Ne pas versionner node_modules : npm install les reconstruit à partir de package.json
 resources/jeewhatsappd/node_modules/
-resources/jeewhatsappd/package-lock.json
+# package-lock.json est versionné (SECURITY F-016) : npm ci garantit des builds
+# reproductibles et bloque les mises à jour non intentionnelles des dépendances.
 
 # ── Credentials Baileys (générés à l'exécution, SENSIBLES) ───────────────────
 # Contient les clés de session WhatsApp — jamais dans le dépôt
