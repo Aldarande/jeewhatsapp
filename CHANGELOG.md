@@ -28,6 +28,17 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **Documentation — casse des tags dans les templates** (suite au signalement
+  forum #149438) : la doc et l'aide in-app précisaient seulement que la *clé*
+  d'un template est insensible à la casse, ce qui pouvait laisser croire que les
+  **tags de commande** l'étaient aussi. Clarification ajoutée : les noms
+  d'objet/équipement/commande dans `#[Objet][Équipement][Commande]#` sont
+  **sensibles à la casse** (comportement Jeedom par défaut, conservé) et doivent
+  correspondre exactement. Aucun changement de code : la résolution passe par
+  `cmd::cmdToValue(jeedom::fromHumanReadable())` (fonctions core sensibles à la
+  casse) ; seules la *clé* de template et le *déclencheur* de raccourci sont
+  volontairement normalisés en minuscules.
+
 - **Debounce des écritures JSON du daemon (perf / usure SD)** — `events.json`
   était réécrit intégralement à chaque événement (message envoyé/reçu, connexion…),
   générant une I/O permanente qui use prématurément la carte SD sur Raspberry Pi.

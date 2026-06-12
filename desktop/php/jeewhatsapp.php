@@ -815,6 +815,7 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								placeholder="bienvenue=Bienvenue chez vous !&#10;alerte=Alerte : #[Maison][Detecteur][Presence]# !&#10;nuit=Bonne nuit - fermeture automatique des volets&#10;# Les lignes commencant par # sont des commentaires"></textarea>
 							<span class="help-block" style="font-size:0.82em;margin-top:6px;">
 								<strong>{{Format :}}</strong> <code>clé=texte</code> — {{une ligne par template, clé insensible à la casse}}<br>
+								{{Les tags}} <code>#[Objet][Équipement][Commande]#</code> {{sont}} <strong>{{sensibles à la casse}}</strong> {{(comme partout dans Jeedom) : les noms doivent correspondre exactement.}}<br>
 								{{Les lignes vides et celles commençant par}} <code>#</code> {{sont ignorées.}}
 							</span>
 						</div>

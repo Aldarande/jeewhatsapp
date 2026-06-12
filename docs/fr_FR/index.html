@@ -768,8 +768,11 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
 # Les lignes commençant par # sont des commentaires</code></pre>
 
   <ul>
-    <li>La <strong>clé</strong> est insensible à la casse (<code>Alerte</code> = <code>alerte</code>)</li>
-    <li>Les <strong>tags Jeedom</strong> <code>#[Objet][Équipement][Commande]#</code> sont résolus automatiquement à l'envoi</li>
+    <li>La <strong>clé du template</strong> est insensible à la casse (<code>Alerte</code> = <code>alerte</code>)</li>
+    <li>Les <strong>tags Jeedom</strong> <code>#[Objet][Équipement][Commande]#</code> sont résolus automatiquement à l'envoi.
+        ⚠️ Les noms d'<strong>objet</strong>, d'<strong>équipement</strong> et de <strong>commande</strong> sont
+        <strong>sensibles à la casse</strong> (comme partout dans Jeedom) : ils doivent correspondre
+        <strong>exactement</strong> — <code>#[Salon][Température][Valeur]#</code> ≠ <code>#[salon][temperature][valeur]#</code></li>
     <li>Les lignes vides et celles commençant par <code>#</code> sont ignorées</li>
   </ul>
 
