@@ -7,6 +7,40 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **File d'envoi persistante avec retry (outbox)** — fiabilise les envois quand
+  WhatsApp est déconnecté (ex. scénario d'alarme pendant une coupure réseau).
+  Auparavant le message était perdu silencieusement.
+  - Daemon : si la socket n'est pas connectée (ou si l'envoi échoue sur une
+    erreur réseau), le message est poussé dans `data/outbox.json` au lieu de
+    lever une erreur, et le daemon répond `{queued:true}` à Jeedom. File bornée
+    à **100 messages**, **TTL 1 h** (au-delà : droppé avec un log warning),
+    écriture **atomique** (tmp + rename).
+  - À la reconnexion Baileys (`connection === 'open'`), la file est rejouée en
+    séquence (**500 ms** entre messages pour éviter le flood), **3 tentatives**
+    max par message.
+  - Nouvelle commande info cachée **`outbox_pending`** (numérique, non
+    historisée) : nombre de messages en attente, alimentée par `getStatus` du
+    daemon. Créée idempotentiellement dans `postSave()`.
+  - Côté PHP, `sendMessage()` traite `{queued:true}` comme un succès et journalise
+    « Message mis en file (WhatsApp déconnecté) ».
+
+### Changed
+
+- **Debounce des écritures JSON du daemon (perf / usure SD)** — `events.json`
+  était réécrit intégralement à chaque événement (message envoyé/reçu, connexion…),
+  générant une I/O permanente qui use prématurément la carte SD sur Raspberry Pi.
+  - Nouveau helper `scheduleWrite(file, dataGetter, delayMs=5000)` : regroupe les
+    réécritures d'un même fichier — **au plus une écriture toutes les 5 s**.
+    `dataGetter()` est évalué au flush pour sérialiser l'état le plus récent.
+  - Écriture **atomique** systématique (`fs.writeFileSync(tmp)` + `fs.renameSync`)
+    partagée avec l'outbox.
+  - Les événements live sont désormais tamponnés en mémoire (`eventsBuf`) et
+    écrits via `scheduleWrite`. Flush forcé de toutes les écritures en attente
+    sur **SIGTERM** (arrêt propre du daemon) pour ne rien perdre.
+  - L'outbox (P2) reste en écriture immédiate : sa durabilité prime sur l'I/O.
+
 ### Security
 
 - **Retrait du dossier-artefact `jeewhatsapp/` dupliqué à la racine du plugin** —

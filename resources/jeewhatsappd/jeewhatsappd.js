@@ -114,6 +114,9 @@ process.on('unhandledRejection', (reason) => {
 function shutdown() {
   logMsg('info', 'Arrêt du daemon JeeWhatsApp');
   running = false;
+  // P3 — écrit sur disque les fichiers JSON en attente de debounce (events.json…)
+  // avant de quitter, pour ne pas perdre les derniers événements.
+  try { flushScheduledWrites(); } catch (_) {}
   if (PID_FILE && fs.existsSync(PID_FILE)) { fs.unlinkSync(PID_FILE); }
   process.exit(0);
 }
@@ -201,22 +204,77 @@ function writeStatus(id, status) {
 
 function eventsFilePath(id) { return path.join(authDir(id), 'events.json'); }
 
+// ---------------------------------------------------------------------------
+// Écritures JSON groupées (debounce) — P3
+// Les fichiers JSON volatils (events.json…) étaient réécrits intégralement à
+// CHAQUE message → I/O permanent et usure de la carte SD sur Raspberry Pi.
+// scheduleWrite() regroupe les écritures : au plus une écriture par fichier
+// toutes les delayMs. dataGetter() est appelé au moment du flush afin de
+// sérialiser l'état le plus récent. Écriture atomique (tmp + rename) systématique.
+// Note : l'outbox (P2) n'utilise PAS le debounce — sa durabilité exige une
+// écriture immédiate (un crash ne doit pas perdre un message déjà accusé).
+// ---------------------------------------------------------------------------
+
+function atomicWriteFileSync(file, data) {
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, data);
+  fs.renameSync(tmp, file);
+}
+
+const _pendingWrites = new Map(); // file → { timer, getData }
+
+function scheduleWrite(file, dataGetter, delayMs = 5000) {
+  const existing = _pendingWrites.get(file);
+  if (existing) {
+    // Une écriture est déjà planifiée : on rafraîchit juste le contenu, sans
+    // repousser l'échéance → garantit « au plus une écriture toutes les delayMs ».
+    existing.getData = dataGetter;
+    return;
+  }
+  const timer = setTimeout(() => {
+    const entry = _pendingWrites.get(file);
+    _pendingWrites.delete(file);
+    if (!entry) { return; }
+    try { atomicWriteFileSync(file, entry.getData()); }
+    catch (e) { logMsg('error', 'scheduleWrite : écriture ' + file + ' échouée : ' + e.message); }
+  }, delayMs);
+  if (typeof timer.unref === 'function') { timer.unref(); } // ne maintient pas le process en vie
+  _pendingWrites.set(file, { timer, getData: dataGetter });
+}
+
+// Flush synchrone de toutes les écritures en attente — appelé à l'arrêt (SIGTERM).
+function flushScheduledWrites() {
+  for (const [file, entry] of _pendingWrites) {
+    clearTimeout(entry.timer);
+    try { atomicWriteFileSync(file, entry.getData()); }
+    catch (e) { logMsg('error', 'flushScheduledWrites : ' + file + ' : ' + e.message); }
+  }
+  _pendingWrites.clear();
+}
+
+// Tampon en mémoire des événements live par instance — évite de relire
+// events.json à chaque appel ; l'écriture disque passe par scheduleWrite.
+const eventsBuf = {}; // id → array
+
 function writeEvent(id, type, text) {
   try {
     const file = eventsFilePath(id);
-    let events = [];
-    try {
-      const raw = fs.readFileSync(file, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) { events = parsed; }
-    } catch (_) {}
-    events.push({
+    if (!eventsBuf[id]) {
+      // Charge l'existant une seule fois (reprise de l'historique après redémarrage)
+      let events = [];
+      try {
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+        if (Array.isArray(parsed)) { events = parsed; }
+      } catch (_) {}
+      eventsBuf[id] = events;
+    }
+    eventsBuf[id].push({
       ts:   new Date().toISOString(),
       type: type,
       text: String(text).substring(0, 200),
     });
-    if (events.length > 100) { events = events.slice(-100); }
-    fs.writeFileSync(file, JSON.stringify(events));
+    if (eventsBuf[id].length > 100) { eventsBuf[id] = eventsBuf[id].slice(-100); }
+    scheduleWrite(file, () => JSON.stringify(eventsBuf[id]));
   } catch (_) {}
 }
 
@@ -262,6 +320,162 @@ function recordSent(id, sent) {
       // Borne mémoire : conserve les ~200 derniers IDs
       if (set.size > 200) { set.delete(set.values().next().value); }
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Outbox — file d'envoi persistante avec retry (P2)
+// Si WhatsApp est déconnecté au moment d'un envoi (ou erreur réseau), le message
+// est mis en file dans data/outbox.json au lieu d'être perdu silencieusement,
+// puis rejoué à la reconnexion. Limite 100 messages, TTL 1 h, 3 tentatives max.
+// L'écriture est atomique et IMMÉDIATE (jamais debouncée) : la durabilité prime,
+// un crash ne doit pas perdre un message d'alarme déjà accusé {queued:true}.
+// ---------------------------------------------------------------------------
+
+const DATA_DIR    = path.resolve(__dirname, '../../data');
+const OUTBOX_FILE = path.join(DATA_DIR, 'outbox.json');
+
+const OUTBOX_MAX          = 100;          // messages max en file (FIFO, drop du plus ancien)
+const OUTBOX_TTL_MS       = 3600 * 1000;  // 1 h — au-delà le message est droppé
+const OUTBOX_MAX_ATTEMPTS = 3;            // tentatives max par message au flush
+const OUTBOX_FLUSH_DELAY  = 500;          // ms entre deux envois (anti-flood)
+
+// L'outbox réutilise atomicWriteFileSync() (défini avec les helpers d'écriture)
+// mais en mode IMMÉDIAT (jamais debouncé) : sa durabilité prime sur l'I/O.
+let outbox = [];                // [{id, instance_id, phone, group_tag, payload, sendOpts, type, created_ts, attempts}]
+const outboxFlushing = {};      // id → true pendant un flush (anti-réentrance)
+
+try {
+  if (fs.existsSync(OUTBOX_FILE)) {
+    const parsed = JSON.parse(fs.readFileSync(OUTBOX_FILE, 'utf8'));
+    if (Array.isArray(parsed)) {
+      outbox = parsed;
+      if (outbox.length > 0) {
+        logMsg('info', 'Outbox : ' + outbox.length + ' message(s) en attente rechargé(s) au démarrage');
+      }
+    }
+  }
+} catch (e) {
+  logMsg('warning', 'Outbox : fichier illisible (' + e.message + ') — file réinitialisée');
+  outbox = [];
+}
+
+function persistOutbox() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) { fs.mkdirSync(DATA_DIR, { recursive: true }); }
+    atomicWriteFileSync(OUTBOX_FILE, JSON.stringify(outbox));
+  } catch (e) {
+    logMsg('error', 'Outbox : écriture impossible : ' + e.message);
+  }
+}
+
+// Purge les entrées expirées (TTL). Retourne le nombre purgé.
+function pruneOutbox() {
+  const now = Date.now();
+  const before = outbox.length;
+  outbox = outbox.filter(e => {
+    if (now - e.created_ts > OUTBOX_TTL_MS) {
+      logMsg('warning', '[' + e.instance_id + '] Outbox : message expiré (>1h) droppé : '
+        + String(e.payload?.text || e.type).substring(0, 60));
+      return false;
+    }
+    return true;
+  });
+  return before - outbox.length;
+}
+
+function outboxPendingCount(id) {
+  return outbox.filter(e => e.instance_id === String(id)).length;
+}
+
+// Met un message en file. Le JID n'est pas figé : on stocke phone + group_tag et
+// on (re)résout au flush, car le cache de groupe peut évoluer entre-temps.
+function enqueueOutbox(id, phone, group_tag, payload, sendOpts, type) {
+  if (pruneOutbox() > 0) { persistOutbox(); }
+  // Limite stricte : on droppe le plus ancien pour faire de la place au plus
+  // récent (dans une alarme, le dernier état est le plus pertinent).
+  while (outbox.length >= OUTBOX_MAX) {
+    const dropped = outbox.shift();
+    logMsg('warning', '[' + (dropped?.instance_id ?? '?') + '] Outbox pleine (' + OUTBOX_MAX
+      + ') — plus ancien message droppé : ' + String(dropped?.payload?.text || dropped?.type || '').substring(0, 60));
+  }
+  outbox.push({
+    id:          crypto.randomUUID(),
+    instance_id: String(id),
+    phone:       phone || '',
+    group_tag:   group_tag || '',
+    payload,
+    sendOpts:    sendOpts || {},
+    type:        type || 'text',
+    created_ts:  Date.now(),
+    attempts:    0,
+  });
+  persistOutbox();
+  writeEvent(id, 'warn', 'Message mis en file (hors connexion) : ' + String(payload?.text || type).substring(0, 100));
+  logMsg('info', '[' + id + '] Outbox : message mis en file (' + outboxPendingCount(id) + ' en attente)');
+}
+
+// Distingue une erreur d'envoi "réseau" (à remettre en file) d'une erreur métier
+// (numéro invalide, groupe introuvable… — inutile de réessayer).
+function isNetworkSendError(e) {
+  const m = String(e?.message || e || '').toLowerCase();
+  return m.includes('délai dépassé')
+      || m.includes('timed out') || m.includes('timeout')
+      || m.includes('connection closed') || m.includes('connection lost')
+      || m.includes('not open') || m.includes('socket')
+      || m.includes('econnrefused') || m.includes('econnreset');
+}
+
+// Rejoue la file d'une instance après reconnexion — séquentiel, OUTBOX_FLUSH_DELAY
+// entre messages, max OUTBOX_MAX_ATTEMPTS tentatives par message.
+async function flushOutbox(id) {
+  id = String(id);
+  if (outboxFlushing[id]) { return; }
+  if (pruneOutbox() > 0) { persistOutbox(); }
+  const mine = outbox.filter(e => e.instance_id === id);
+  if (mine.length === 0) { return; }
+
+  outboxFlushing[id] = true;
+  logMsg('info', '[' + id + '] Outbox : reconnecté — envoi de ' + mine.length + ' message(s) en attente…');
+  try {
+    for (const entry of mine) {
+      const sock = sockets[id];
+      if (!sock) {
+        logMsg('warning', '[' + id + '] Outbox : connexion reperdue — flush interrompu ('
+          + outboxPendingCount(id) + ' restant(s))');
+        break;
+      }
+      if (Date.now() - entry.created_ts > OUTBOX_TTL_MS) {
+        outbox = outbox.filter(e => e.id !== entry.id);
+        persistOutbox();
+        logMsg('warning', '[' + id + '] Outbox : message expiré (>1h) droppé au flush');
+        continue;
+      }
+      try {
+        const jid = resolveJid(id, entry.phone, entry.group_tag);
+        const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi outbox — délai dépassé')), 10000));
+        const sent = await Promise.race([sock.sendMessage(jid, entry.payload, entry.sendOpts || {}), t]);
+        recordSent(id, sent);
+        outbox = outbox.filter(e => e.id !== entry.id);
+        persistOutbox();
+        writeEvent(id, 'out', '(file) → ' + String(entry.payload?.text || entry.type).substring(0, 100));
+        logMsg('info', '[' + id + '] Outbox : message rejoué (' + outboxPendingCount(id) + ' restant(s))');
+      } catch (e) {
+        entry.attempts = (entry.attempts || 0) + 1;
+        if (entry.attempts >= OUTBOX_MAX_ATTEMPTS) {
+          outbox = outbox.filter(x => x.id !== entry.id);
+          writeEvent(id, 'err', 'Message abandonné (3 échecs) : ' + String(entry.payload?.text || entry.type).substring(0, 80));
+          logMsg('warning', '[' + id + '] Outbox : message abandonné après ' + OUTBOX_MAX_ATTEMPTS + ' tentatives : ' + e.message);
+        } else {
+          logMsg('warning', '[' + id + '] Outbox : tentative ' + entry.attempts + '/' + OUTBOX_MAX_ATTEMPTS
+            + ' échouée (' + e.message + ') — réessai à la prochaine reconnexion');
+        }
+        persistOutbox();
+      }
+      await new Promise(r => setTimeout(r, OUTBOX_FLUSH_DELAY));
+    }
+  } finally {
+    outboxFlushing[id] = false;
   }
 }
 
@@ -356,6 +570,10 @@ async function connectInstance(instance) {
       try { fs.writeFileSync(connectedSinceFilePath(id), new Date().toISOString()); } catch (_) {}
       writeEvent(id, 'sys', '✓ Connecté à WhatsApp');
       logMsg('info', '[' + id + '] ✓ Connecté à WhatsApp');
+
+      // P2 — rejoue les messages mis en file pendant la déconnexion. Délai de 3 s
+      // pour laisser la socket se stabiliser et le cache de groupe se charger.
+      setTimeout(() => { flushOutbox(id).catch(e => logMsg('warning', '[' + id + '] flushOutbox : ' + e.message)); }, 3000);
 
       // Rechercher le groupe canal — retardé de 2 s pour laisser à Baileys
       // le temps de synchroniser la liste des groupes après l'open
@@ -915,13 +1133,9 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
     // ── Envoi d'un message (vers le groupe canal ou un destinataire direct) ─
     case 'send': {
       const sock = sockets[id];
-      if (!sock) { throw new Error('Non connecté à WhatsApp — scanner le QR code dans Jeedom'); }
 
-      // Résolution du destinataire — gère le groupe par défaut, les groupes
-      // additionnels (group_tag, v0.3 #16), un JID complet ou un numéro.
-      const jid = resolveJid(id, phone, group_tag);
-
-      // Mention optionnelle — @numéro en tête de message
+      // Mention optionnelle — @numéro en tête de message. Construit avant la
+      // vérification de connexion pour pouvoir mettre le payload complet en file.
       const msgPayload = { text: message };
       if (mention) {
         // Même normalisation que pour le destinataire : 06… → 336…
@@ -935,15 +1149,37 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         }
       }
 
+      // P2 — WhatsApp déconnecté : on met en file au lieu de perdre le message
+      // (scénario d'alarme pendant une coupure). Rejoué à la reconnexion.
+      if (!sock) {
+        enqueueOutbox(id, phone, group_tag, msgPayload, sendOpts, 'text');
+        return { queued: true, pending: outboxPendingCount(id) };
+      }
+
+      // Résolution du destinataire — gère le groupe par défaut, les groupes
+      // additionnels (group_tag, v0.3 #16), un JID complet ou un numéro.
+      const jid = resolveJid(id, phone, group_tag);
+
       logMsg('info', '[' + id + '] → ' + jid + ' : ' + msgPayload.text.substring(0, 60));
       await applyPresence(sock, jid, presence);
-      const sendTimeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Envoi échoué — délai dépassé pour ' + jid)), 10000)
-      );
-      const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
-      recordSent(id, sent);
-      writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120));
-      return { sent: true };
+      try {
+        const sendTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Envoi échoué — délai dépassé pour ' + jid)), 10000)
+        );
+        const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
+        recordSent(id, sent);
+        writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120));
+        return { sent: true };
+      } catch (e) {
+        // Échec réseau (timeout, socket fermée…) → mise en file + {queued:true}.
+        // Une erreur métier (groupe introuvable, numéro invalide) est relancée.
+        if (isNetworkSendError(e)) {
+          enqueueOutbox(id, phone, group_tag, msgPayload, sendOpts, 'text');
+          logMsg('warning', '[' + id + '] Envoi échoué (réseau) — mis en file : ' + e.message);
+          return { queued: true, pending: outboxPendingCount(id) };
+        }
+        throw e;
+      }
     }
 
     // ── Envoi d'une position GPS ───────────────────────────────────────────
@@ -1499,6 +1735,7 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
         connected:       !!sockets[id],
         group_jid:       groupJids[id] || null,
         connected_since: connectedSince,
+        outbox_pending:  outboxPendingCount(id),
       };
     }
 

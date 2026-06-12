@@ -360,6 +360,13 @@ class jeewhatsapp extends eqLogic {
     if (($e = $this->ephemeralParam()) !== null) { $params['ephemeral'] = $e; }
 
     $result = $this->sendToDaemon('send', $params);
+    // P2 — si WhatsApp est déconnecté, le daemon met le message en file (outbox)
+    // et répond {queued:true} au lieu d'une erreur : on traite comme un succès.
+    if (is_array($result) && !empty($result['queued'])) {
+      log::add('jeewhatsapp', 'info',
+        'jeewhatsapp.class.php::sendMessage() l.' . __LINE__
+        . ' — Message mis en file (WhatsApp déconnecté) — ' . ($result['pending'] ?? '?') . ' en attente');
+    }
     $this->incrementSentCounters();
     // Historique widget : ajoute le message sortant (sans préfixe dans l'historique)
     if (!$_skipPrefix) {
@@ -1834,6 +1841,10 @@ class jeewhatsapp extends eqLogic {
         $this->checkAndUpdateCmd('connected_since', date('Y-m-d H:i:s', $ts));
       }
     }
+    // P2 — expose le nombre de messages en file d'attente (outbox) du daemon
+    if (isset($st['outbox_pending'])) {
+      $this->checkAndUpdateCmd('outbox_pending', (int) $st['outbox_pending']);
+    }
     return $st;
   }
 
@@ -2402,6 +2413,24 @@ class jeewhatsapp extends eqLogic {
         $c->setOrder($order++);
         $c->save();
       }
+    }
+
+    // Commande info cachée : nombre de messages en file d'attente (outbox, P2).
+    // Mise à jour par getConnectionStatus() depuis le statut du daemon. Non
+    // historisée (jauge instantanée), invisible sur le dashboard.
+    $outboxCmd = $this->getCmd('info', 'outbox_pending');
+    if (!is_object($outboxCmd)) {
+      $outboxCmd = new jeewhatsappCmd();
+      $outboxCmd->setEqLogic_id($this->getId());
+      $outboxCmd->setLogicalId('outbox_pending');
+      $outboxCmd->setType('info');
+      $outboxCmd->setSubType('numeric');
+      $outboxCmd->setName('Messages en file');
+      $outboxCmd->setUnite('msg');
+      $outboxCmd->setIsVisible(0);
+      $outboxCmd->setIsHistorized(0);
+      $outboxCmd->setOrder($order++);
+      $outboxCmd->save();
     }
 
     // Si le daemon tourne déjà, on le redémarre pour qu'il prenne en compte
