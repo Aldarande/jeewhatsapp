@@ -6,7 +6,12 @@
 **Commit analysé :** edb9c08 docs: note avertissement usage non officiel Meta + exemples anti-ban
 **Branche :** dev
 **Fichiers analysés :** 15 (hors dossier-artefact `jeewhatsapp/` et `3rdparty/`)
-**Score de sécurité :** 83/100
+**Score de sécurité :** 83/100 (à l'audit) → **99/100** après corrections F-013..F-016 (2026-06-11)
+
+> **Note 2026-06-12** — Le dossier-artefact `jeewhatsapp/` (vieille copie pré-audit
+> du plugin, dont un `callback.php` sans les correctifs F-001..F-012) a été
+> **supprimé** : il était servi par le web et constituait une surface d'attaque
+> inutile. Voir l'entrée *Security* du CHANGELOG (Unreleased).
 
 > **Revue 2026-06-06** — Relecture complète de tous les fichiers sources à partir de zéro.
 > 3 nouveaux findings identifiés (1 MEDIUM, 2 LOW) ; toutes les corrections des audits
