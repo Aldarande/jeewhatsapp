@@ -28,6 +28,14 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Changed
 
+- **Documentation — synchronisation complète des traductions (en/de/es/it)** :
+  les versions anglaise, allemande, espagnole et italienne de `docs/*/index.html`
+  étaient basées sur une version antérieure du doc FR (12 sections sur 16). Elles
+  sont désormais alignées intégralement sur `docs/fr_FR/index.html` (16 sections,
+  même structure HTML), incluant les sections jusque-là absentes — *Principe du
+  groupe canal*, *Lier le groupe canal*, *Templates de messages*, *Changelog*,
+  *Faire un don* — et la clarification sur la casse des tags ci-dessous.
+
 - **Documentation — casse des tags dans les templates** (suite au signalement
   forum #149438) : la doc et l'aide in-app précisaient seulement que la *clé*
   d'un template est insensible à la casse, ce qui pouvait laisser croire que les
