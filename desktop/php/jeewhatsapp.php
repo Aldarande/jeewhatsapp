@@ -1625,7 +1625,7 @@ function buildContactsDatalist() {
     var number = line.substring(eq + 1).trim();
     if (name && number) {
       opts += '<option value="' + $('<div>').text(name).html() + '">'
-            + $('<div>').text(name + ' (' + number + ')').html()
+            + $('<div>').text('(' + number + ')').html()
             + '</option>';
     }
   });
