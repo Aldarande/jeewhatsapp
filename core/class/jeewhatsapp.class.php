@@ -342,6 +342,11 @@ class jeewhatsapp extends eqLogic {
     $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
     $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
+    // Résolution carnet de contacts : "Didier" → "33612345678"
+    if ($_phone !== null && $_phone !== '') {
+      $_phone = $this->resolvePhone($_phone);
+    }
+
     $params = [
       'instance_id' => $this->getId(),
       'message'     => $message,
@@ -606,6 +611,10 @@ class jeewhatsapp extends eqLogic {
     $text = trim((string) $_text);
     if ($text === '') {
       throw new Exception(__('Texte à synthétiser vide', __FILE__));
+    }
+    // Résolution carnet de contacts
+    if ($_phone !== null && $_phone !== '') {
+      $_phone = $this->resolvePhone($_phone);
     }
 
     $script = realpath(__DIR__ . '/../../resources/piper/tts.sh');
@@ -1741,6 +1750,42 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // Carnet de contacts — résolution Nom → Numéro
+  // -------------------------------------------------------------------------
+
+  // Parse la configuration "contacts" (format "Nom=Numéro", une entrée par ligne).
+  // Retourne un tableau associatif insensible à la casse : ['didier' => '33612345678', ...]
+  public static function parseContacts($_raw) {
+    $result = [];
+    foreach (preg_split('/\r?\n/', (string) $_raw) as $line) {
+      $line = trim($line);
+      if ($line === '' || $line[0] === '#') { continue; }
+      $pos = strpos($line, '=');
+      if ($pos === false) { continue; }
+      $name   = trim(substr($line, 0, $pos));
+      $number = trim(substr($line, $pos + 1));
+      if ($name !== '' && $number !== '') {
+        $result[strtolower($name)] = $number;
+      }
+    }
+    return $result;
+  }
+
+  // Résout un destinataire : si $_phone correspond à un nom du carnet de contacts
+  // (insensible à la casse), retourne le numéro associé ; sinon retourne $_phone tel quel.
+  public function resolvePhone($_phone) {
+    if ($_phone === null || trim((string) $_phone) === '') { return $_phone; }
+    $contacts = self::parseContacts($this->getConfiguration('contacts', ''));
+    $key = strtolower(trim((string) $_phone));
+    if (isset($contacts[$key])) {
+      log::add('jeewhatsapp', 'debug',
+        'jeewhatsapp.class.php::resolvePhone() — contact résolu : "' . $_phone . '" → "' . $contacts[$key] . '"');
+      return $contacts[$key];
+    }
+    return $_phone;
+  }
+
+  // -------------------------------------------------------------------------
   // Compteur de messages reçus aujourd'hui (cache jusqu'à minuit local)
   // -------------------------------------------------------------------------
 
@@ -2042,8 +2087,8 @@ class jeewhatsapp extends eqLogic {
     // Le champ "Titre" sert d'override optionnel (numéro direct ou JID de groupe)
     // NM (Notification Manager) utilise ce champ "Titre" comme destinataire.
     // Laisser vide = groupe canal par defaut.
-    if ($send->getDisplay('title_placeholder') !== 'Numero direct ou vide = groupe canal (NM : numero destinataire)') {
-      $send->setDisplay('title_placeholder', 'Numero direct ou vide = groupe canal (NM : numero destinataire)');
+    if ($send->getDisplay('title_placeholder') !== 'Vide = groupe canal — numéro ou nom du carnet de contacts (NM : numero destinataire)') {
+      $send->setDisplay('title_placeholder', 'Vide = groupe canal — numéro ou nom du carnet de contacts (NM : numero destinataire)');
       $send->save();
     }
 

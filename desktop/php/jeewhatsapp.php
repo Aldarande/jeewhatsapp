@@ -400,6 +400,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
+<!-- Carnet de contacts -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Carnet de contacts}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="4"
+											   data-l1key="configuration" data-l2key="contacts"
+											   id="jwa_contacts_config"
+											   placeholder="Didier=33612345678&#10;Marie=33698765432&#10;Papa=33607080910"></textarea>
+										<span class="help-block">
+											<small>{{Un contact par ligne au format <strong>Nom=Numéro</strong> (numéro international sans +). Le nom peut être utilisé à la place du numéro dans le champ Destinataire de la commande « Envoyer un message » et dans les scénarios.}}</small>
+										</span>
+									</div>
+								</div>
 								</div>
 								<div class="col-lg-6">
 <!-- Interactions Jeedom -->
@@ -744,7 +757,9 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								<span class="text-muted" style="font-weight:normal;font-size:0.88em;margin-left:4px;">{{— vide = groupe canal}}</span>
 							</label>
 							<input type="text" id="test_phone" class="form-control"
-								placeholder="{{Laisser vide pour le groupe canal — ou numéro direct ex : 33612345678}}">
+								list="jwa_contacts_datalist"
+								placeholder="{{Vide = groupe canal — numéro direct ou nom du carnet de contacts}}">
+							<datalist id="jwa_contacts_datalist"></datalist>
 						</div>
 
 						<!-- Message -->
@@ -1596,6 +1611,30 @@ $('#bk_restore').on('click', function () {
     error: function () { $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}'); $result.text('{{Erreur de communication}}').css('color', 'red').show(); }
   });
 });
+
+// ── Carnet de contacts — mise à jour du datalist ────────────────────────────
+function buildContactsDatalist() {
+  var raw = $('#jwa_contacts_config').val() || '';
+  var opts = '';
+  raw.split('\n').forEach(function (line) {
+    line = line.trim();
+    if (!line || line.charAt(0) === '#') { return; }
+    var eq = line.indexOf('=');
+    if (eq === -1) { return; }
+    var name   = line.substring(0, eq).trim();
+    var number = line.substring(eq + 1).trim();
+    if (name && number) {
+      opts += '<option value="' + $('<div>').text(name).html() + '">'
+            + $('<div>').text(name + ' (' + number + ')').html()
+            + '</option>';
+    }
+  });
+  $('#jwa_contacts_datalist').html(opts);
+}
+// Rafraîchir au chargement et à chaque modification du carnet
+$(document).on('input change', '#jwa_contacts_config', buildContactsDatalist);
+// Rafraîchir quand l'onglet Équipement s'affiche (config déjà chargée par Jeedom)
+$('a[href="#eqlogictab"]').on('shown.bs.tab', function () { buildContactsDatalist(); });
 
 // ── Envoi de test ───────────────────────────────────────────────────────────
 function doTestSend(extra) {
