@@ -756,10 +756,12 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								{{Destinataire}}
 								<span class="text-muted" style="font-weight:normal;font-size:0.88em;margin-left:4px;">{{— vide = groupe canal}}</span>
 							</label>
-							<input type="text" id="test_phone" class="form-control"
-								list="jwa_contacts_datalist"
-								placeholder="{{Vide = groupe canal — numéro direct ou nom du carnet de contacts}}">
-							<datalist id="jwa_contacts_datalist"></datalist>
+							<div style="position:relative;">
+								<input type="text" id="test_phone" class="form-control"
+									placeholder="{{Vide = groupe canal — numéro direct ou nom du carnet de contacts}}"
+									autocomplete="off">
+								<div id="jwa_contacts_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1050;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;"></div>
+							</div>
 						</div>
 
 						<!-- Message -->
@@ -1612,10 +1614,12 @@ $('#bk_restore').on('click', function () {
   });
 });
 
-// ── Carnet de contacts — mise à jour du datalist ────────────────────────────
-function buildContactsDatalist() {
+// ── Carnet de contacts — autocomplete custom ────────────────────────────────
+var jwaContactsList = [];
+
+function parseContactsList() {
+  jwaContactsList = [];
   var raw = $('#jwa_contacts_config').val() || '';
-  var opts = '';
   raw.split('\n').forEach(function (line) {
     line = line.trim();
     if (!line || line.charAt(0) === '#') { return; }
@@ -1623,18 +1627,58 @@ function buildContactsDatalist() {
     if (eq === -1) { return; }
     var name   = line.substring(0, eq).trim();
     var number = line.substring(eq + 1).trim();
-    if (name && number) {
-      opts += '<option value="' + $('<div>').text(name).html() + '">'
-            + $('<div>').text('(' + number + ')').html()
-            + '</option>';
-    }
+    if (name && number) { jwaContactsList.push({ name: name, number: number }); }
   });
-  $('#jwa_contacts_datalist').html(opts);
 }
-// Rafraîchir au chargement et à chaque modification du carnet
-$(document).on('input change', '#jwa_contacts_config', buildContactsDatalist);
-// Rafraîchir quand l'onglet Équipement s'affiche (config déjà chargée par Jeedom)
-$('a[href="#eqlogictab"]').on('shown.bs.tab', function () { buildContactsDatalist(); });
+
+function showContactsDropdown(filter) {
+  var $dd = $('#jwa_contacts_dropdown');
+  if (!jwaContactsList.length) { $dd.hide(); return; }
+  var term = (filter || '').toLowerCase().trim();
+  var matches = jwaContactsList.filter(function (c) {
+    return !term || c.name.toLowerCase().indexOf(term) !== -1 || c.number.indexOf(term) !== -1;
+  });
+  if (!matches.length) { $dd.hide(); return; }
+  var html = '';
+  matches.forEach(function (c) {
+    var nameSafe   = $('<div>').text(c.name).html();
+    var numberSafe = $('<div>').text(c.number).html();
+    html += '<div class="jwa-contact-item" data-number="' + numberSafe + '" '
+          + 'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;">'
+          + '<strong>' + nameSafe + '</strong>'
+          + ' <span style="color:#888;font-size:0.88em;">(' + numberSafe + ')</span>'
+          + '</div>';
+  });
+  $dd.html(html).show();
+}
+
+$(document).on('input', '#test_phone', function () {
+  parseContactsList();
+  showContactsDropdown($(this).val());
+});
+$(document).on('focus', '#test_phone', function () {
+  parseContactsList();
+  showContactsDropdown($(this).val());
+});
+$(document).on('click', '.jwa-contact-item', function () {
+  $('#test_phone').val($(this).data('number'));
+  $('#jwa_contacts_dropdown').hide();
+});
+$(document).on('mouseenter', '.jwa-contact-item', function () {
+  $(this).css('background', '#f5f5f5');
+}).on('mouseleave', '.jwa-contact-item', function () {
+  $(this).css('background', '');
+});
+$(document).on('keydown', '#test_phone', function (e) {
+  if (e.key === 'Escape') { $('#jwa_contacts_dropdown').hide(); }
+});
+$(document).on('click', function (e) {
+  if (!$(e.target).closest('#test_phone, #jwa_contacts_dropdown').length) {
+    $('#jwa_contacts_dropdown').hide();
+  }
+});
+$(document).on('input change', '#jwa_contacts_config', function () { parseContactsList(); });
+$('a[href="#eqlogictab"]').on('shown.bs.tab', function () { parseContactsList(); });
 
 // ── Envoi de test ───────────────────────────────────────────────────────────
 function doTestSend(extra) {

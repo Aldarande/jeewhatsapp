@@ -1420,13 +1420,20 @@ class jeewhatsapp extends eqLogic {
     $tarPath = $tmp . '/session_' . $this->getId() . '_' . bin2hex(random_bytes(8)) . '.tar';
     @unlink($tarPath);
 
+    $configFile = $authDir . '/_jwa_config.json';
     try {
+      // Inclut le carnet de contacts (stocké en DB, pas dans auth/) dans l'archive
+      file_put_contents($configFile, json_encode(
+        ['contacts' => $this->getConfiguration('contacts', '')],
+        JSON_UNESCAPED_UNICODE
+      ));
       $phar = new PharData($tarPath);
       $phar->buildFromDirectory($authDir);
       unset($phar);
       $plain = file_get_contents($tarPath);
     } finally {
       @unlink($tarPath);
+      @unlink($configFile);
     }
     if ($plain === false || $plain === '') {
       throw new Exception(__('Archive de session vide', __FILE__));
@@ -1531,6 +1538,20 @@ class jeewhatsapp extends eqLogic {
       $phar->extractTo($authDir, null, true);
       unset($phar);
       @chmod($authDir, 0700);
+
+      // Restaure le carnet de contacts s'il est présent dans l'archive (JWAB3+)
+      $contactsFile = $authDir . '/_jwa_config.json';
+      if (is_file($contactsFile)) {
+        $cfg = json_decode(file_get_contents($contactsFile), true);
+        if (is_array($cfg) && array_key_exists('contacts', $cfg)) {
+          $this->setConfiguration('contacts', $cfg['contacts']);
+          $this->save();
+          log::add('jeewhatsapp', 'info',
+            'jeewhatsapp.class.php::restoreSession() l.' . __LINE__
+            . ' — Carnet de contacts restauré pour l\'instance ' . $this->getId());
+        }
+        @unlink($contactsFile);
+      }
     } catch (Exception $e) {
       @unlink($tarPath);
       throw new Exception(__('Archive de restauration illisible : ', __FILE__) . $e->getMessage());
