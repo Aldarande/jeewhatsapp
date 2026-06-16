@@ -400,6 +400,19 @@ sendVarToJS('eqType', 'jeewhatsapp');
 										</span>
 									</div>
 								</div>
+<!-- Carnet de contacts -->
+								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Carnet de contacts}}</label>
+									<div class="col-sm-7">
+										<textarea class="eqLogicAttr form-control" rows="4"
+											   data-l1key="configuration" data-l2key="contacts"
+											   id="jwa_contacts_config"
+											   placeholder="Didier=33612345678&#10;Marie=33698765432&#10;Papa=33607080910"></textarea>
+										<span class="help-block">
+											<small>{{Un contact par ligne au format <strong>Nom=Numéro</strong> (numéro international sans +). Le nom peut être utilisé à la place du numéro dans le champ Destinataire de la commande « Envoyer un message » et dans les scénarios.}}</small>
+										</span>
+									</div>
+								</div>
 								</div>
 								<div class="col-lg-6">
 <!-- Interactions Jeedom -->
@@ -743,8 +756,12 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								{{Destinataire}}
 								<span class="text-muted" style="font-weight:normal;font-size:0.88em;margin-left:4px;">{{— vide = groupe canal}}</span>
 							</label>
-							<input type="text" id="test_phone" class="form-control"
-								placeholder="{{Laisser vide pour le groupe canal — ou numéro direct ex : 33612345678}}">
+							<div style="position:relative;">
+								<input type="text" id="test_phone" class="form-control"
+									placeholder="{{Vide = groupe canal — numéro direct ou nom du carnet de contacts}}"
+									autocomplete="off">
+								<div id="jwa_contacts_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1050;background:#fff;border:1px solid #ccc;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,0.12);max-height:220px;overflow-y:auto;"></div>
+							</div>
 						</div>
 
 						<!-- Message -->
@@ -1596,6 +1613,72 @@ $('#bk_restore').on('click', function () {
     error: function () { $btn.prop('disabled', false).html('<i class="fas fa-upload"></i> {{Restaurer}}'); $result.text('{{Erreur de communication}}').css('color', 'red').show(); }
   });
 });
+
+// ── Carnet de contacts — autocomplete custom ────────────────────────────────
+var jwaContactsList = [];
+
+function parseContactsList() {
+  jwaContactsList = [];
+  var raw = $('#jwa_contacts_config').val() || '';
+  raw.split('\n').forEach(function (line) {
+    line = line.trim();
+    if (!line || line.charAt(0) === '#') { return; }
+    var eq = line.indexOf('=');
+    if (eq === -1) { return; }
+    var name   = line.substring(0, eq).trim();
+    var number = line.substring(eq + 1).trim();
+    if (name && number) { jwaContactsList.push({ name: name, number: number }); }
+  });
+}
+
+function showContactsDropdown(filter) {
+  var $dd = $('#jwa_contacts_dropdown');
+  if (!jwaContactsList.length) { $dd.hide(); return; }
+  var term = (filter || '').toLowerCase().trim();
+  var matches = jwaContactsList.filter(function (c) {
+    return !term || c.name.toLowerCase().indexOf(term) !== -1 || c.number.indexOf(term) !== -1;
+  });
+  if (!matches.length) { $dd.hide(); return; }
+  var html = '';
+  matches.forEach(function (c) {
+    var nameSafe   = $('<div>').text(c.name).html();
+    var numberSafe = $('<div>').text(c.number).html();
+    html += '<div class="jwa-contact-item" data-number="' + numberSafe + '" '
+          + 'style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;">'
+          + '<strong>' + nameSafe + '</strong>'
+          + ' <span style="color:#888;font-size:0.88em;">(' + numberSafe + ')</span>'
+          + '</div>';
+  });
+  $dd.html(html).show();
+}
+
+$(document).on('input', '#test_phone', function () {
+  parseContactsList();
+  showContactsDropdown($(this).val());
+});
+$(document).on('focus', '#test_phone', function () {
+  parseContactsList();
+  showContactsDropdown($(this).val());
+});
+$(document).on('click', '.jwa-contact-item', function () {
+  $('#test_phone').val($(this).data('number'));
+  $('#jwa_contacts_dropdown').hide();
+});
+$(document).on('mouseenter', '.jwa-contact-item', function () {
+  $(this).css('background', '#f5f5f5');
+}).on('mouseleave', '.jwa-contact-item', function () {
+  $(this).css('background', '');
+});
+$(document).on('keydown', '#test_phone', function (e) {
+  if (e.key === 'Escape') { $('#jwa_contacts_dropdown').hide(); }
+});
+$(document).on('click', function (e) {
+  if (!$(e.target).closest('#test_phone, #jwa_contacts_dropdown').length) {
+    $('#jwa_contacts_dropdown').hide();
+  }
+});
+$(document).on('input change', '#jwa_contacts_config', function () { parseContactsList(); });
+$('a[href="#eqlogictab"]').on('shown.bs.tab', function () { parseContactsList(); });
 
 // ── Envoi de test ───────────────────────────────────────────────────────────
 function doTestSend(extra) {

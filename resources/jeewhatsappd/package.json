@@ -8,6 +8,6 @@
     "@whiskeysockets/baileys": "^6.7.15",
     "pino": "^9.0.0",
     "qrcode": "^1.5.4",
-    "sharp": "^0.33.5"
+    "sharp": "^0.34.0"
   }
 }

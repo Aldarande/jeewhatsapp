@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.6</div>
+    <div class="version">Plugin Jeedom — v0.7</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -285,6 +285,7 @@
 
     <li class="section-title">Utilisation</li>
     <li><a href="#configuration">Configuration</a></li>
+    <li><a href="#contacts">Carnet de contacts</a></li>
     <li><a href="#groupe-canal">Lier le groupe</a></li>
     <li><a href="#qrcode">Connexion QR code</a></li>
     <li><a href="#commandes">Commandes</a></li>
@@ -512,10 +513,40 @@
       <tr><td><strong>Groupe lié</strong></td><td>JID du groupe — renseigné automatiquement, en lecture seule</td></tr>
       <tr><td><strong>Interactions Jeedom</strong></td><td>Active les réponses automatiques via le moteur d'interactions</td></tr>
       <tr><td><strong>Préfixe Jeedom</strong></td><td>Texte ajouté en tête de chaque message envoyé par Jeedom (défaut : <code>🏠 </code>)</td></tr>
+      <tr><td><strong>Carnet de contacts</strong></td><td>Aliases <code>Nom=Numéro</code> utilisables comme destinataires dans les commandes et scénarios</td></tr>
     </tbody>
   </table>
 
   <p>Sauvegardez. Les commandes sont créées automatiquement.</p>
+
+  <!-- ── Carnet de contacts ───────────────────────────────────────────── -->
+  <h2 id="contacts">Carnet de contacts</h2>
+
+  <p>Le carnet de contacts permet d'associer un <strong>alias</strong> à un numéro WhatsApp.
+  Une fois défini, l'alias peut être utilisé à la place du numéro international dans le champ
+  <strong>Titre</strong> (Destinataire) de la commande <code>send_message</code> et dans les scénarios.</p>
+
+  <h3>Format</h3>
+  <p>Un contact par ligne, format <code>Nom=Numéro</code> :</p>
+  <pre><code>Didier=33612345678
+Marie=33698765432
+Papa=33607080910</code></pre>
+  <ul>
+    <li>Le numéro est au format international sans <code>+</code> (ex : <code>33612345678</code> pour un numéro français)</li>
+    <li>Les noms sont insensibles à la casse (<code>didier</code>, <code>DIDIER</code> et <code>Didier</code> sont équivalents)</li>
+    <li>Les lignes commençant par <code>#</code> sont des commentaires et ignorées</li>
+  </ul>
+
+  <h3>Utilisation dans un scénario</h3>
+  <pre><code>Commande : Envoyer un message
+Message  : Bonne nuit !
+Titre    : Didier          ← à la place de 33612345678</code></pre>
+
+  <div class="callout tip">
+    <strong>💡 Datalist dans l'onglet Test</strong>
+    Le champ <strong>Destinataire</strong> de l'onglet Test propose automatiquement les contacts
+    définis dans le carnet sous forme de suggestions. Commencez à taper le nom pour les voir apparaître.
+  </div>
 
   <!-- ── Groupe canal ──────────────────────────────────────────────────── -->
   <h2 id="groupe-canal">Lier le groupe canal</h2>
@@ -676,7 +707,7 @@
         <td>message</td>
         <td>
           Envoie un message dans le groupe canal.<br>
-          <strong>Titre</strong> = override optionnel (vide = groupe canal, numéro = envoi direct).<br>
+          <strong>Titre</strong> = override optionnel (vide = groupe canal, numéro ou <a href="#contacts">alias du carnet de contacts</a> = envoi direct).<br>
           <strong>Message</strong> = texte à envoyer.
         </td>
       </tr>
@@ -695,6 +726,7 @@
     Dans JeeWhatsApp, le champ <strong>Titre</strong> est un override optionnel :<br>
     — Vide → envoi dans le <strong>groupe canal</strong> (comportement par défaut)<br>
     — Numéro (ex : <code>33612345678</code>) → envoi direct à ce numéro<br>
+    — <strong>Alias</strong> (ex : <code>Didier</code>) → résolu via le <a href="#contacts">carnet de contacts</a><br>
     — JID de groupe (ex : <code>120363…@g.us</code>) → envoi dans ce groupe spécifique
   </div>
 
@@ -934,7 +966,16 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.6 <span class="badge">latest</span></h3>
+  <h3>v0.7 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Carnet de contacts</strong> — alias <code>Nom=Numéro</code> utilisables comme destinataire dans <code>send_message</code> et les scénarios</li>
+    <li>UI Live : bouton ↓ (scroll vers le bas), démarrage automatique à l'ouverture de l'onglet</li>
+    <li>UI Stats : pré-chargement automatique à l'ouverture de l'équipement, anti-clignotement</li>
+    <li>Sécurité : confinement des chemins de fichiers médias (<code>assertMediaPathAllowed</code>)</li>
+    <li>Sécurité : <code>package-lock.json</code> versionné, <code>npm ci</code> pour builds reproductibles</li>
+  </ul>
+
+  <h3>v0.6 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li>Audit de sécurité complet — score 100/100</li>
     <li>Renforcement de l'authentification du callback (vérification IP locale, headers)</li>
@@ -982,7 +1023,7 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <h2 id="apropos">À propos</h2>
 
   <ul>
-    <li><strong>Plugin :</strong> JeeWhatsApp v0.6 — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin :</strong> JeeWhatsApp v0.7 — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend :</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — open-source, licence MIT</li>
     <li><strong>Jeedom</strong> est une marque déposée de Jeedom SAS. Ce plugin est un développement communautaire indépendant, non affilié à Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> est une marque déposée de Meta Platforms, Inc. Ce plugin n'est pas affilié à Meta.</li>

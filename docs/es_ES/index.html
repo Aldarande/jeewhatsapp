@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.6</div>
+    <div class="version">Plugin Jeedom — v0.7</div>
   </div>
   <ul>
     <li class="section-title">Primeros pasos</li>
@@ -291,6 +291,7 @@
     <li><a href="#interactions">Interacciones</a></li>
     <li><a href="#scenarios">Escenarios</a></li>
     <li><a href="#templates">Plantillas</a></li>
+    <li><a href="#contacts">Agenda de contactos</a></li>
 
     <li class="section-title">Referencia</li>
     <li><a href="#limitation-notifications">⚠️ Notificaciones</a></li>
@@ -512,6 +513,7 @@
       <tr><td><strong>Grupo vinculado</strong></td><td>JID del grupo — rellenado automáticamente, solo lectura</td></tr>
       <tr><td><strong>Interacciones Jeedom</strong></td><td>Activa las respuestas automáticas mediante el motor de interacciones</td></tr>
       <tr><td><strong>Prefijo Jeedom</strong></td><td>Texto añadido al inicio de cada mensaje enviado por Jeedom (predeterminado: <code>🏠 </code>)</td></tr>
+      <tr><td><strong>Agenda de contactos</strong></td><td>Alias con nombre (<code>Nombre=Número</code>) — usar un nombre como destinatario en lugar de un número de teléfono</td></tr>
     </tbody>
   </table>
 
@@ -676,7 +678,7 @@
         <td>message</td>
         <td>
           Envía un mensaje al grupo canal.<br>
-          <strong>Título</strong> = anulación opcional (vacío = grupo canal, número = envío directo).<br>
+          <strong>Título</strong> = anulación opcional (vacío = grupo canal, número o <a href="#contacts">alias de la agenda</a> = envío directo).<br>
           <strong>Mensaje</strong> = texto a enviar.
         </td>
       </tr>
@@ -695,7 +697,8 @@
     En JeeWhatsApp, el campo <strong>Título</strong> es una anulación opcional:<br>
     — Vacío → envío al <strong>grupo canal</strong> (comportamiento predeterminado)<br>
     — Número (ej.: <code>33612345678</code>) → envío directo a ese número<br>
-    — JID de grupo (ej.: <code>120363…@g.us</code>) → envío a ese grupo específico
+    — JID de grupo (ej.: <code>120363…@g.us</code>) → envío a ese grupo específico<br>
+    — Alias (ej.: <code>Didier</code>) → resuelto a través de la <a href="#contacts">agenda de contactos</a>
   </div>
 
   <!-- ── Interacciones ─────────────────────────────────────────────────── -->
@@ -798,6 +801,39 @@ informe=☀️ Salón: #[Salón][Temperatura][Valor]#°C — Puerta: #[Entrada][
     <strong>Enviar una plantilla</strong> primero resuelve la clave para recuperar el texto de la plantilla,
     luego resuelve las etiquetas de Jeedom antes de enviar. Esto permite centralizar tus mensajes y
     modificarlos en un solo lugar sin tocar los escenarios.
+  </div>
+
+  <!-- ── Agenda de contactos ─────────────────────────────────────────────── -->
+  <h2 id="contacts">Agenda de contactos</h2>
+
+  <p>El campo <strong>Agenda de contactos</strong> permite definir alias con nombre para números de teléfono.
+  Usa un nombre como destinatario en el comando <code>send_message</code> en lugar de un número de teléfono directo.</p>
+
+  <h3>Formato</h3>
+  <p>Un alias por línea, en el formato <code>Nombre=Número</code>:</p>
+  <pre><code>Didier=33612345678
+Marie=33698765432
+Papa=33607080910
+# Las líneas que empiezan por # son comentarios</code></pre>
+
+  <ul>
+    <li>El nombre <strong>no distingue mayúsculas y minúsculas</strong> (<code>Didier</code> = <code>didier</code>)</li>
+    <li>El número debe estar en formato internacional sin el <code>+</code> (ej.: <code>33612345678</code>)</li>
+    <li>Las líneas vacías y las que empiezan por <code>#</code> se ignoran</li>
+  </ul>
+
+  <h3>Uso en un escenario</h3>
+  <div class="scenario">
+    <h4>📱 Enviar un mensaje directo a un contacto por nombre</h4>
+    <div class="sc-row"><span class="sc-label">Acción</span><span class="sc-val"><code>[Mi WhatsApp][Enviar un mensaje]</code></span></div>
+    <div class="sc-row"><span class="sc-label">Título</span><span class="sc-val"><code>Didier</code> <span style="color:#888;font-size:0.9em;">(alias de la agenda)</span></span></div>
+    <div class="sc-row"><span class="sc-label">Mensaje</span><span class="sc-val">¡Movimiento detectado en casa!</span></div>
+  </div>
+
+  <div class="callout tip">
+    <strong>💡 Autocompletar en la interfaz de prueba</strong>
+    En la pestaña <strong>Test</strong>, el campo <em>Destinatario</em> muestra tu agenda como sugerencias:
+    el nombre aparece en negrita, el número entre paréntesis como indicación.
   </div>
 
   <!-- ── Resolución de problemas ───────────────────────────────────────── -->
@@ -934,7 +970,14 @@ informe=☀️ Salón: #[Salón][Temperatura][Valor]#°C — Puerta: #[Entrada][
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.6 <span class="badge">latest</span></h3>
+  <h3>v0.7 <span class="badge">latest</span></h3>
+  <ul>
+    <li>Agenda de contactos: alias con nombre (<code>Nombre=Número</code>) para destinatarios de <code>send_message</code></li>
+    <li>Pestaña Test: datalist con autocompletar de la agenda de contactos</li>
+    <li>Seguridad: confinamiento de ruta para archivos multimedia (CWE-73), npm lockfile versionado (F-014/F-016)</li>
+  </ul>
+
+  <h3>v0.6 <span class="badge" style="background:#1a7f4b;">estable</span></h3>
   <ul>
     <li>Auditoría de seguridad completa — puntuación 100/100</li>
     <li>Refuerzo de la autenticación del callback (verificación de IP local, cabeceras)</li>
@@ -982,7 +1025,7 @@ informe=☀️ Salón: #[Salón][Temperatura][Valor]#°C — Puerta: #[Entrada][
   <h2 id="apropos">Acerca de</h2>
 
   <ul>
-    <li><strong>Plugin:</strong> JeeWhatsApp v0.6 — Licencia AGPL v3 — Autor: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin:</strong> JeeWhatsApp v0.7 — Licencia AGPL v3 — Autor: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend:</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — código abierto, licencia MIT</li>
     <li><strong>Jeedom</strong> es una marca registrada de Jeedom SAS. Este plugin es un desarrollo comunitario independiente, no afiliado a Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> es una marca registrada de Meta Platforms, Inc. Este plugin no está afiliado a Meta.</li>
