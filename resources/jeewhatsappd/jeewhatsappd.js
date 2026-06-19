@@ -28,19 +28,31 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // SECURITY (F-014, CWE-73) : liste blanche de répertoires autorisés pour les
 // fichiers médias (sendMedia, sendSticker, postStatus, setGroupIcon).
-// Empêche l'exfiltration de fichiers système arbitraires via media_path.
+// Empêche l'exfiltration de fichiers système arbitraires (/etc, /root, …) via
+// media_path, tout en couvrant les emplacements légitimes où Jeedom et les
+// scénarios génèrent des fichiers : toute l'arborescence data/, tmp/, cache/
+// de l'installation Jeedom (racine = ../../../../ depuis resources/jeewhatsappd/).
+// Le plugin lui-même utilise des sous-dossiers de data/jeewhatsapp et tmp/jeewhatsapp.
+const JEEDOM_ROOT = path.resolve(__dirname, '../../../..');
 const MEDIA_ALLOWED_BASES = [
-  path.resolve(__dirname, '../../../../data/jeewhatsapp'),
-  path.resolve(__dirname, '../../../../tmp/jeewhatsapp'),
-  '/tmp',
+  path.join(JEEDOM_ROOT, 'data'),    // data/jeewhatsapp + tout fichier généré par un plugin/scénario
+  path.join(JEEDOM_ROOT, 'tmp'),     // fichiers temporaires Jeedom
+  path.join(JEEDOM_ROOT, 'cache'),   // cache Jeedom (rapports, exports…)
+  '/tmp',                            // /tmp système (chemins reconstruits dans les scénarios)
 ];
 
 function assertMediaPathAllowed(filePath) {
-  const resolved = path.resolve(filePath);
+  // Résout les liens symboliques et . / .. pour empêcher tout contournement
+  // (ex : data/jeewhatsapp/../../etc/passwd). fs.realpathSync échoue si le
+  // fichier n'existe pas → on retombe sur path.resolve (l'existence est
+  // vérifiée juste après par l'appelant).
+  let resolved;
+  try { resolved = fs.realpathSync(filePath); }
+  catch (e) { resolved = path.resolve(filePath); }
   for (const base of MEDIA_ALLOWED_BASES) {
-    if (resolved.startsWith(base + path.sep) || resolved === base) { return; }
+    if (resolved === base || resolved.startsWith(base + path.sep)) { return; }
   }
-  throw new Error('Chemin de fichier non autorisé (hors des répertoires permis) : ' + filePath);
+  throw new Error('Chemin de fichier non autorisé (hors des répertoires Jeedom data/tmp/cache permis) : ' + filePath);
 }
 
 // ---------------------------------------------------------------------------
