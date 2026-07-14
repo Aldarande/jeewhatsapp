@@ -427,13 +427,19 @@ function enqueueOutbox(id, phone, group_tag, payload, sendOpts, type) {
   logMsg('info', '[' + id + '] Outbox : message mis en file (' + outboxPendingCount(id) + ' en attente)');
 }
 
-// Distingue une erreur d'envoi "réseau" (à remettre en file) d'une erreur métier
-// (numéro invalide, groupe introuvable… — inutile de réessayer).
+// Distingue une erreur d'envoi "réseau" (socket fermée → remettre en file) d'un
+// simple dépassement de délai d'ACK.
+//
+// ⚠️ IMPORTANT (fix duplication 4x — forum #149964) : un timeout du Promise.race
+// (« délai dépassé ») NE doit PAS être traité comme un échec réseau. Baileys, une
+// fois sock.sendMessage() appelé, met le message dans sa file d'émission et le
+// LIVRE même si l'ACK tarde au-delà de notre garde-fou. Le Promise.race qui expire
+// n'annule pas cet envoi. Le remettre en file (outbox) provoque donc un envoi en
+// double (voire 4x si l'ACK tarde à chaque tentative). On ne réenfile donc QUE sur
+// une vraie erreur de socket (fermée/perdue), pas sur un timeout.
 function isNetworkSendError(e) {
   const m = String(e?.message || e || '').toLowerCase();
-  return m.includes('délai dépassé')
-      || m.includes('timed out') || m.includes('timeout')
-      || m.includes('connection closed') || m.includes('connection lost')
+  return m.includes('connection closed') || m.includes('connection lost')
       || m.includes('not open') || m.includes('socket')
       || m.includes('econnrefused') || m.includes('econnreset');
 }
@@ -465,12 +471,17 @@ async function flushOutbox(id) {
       }
       try {
         const jid = resolveJid(id, entry.phone, entry.group_tag);
-        const t = new Promise((_, r) => setTimeout(() => r(new Error('Envoi outbox — délai dépassé')), 10000));
+        // Timeout d'ACK (30 s) : comme pour le case 'send', un ACK lent ≠ échec.
+        // On retire l'entrée de l'outbox AVANT l'attente longue pour éviter tout
+        // rejeu concurrent, et on considère l'envoi lancé comme livré.
+        const ACK_TIMEOUT = Symbol('ack_timeout');
+        const t = new Promise((resolve) => setTimeout(() => resolve(ACK_TIMEOUT), 30000));
         const sent = await Promise.race([sock.sendMessage(jid, entry.payload, entry.sendOpts || {}), t]);
-        recordSent(id, sent);
+        if (sent !== ACK_TIMEOUT) { recordSent(id, sent); }
         outbox = outbox.filter(e => e.id !== entry.id);
         persistOutbox();
-        writeEvent(id, 'out', '(file) → ' + String(entry.payload?.text || entry.type).substring(0, 100));
+        writeEvent(id, 'out', '(file) → ' + String(entry.payload?.text || entry.type).substring(0, 100)
+          + (sent === ACK_TIMEOUT ? ' (ACK lent)' : ''));
         logMsg('info', '[' + id + '] Outbox : message rejoué (' + outboxPendingCount(id) + ' restant(s))');
       } catch (e) {
         entry.attempts = (entry.attempts || 0) + 1;
@@ -1175,19 +1186,29 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       logMsg('info', '[' + id + '] → ' + jid + ' : ' + msgPayload.text.substring(0, 60));
       await applyPresence(sock, jid, presence);
       try {
-        const sendTimeout = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Envoi échoué — délai dépassé pour ' + jid)), 10000)
+        // Garde-fou de 30 s. Si sock.sendMessage n'a pas résolu (ACK lent), on
+        // NE réenfile PAS : Baileys a déjà accepté le message et le livrera. On
+        // renvoie {sent:true, ackTimeout:true} pour ne PAS générer de doublon
+        // (fix forum #149964 — messages dupliqués 4x sur connexion lente).
+        const ACK_TIMEOUT = Symbol('ack_timeout');
+        const sendTimeout = new Promise((resolve) =>
+          setTimeout(() => resolve(ACK_TIMEOUT), 30000)
         );
         const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
+        if (sent === ACK_TIMEOUT) {
+          writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120) + ' (ACK lent)');
+          logMsg('warning', '[' + id + '] Envoi lancé mais ACK non reçu sous 30 s — considéré envoyé (pas de réessai pour éviter les doublons) : ' + jid);
+          return { sent: true, ackTimeout: true };
+        }
         recordSent(id, sent);
         writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120));
         return { sent: true };
       } catch (e) {
-        // Échec réseau (timeout, socket fermée…) → mise en file + {queued:true}.
+        // Vraie erreur de socket (fermée/perdue) → mise en file + {queued:true}.
         // Une erreur métier (groupe introuvable, numéro invalide) est relancée.
         if (isNetworkSendError(e)) {
           enqueueOutbox(id, phone, group_tag, msgPayload, sendOpts, 'text');
-          logMsg('warning', '[' + id + '] Envoi échoué (réseau) — mis en file : ' + e.message);
+          logMsg('warning', '[' + id + '] Envoi échoué (socket) — mis en file : ' + e.message);
           return { queued: true, pending: outboxPendingCount(id) };
         }
         throw e;
