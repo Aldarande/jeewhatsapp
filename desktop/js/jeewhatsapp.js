@@ -135,6 +135,12 @@ function addCmdToTable(cmdParam) {
     tr += '</tr>';
 
     const $tr = $(tr);
+    // Idempotence : si une ligne existe déjà pour ce cmd.id (rechargement partiel
+    // du tableau), on la remplace au lieu d'empiler un doublon visuel. N'a AUCUN
+    // effet sur l'envoi de messages — purement cosmétique côté page de config.
+    if (isset(cmd.id) && cmd.id !== '') {
+        $('#table_cmd tbody tr.cmd[data-cmd_id="' + cmd.id + '"]').remove();
+    }
     $('#table_cmd tbody').append($tr);
     $tr.setValues(cmd, '.cmdAttr');
 }
