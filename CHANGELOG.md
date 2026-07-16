@@ -76,6 +76,59 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Fixed
 
+- **Messages envoyés dupliqués (jusqu'à 4×)** — signalé sur le forum
+  ([#149964](https://community.jeedom.com/t/jeewhatsapp-message-envoye-dupliques-4x/149964)),
+  non reproductible sur une installation rapide (Docker) : le bug dépendait de la
+  **latence**. Les logs utilisateur ont montré **4 appels `sendToDaemon() — send`
+  côté PHP** pour un seul envoi — Jeedom émettait réellement 4 ordres, le daemon
+  les exécutait fidèlement.
+  - **Désalignement des délais** : le garde-fou d'envoi du daemon pouvait dépasser
+    le timeout de `file_get_contents()` côté PHP (15 s). Sur installation lente,
+    PHP coupait la connexion et levait « Daemon non joignable » alors que le
+    message était **déjà parti** — un scénario pouvait alors re-déclencher l'envoi.
+    Garde-fou daemon ramené à **12 s** (strictement sous les 15 s de PHP) : le
+    daemon rend toujours la main avant PHP, plus aucun faux timeout.
+  - **ACK lent ≠ échec** : un dépassement de délai d'accusé de réception n'est plus
+    traité comme une erreur réseau. Baileys, une fois `sendMessage()` appelé, livre
+    le message même si l'ACK tarde (et le timeout n'annule pas l'envoi) — le
+    remettre en file provoquait des doublons. Seule une **vraie erreur de socket**
+    (`closed`/`lost`/`not open`/`econn*`) réenfile désormais le message. Même
+    logique appliquée au rejeu de l'outbox (`flushOutbox`).
+  - **Déduplication anti-doublon (filet de sécurité)** : `sendMessage()` refuse de
+    ré-émettre le **même message vers le même destinataire** dans une fenêtre
+    courte — configurable par équipement via `dedup_window` (**4 s** par défaut,
+    `0` = désactivé). Neutralise les doublons quelle qu'en soit la cause (retry de
+    scénario, double déclencheur…). Les envois de test et les messages distincts
+    ne sont jamais bloqués ; chaque blocage est journalisé en **info**.
+
+- **Onglet Live : le bouton « Vider » ne vidait pas réellement le flux** — signalé
+  sur le forum (#149964, ddelec24) : les événements réapparaissaient au
+  rafraîchissement automatique. Deux causes cumulées :
+  - le polling repartait de `_liveLastTs = 0` et rechargeait tout l'historique ;
+  - même en vidant `events.json`, le daemon conservait un **tampon mémoire**
+    (`eventsBuf[id]`) qu'il réécrivait au premier événement suivant.
+  Correctif : nouvelle action daemon **`clearEvents`** qui purge **à la fois** le
+  tampon mémoire et le fichier, exposée par `clearLiveEvents()` + l'endpoint AJAX
+  `clearLiveEvents` (avec repli fichier si le daemon est injoignable). Le bouton
+  conserve désormais le dernier horodatage vu : seuls les **nouveaux** événements
+  s'affichent.
+
+- **Envoi de fichier refusé (« chemin non autorisé »)** — signalé sur le forum
+  ([#149613](https://community.jeedom.com/t/jeewhatsapp-envoi-de-fichier/149613)) :
+  le garde-fou anti-exfiltration (F-014) limitait `media_path` à `data/jeewhatsapp`,
+  `tmp/jeewhatsapp` et `/tmp`. Tout fichier légitime généré ailleurs sous `data/`
+  (caméra, rapport d'un autre plugin, chemin reconstruit dans un scénario) était
+  rejeté. La liste blanche couvre désormais l'ensemble des répertoires Jeedom
+  **`data/`, `tmp/` et `cache/`** (plus `/tmp`), et la vérification résout les liens
+  symboliques et les `..` via `fs.realpathSync` — l'exfiltration système
+  (`/etc/passwd`, `/root/.ssh`) et le path traversal restent bloqués.
+
+- **Lignes en double dans le tableau des commandes** — `addCmdToTable()` ajoutait
+  systématiquement une ligne sans vérifier si le `cmd.id` était déjà affiché : un
+  rechargement partiel du tableau pouvait empiler des doublons visuels. La ligne
+  existante est désormais remplacée. Purement cosmétique (page de configuration) —
+  aucun impact sur l'envoi de messages. Suggestion communautaire (SWR, #149964).
+
 - **Affichage des noms d'équipements cassé sur la page du plugin** — le correctif
   F-013 enveloppait `getHumanName(true, true)` dans `htmlspecialchars()`, or cette
   méthode retourne du **HTML de confiance** (badge d'objet coloré + `<strong>nom</strong>`)
