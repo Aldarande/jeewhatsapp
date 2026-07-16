@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Jeedom-Plugin — v0.7</div>
+    <div class="version">Jeedom-Plugin — v0.8</div>
   </div>
   <ul>
     <li class="section-title">Erste Schritte</li>
@@ -284,7 +284,8 @@
     <li><a href="#installation">Installation</a></li>
 
     <li class="section-title">Verwendung</li>
-    <li><a href="#configuration">Konfiguration</a></li>
+    <li><a href="#configuration">Gerätekonfiguration</a></li>
+    <li><a href="#parametres-plugin">Plugin-Einstellungen</a></li>
     <li><a href="#groupe-canal">Gruppe verknüpfen</a></li>
     <li><a href="#qrcode">QR-Code-Verbindung</a></li>
     <li><a href="#commandes">Befehle</a></li>
@@ -518,6 +519,45 @@
   </table>
 
   <p>Speichern. Die Befehle werden automatisch erstellt.</p>
+
+  <!-- ── Plugin-Einstellungen ────────────────────────────────────────────── -->
+  <h2 id="parametres-plugin">Plugin-Einstellungen</h2>
+
+  <p>Erreichbar über <strong>Plugins → Plugin-Verwaltung → JeeWhatsApp → Konfiguration</strong>.</p>
+
+  <table>
+    <thead><tr><th>Parameter</th><th>Beschreibung</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Daemon-Port</strong></td>
+        <td>Lokaler HTTP-Port des Daemons (Standard: <code>55148</code>). Nur ändern, wenn ein Konflikt mit einem anderen Dienst besteht.</td>
+      </tr>
+      <tr>
+        <td><strong>Webhook-Token</strong></td>
+        <td>Geheimer Token zur Absicherung eingehender Webhook-Aufrufe. Automatisch generiert — nicht manuell ändern.</td>
+      </tr>
+      <tr>
+        <td><strong>Zusätzliche erlaubte Verzeichnisse</strong></td>
+        <td>Absolute Pfade (ein Pfad pro Zeile), aus denen der Befehl <em>Datei senden</em> Dateien lesen darf. Standardmäßig sind nur Jeedom-eigene Verzeichnisse (<code>data/</code>, <code>tmp/</code>, <code>cache/</code>) erlaubt.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Erlaubte Dateiverzeichnisse</h3>
+
+  <p>Beim Senden einer Datei über den Befehl <strong>Datei senden</strong> prüft das Plugin, ob der angegebene Pfad in einem erlaubten Verzeichnis liegt. Standardmäßig sind folgende Verzeichnisse freigegeben: <code>data/</code>, <code>tmp/</code> und <code>cache/</code> innerhalb von Jeedom.</p>
+
+  <p>Um Dateien aus anderen Verzeichnissen zu senden (z. B. von einer Netzwerkfreigabe oder einem externen Speicher), tragen Sie den absoluten Pfad in das Feld <strong>Zusätzliche erlaubte Verzeichnisse</strong> ein:</p>
+
+  <pre><code>/mnt/nas/bilder
+/home/jeedom/medien
+/data/kamera</code></pre>
+
+  <div class="callout warning">
+    <strong>⚠️ Sicherheitshinweis und Daemon-Neustart erforderlich</strong>
+    Erlauben Sie nur Verzeichnisse, auf die Sie vertrauen. Ein zu weit gefasstes Verzeichnis (z. B. <code>/</code> oder <code>/etc</code>) könnte es einem Szenario ermöglichen, beliebige Systemdateien zu senden.<br><br>
+    Nach jeder Änderung an den Plugin-Einstellungen muss der <strong>Daemon neu gestartet</strong> werden, damit die neuen Verzeichnisse wirksam werden.
+  </div>
 
   <!-- ── Kanalgruppe ───────────────────────────────────────────────────── -->
   <h2 id="groupe-canal">Kanalgruppe verknüpfen</h2>
@@ -831,9 +871,11 @@ Papa=33607080910
   </div>
 
   <div class="callout tip">
-    <strong>💡 Autovervollständigung in der Testoberfläche</strong>
-    Im Tab <strong>Test</strong> zeigt das Feld <em>Empfänger</em> Ihr Kontaktbuch als Vorschläge:
-    der Name erscheint fett, die Nummer in Klammern als Hinweis.
+    <strong>💡 Autovervollständigung im Test-Tab</strong>
+    Im Tab <strong>Test</strong> zeigt das Feld <em>Empfänger</em> ein benutzerdefiniertes Dropdown mit Ihrem Kontaktbuch:
+    der <strong>Name erscheint fett</strong>, darunter die Nummer in gedimmter Schrift.
+    Die Liste lässt sich durch Tippen filtern — Tastaturnavigation (Pfeiltasten + Enter) wird unterstützt.
+    Die Auswahl eines Eintrags trägt automatisch die Telefonnummer in das Feld ein.
   </div>
 
   <!-- ── Fehlerbehebung ────────────────────────────────────────────────── -->
@@ -970,7 +1012,15 @@ Papa=33607080910
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.7 <span class="badge">latest</span></h3>
+  <h3>v0.8 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Zusätzliche Medienverzeichnisse</strong> — in den Plugin-Einstellungen konfigurierbar (ein absoluter Pfad pro Zeile)</li>
+    <li><strong>Kontakt-Autocomplete</strong> — stilisiertes Dropdown im Test-Tab (Name fett + Nummer, Tastaturfilterung)</li>
+    <li><strong>Sitzungs-Backup</strong> — Kontaktbuch jetzt in <code>.jwab</code>-Datei enthalten und automatisch wiederhergestellt</li>
+    <li>Korrektur: <code>package-lock.json</code> aus dem Repository entfernt, zurück zu <code>npm install</code></li>
+  </ul>
+
+  <h3>v0.7 <span class="badge" style="background:#1a7f4b;">stabil</span></h3>
   <ul>
     <li>Kontaktbuch: benannte Aliase (<code>Name=Nummer</code>) für <code>send_message</code>-Empfänger</li>
     <li>Test-Tab: Datalist mit Autovervollständigung aus dem Kontaktbuch</li>
@@ -1025,7 +1075,7 @@ Papa=33607080910
   <h2 id="apropos">Über das Plugin</h2>
 
   <ul>
-    <li><strong>Plugin:</strong> JeeWhatsApp v0.7 — Lizenz AGPL v3 — Autor: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin:</strong> JeeWhatsApp v0.8 — Lizenz AGPL v3 — Autor: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend:</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — Open Source, MIT-Lizenz</li>
     <li><strong>Jeedom</strong> ist eine eingetragene Marke von Jeedom SAS. Dieses Plugin ist eine unabhängige Community-Entwicklung, nicht mit Jeedom SAS verbunden.</li>
     <li><strong>WhatsApp</strong> ist eine eingetragene Marke von Meta Platforms, Inc. Dieses Plugin ist nicht mit Meta verbunden.</li>

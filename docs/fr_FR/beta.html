@@ -276,7 +276,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.7 BETA</div>
+    <div class="version">Plugin Jeedom — v0.8 BETA</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -976,25 +976,28 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
     non encore disponibles dans la version stable.
   </div>
 
-  <p>Aucune nouveauté beta en cours pour le moment. Les prochaines fonctionnalités planifiées :</p>
-  <ul>
-    <li>Envoi de médias (images)</li>
-    <li>Support des réactions WhatsApp</li>
-  </ul>
+  <p>Aucune nouveauté beta en cours pour le moment.</p>
 
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.7 <span class="badge stable">latest</span></h3>
+  <h3>v0.8 <span class="badge stable">latest</span></h3>
+  <ul>
+    <li><strong>Répertoires médias supplémentaires</strong> — configurables dans les paramètres du plugin (un chemin absolu par ligne)</li>
+    <li><strong>Autocomplete contacts</strong> — liste déroulante stylisée dans l'onglet Test (nom en gras + numéro, filtrage au clavier)</li>
+    <li><strong>Backup de session</strong> — carnet de contacts inclus dans le fichier <code>.jwab</code> et restauré automatiquement</li>
+    <li>Correction : <code>package-lock.json</code> retiré du dépôt, retour à <code>npm install</code></li>
+  </ul>
+
+  <h3>v0.7 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Carnet de contacts</strong> — alias <code>Nom=Numéro</code> utilisables comme destinataire dans <code>send_message</code> et les scénarios</li>
     <li>UI Live : bouton ↓ (scroll vers le bas), démarrage automatique à l'ouverture de l'onglet</li>
     <li>UI Stats : pré-chargement automatique, anti-clignotement</li>
     <li>Sécurité : confinement des chemins de fichiers médias (<code>assertMediaPathAllowed</code>)</li>
-    <li>Sécurité : <code>package-lock.json</code> versionné, <code>npm ci</code> pour builds reproductibles</li>
   </ul>
 
-  <h3>v0.6 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
+  <h3>v0.6 <span class="badge" style="background:#888;">stable</span></h3>
   <ul>
     <li>Audit de sécurité complet — score 100/100</li>
     <li>Renforcement de l'authentification du callback (vérification IP locale, headers)</li>

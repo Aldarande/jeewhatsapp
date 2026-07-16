@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.7</div>
+    <div class="version">Plugin Jeedom — v0.8</div>
   </div>
   <ul>
     <li class="section-title">Per iniziare</li>
@@ -284,7 +284,8 @@
     <li><a href="#installation">Installazione</a></li>
 
     <li class="section-title">Utilizzo</li>
-    <li><a href="#configuration">Configurazione</a></li>
+    <li><a href="#configuration">Configurazione dispositivo</a></li>
+    <li><a href="#parametres-plugin">Impostazioni plugin</a></li>
     <li><a href="#groupe-canal">Collega il gruppo</a></li>
     <li><a href="#qrcode">Connessione tramite QR</a></li>
     <li><a href="#commandes">Comandi</a></li>
@@ -518,6 +519,36 @@
   </table>
 
   <p>Salva. I comandi vengono creati automaticamente.</p>
+
+  <!-- ── Impostazioni plugin ──────────────────────────────────────────────── -->
+  <h2 id="parametres-plugin">Impostazioni plugin</h2>
+
+  <p>Accessibile da <strong>Plugin → Gestione plugin → JeeWhatsApp → Configurazione</strong>.</p>
+
+  <table>
+    <thead><tr><th>Parametro</th><th>Descrizione</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Porta del daemon</strong></td><td>Porta HTTP locale su cui il daemon è in ascolto (predefinito: <code>55148</code>). Modificare solo in caso di conflitto con un altro servizio.</td></tr>
+      <tr><td><strong>Token webhook</strong></td><td>Token segreto utilizzato dal callback PHP per autenticare le chiamate del daemon. Generato automaticamente alla prima installazione.</td></tr>
+      <tr><td><strong>Directory aggiuntive consentite</strong></td><td>Percorsi assoluti aggiuntivi da cui il daemon è autorizzato a leggere i file multimediali da inviare (un percorso per riga).</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Directory file consentite</h3>
+
+  <p>Per impostazione predefinita, il daemon può accedere solo alle directory di Jeedom (<code>data/</code>, <code>tmp/</code>, <code>cache/</code>).
+  Se desideri inviare file situati altrove (es. un'unità NAS montata, una directory di immagini personalizzata),
+  aggiungi i loro percorsi assoluti nella configurazione del plugin, uno per riga:</p>
+
+  <pre><code>/mnt/nas/immagini
+/home/jeedom/media
+/var/lib/jeedom/allegati</code></pre>
+
+  <div class="callout warning">
+    <strong>⚠️ Sicurezza e riavvio del daemon</strong>
+    Aggiungi solo directory di fiducia. Ogni percorso autorizzato consente al daemon di leggere qualsiasi file in quella directory.
+    Dopo aver modificato le directory consentite, <strong>riavvia il daemon</strong> affinché le modifiche abbiano effetto.
+  </div>
 
   <!-- ── Gruppo canale ─────────────────────────────────────────────────── -->
   <h2 id="groupe-canal">Collegare il gruppo canale</h2>
@@ -831,9 +862,10 @@ Papa=33607080910
   </div>
 
   <div class="callout tip">
-    <strong>💡 Completamento automatico nell'interfaccia di test</strong>
-    Nella scheda <strong>Test</strong>, il campo <em>Destinatario</em> mostra la tua rubrica come suggerimenti:
-    il nome appare in grassetto, il numero tra parentesi come indicazione.
+    <strong>💡 Elenco a discesa personalizzato nell'interfaccia di test</strong>
+    Nella scheda <strong>Test</strong>, il campo <em>Destinatario</em> mostra un elenco a discesa stilizzato
+    con i contatti della rubrica: il <strong>nome appare in grassetto</strong>, il numero è indicato accanto.
+    Digita alcune lettere per filtrare i risultati in tempo reale.
   </div>
 
   <!-- ── Risoluzione dei problemi ──────────────────────────────────────── -->
@@ -970,7 +1002,15 @@ Papa=33607080910
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.7 <span class="badge">latest</span></h3>
+  <h3>v0.8 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Directory media aggiuntive</strong> — configurabili nelle impostazioni del plugin (un percorso assoluto per riga)</li>
+    <li><strong>Autocompletamento contatti</strong> — elenco a discesa stilizzato nella scheda Test (nome in grassetto + numero, filtro da tastiera)</li>
+    <li><strong>Backup sessione</strong> — la rubrica contatti è ora inclusa nel file <code>.jwab</code> e ripristinata automaticamente</li>
+    <li>Correzione: <code>package-lock.json</code> rimosso dal repository, ritorno a <code>npm install</code></li>
+  </ul>
+
+  <h3>v0.7 <span class="badge" style="background:#1a7f4b;">stabile</span></h3>
   <ul>
     <li>Rubrica contatti: alias nominali (<code>Nome=Numero</code>) per i destinatari di <code>send_message</code></li>
     <li>Scheda Test: datalist con completamento automatico dalla rubrica contatti</li>
@@ -1025,7 +1065,7 @@ Papa=33607080910
   <h2 id="apropos">Informazioni</h2>
 
   <ul>
-    <li><strong>Plugin:</strong> JeeWhatsApp v0.7 — Licenza AGPL v3 — Autore: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin:</strong> JeeWhatsApp v0.8 — Licenza AGPL v3 — Autore: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend:</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — open-source, licenza MIT</li>
     <li><strong>Jeedom</strong> è un marchio registrato di Jeedom SAS. Questo plugin è uno sviluppo comunitario indipendente, non affiliato a Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> è un marchio registrato di Meta Platforms, Inc. Questo plugin non è affiliato a Meta.</li>

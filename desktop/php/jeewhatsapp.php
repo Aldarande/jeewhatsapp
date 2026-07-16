@@ -1159,9 +1159,21 @@ $('#btn_live_pause').on('click', function () {
 });
 
 $('#btn_live_clear').on('click', function () {
-  $('#live_feed').html('<div class="live-hint" style="color:#666;font-style:italic;">{{Flux vidé — cliquez sur « Démarrer » pour continuer.}}</div>');
+  var eqLogic_id = $('input.eqLogicAttr[data-l1key="id"]').val();
+  // Purge côté serveur (buffer daemon + events.json) pour que les événements
+  // déjà vus ne réapparaissent pas au prochain rafraîchissement automatique.
+  if (eqLogic_id) {
+    $.ajax({
+      type: 'POST',
+      url: 'plugins/jeewhatsapp/core/ajax/jeewhatsapp.ajax.php',
+      data: { action: 'clearLiveEvents', eqLogic_id: eqLogic_id },
+      dataType: 'json'
+    });
+  }
+  $('#live_feed').html('<div class="live-hint" style="color:#666;font-style:italic;">{{Flux vidé — les nouveaux événements s\'afficheront ici.}}</div>');
   $('#live_scroll_bottom').hide();
-  _liveLastTs = 0;
+  // On NE remet PAS _liveLastTs à 0 : sinon le polling rechargerait tout l'historique
+  // encore en cache. On garde le dernier ts vu → seuls les événements futurs arrivent.
   _liveCount  = 0;
   $('#live_event_count').text('');
 });

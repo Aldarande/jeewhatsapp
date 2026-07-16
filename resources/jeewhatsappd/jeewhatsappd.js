@@ -1770,6 +1770,16 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       return { qr: null, status: st };
     }
 
+    // ── Vider le flux live (#31) : purge le tampon mémoire ET le fichier ────
+    // Doit passer par le daemon : vider seulement events.json ne suffit pas car
+    // eventsBuf[id] en mémoire réécrirait tout au prochain writeEvent
+    // (forum #149964, ddelec24 — les logs réapparaissaient au rafraîchissement).
+    case 'clearEvents': {
+      eventsBuf[id] = [];
+      try { fs.writeFileSync(eventsFilePath(id), '[]'); } catch (_) {}
+      return { cleared: true };
+    }
+
     // ── Statut de connexion ────────────────────────────────────────────────
     case 'getStatus': {
       const st = fs.existsSync(statusFilePath(id))

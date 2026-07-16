@@ -8,7 +8,7 @@ try {
   include_file('core', 'authentification', 'php');
 
   // SECURITY: ajax::init() vérifie le token CSRF et la liste des actions autorisées
-  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia', 'generateWebhookToken', 'getLiveEvents', 'getStats', 'backupSession', 'restoreSession', 'logout']);
+  ajax::init(['testSend', 'getQR', 'getStatus', 'createGroup', 'findGroup', 'setGroupIcon', 'groupAction', 'uploadVoice', 'getMedia', 'generateWebhookToken', 'getLiveEvents', 'clearLiveEvents', 'getStats', 'backupSession', 'restoreSession', 'logout']);
 
   if (!isConnect('admin')) {
     throw new Exception(__('401 - Accès non autorisé', __FILE__));
@@ -182,6 +182,28 @@ try {
         }
       }
       ajax::success($events);
+      break;
+
+    // ── Vider le flux live — purge le tampon du daemon (#31) ───────────────
+    // Passe par le daemon (action clearEvents) pour vider À LA FOIS le buffer
+    // mémoire eventsBuf[id] ET le fichier events.json. Vider seulement le fichier
+    // ne suffit pas : le daemon réécrirait tout depuis sa mémoire au prochain
+    // événement (forum #149964, ddelec24 — logs réapparaissant au rafraîchissement).
+    // Repli : si le daemon est injoignable, on vide au moins le fichier.
+    case 'clearLiveEvents':
+      $eqLogic_id = init('eqLogic_id');
+      if (!$eqLogic_id) { throw new Exception(__('eqLogic_id manquant', __FILE__)); }
+      $eqLogic = jeewhatsapp::byId(intval($eqLogic_id));
+      if (!is_object($eqLogic)) { throw new Exception(__('Équipement introuvable', __FILE__)); }
+      try {
+        $res = $eqLogic->clearLiveEvents();
+      } catch (Exception $e) {
+        $file = dirname(__FILE__) . '/../../resources/jeewhatsappd/auth/'
+              . intval($eqLogic_id) . '/events.json';
+        if (is_file($file)) { @file_put_contents($file, '[]'); }
+        $res = ['cleared' => true, 'fallback' => true];
+      }
+      ajax::success($res);
       break;
 
     // ── Statistiques (#30) ──────────────────────────────────────────────────

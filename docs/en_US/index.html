@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Jeedom plugin — v0.7</div>
+    <div class="version">Jeedom plugin — v0.8</div>
   </div>
   <ul>
     <li class="section-title">Getting started</li>
@@ -284,7 +284,8 @@
     <li><a href="#installation">Installation</a></li>
 
     <li class="section-title">Usage</li>
-    <li><a href="#configuration">Configuration</a></li>
+    <li><a href="#configuration">Equipment config</a></li>
+    <li><a href="#parametres-plugin">Plugin settings</a></li>
     <li><a href="#groupe-canal">Link the group</a></li>
     <li><a href="#qrcode">QR code connection</a></li>
     <li><a href="#commandes">Commands</a></li>
@@ -518,6 +519,42 @@
   </table>
 
   <p>Save. The commands are created automatically.</p>
+
+  <!-- ── Plugin settings ──────────────────────────────────────────────── -->
+  <h2 id="parametres-plugin">Plugin settings</h2>
+
+  <p>Accessible via <strong>Plugins → Plugin management → JeeWhatsApp → Configuration</strong>.</p>
+
+  <table>
+    <thead><tr><th>Setting</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Daemon port</strong></td>
+        <td>Local HTTP port used by the Node.js daemon (default: <code>55148</code>). Change only if this port is already in use by another service.</td>
+      </tr>
+      <tr>
+        <td><strong>Webhook token</strong></td>
+        <td>API key used to authenticate the daemon's callbacks to Jeedom. Generated automatically — do not change unless you know what you are doing.</td>
+      </tr>
+      <tr>
+        <td><strong>Additional allowed directories</strong></td>
+        <td>Extra directories whose files may be sent as media attachments. One absolute path per line. Added to the whitelist alongside <code>data/</code>, <code>tmp/</code> and <code>cache/</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Allowed file directories</h3>
+
+  <p>By default, JeeWhatsApp only allows sending files located in Jeedom's <code>data/</code>, <code>tmp/</code> and <code>cache/</code> directories. The <strong>Additional allowed directories</strong> field lets you whitelist extra paths — for example a NAS share or a dedicated media folder:</p>
+
+  <pre><code>/mnt/nas/photos
+/home/jeedom/media
+/var/lib/jeedom/alerts</code></pre>
+
+  <div class="callout warning">
+    <strong>⚠️ Security &amp; restart</strong>
+    Only add directories you fully control. Whitelisting a path allows the daemon to read and send any file it contains. A <strong>daemon restart</strong> is required after changing this setting for the new paths to take effect.
+  </div>
 
   <!-- ── Channel group ─────────────────────────────────────────────────── -->
   <h2 id="groupe-canal">Link the channel group</h2>
@@ -832,8 +869,10 @@ Dad=33607080910
 
   <div class="callout tip">
     <strong>💡 Autocomplete in the test interface</strong>
-    In the <strong>Test</strong> tab, the <em>Recipient</em> field shows your contact book as suggestions:
-    the name appears in bold, the number in parentheses as a hint.
+    In the <strong>Test</strong> tab, the <em>Recipient</em> field features a custom dropdown:
+    each entry shows the <strong>name in bold</strong> with the number in parentheses.
+    Start typing to filter by name or number; click an entry (or navigate with the keyboard)
+    to fill the field with the phone number automatically.
   </div>
 
   <!-- ── Troubleshooting ───────────────────────────────────────────────── -->
@@ -970,11 +1009,19 @@ Dad=33607080910
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.7 <span class="badge">latest</span></h3>
+  <h3>v0.8 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Additional media directories</strong> — configurable in plugin settings (one absolute path per line), added to the whitelist alongside <code>data/</code>, <code>tmp/</code> and <code>cache/</code></li>
+    <li><strong>Contacts autocomplete</strong> — styled dropdown in the Test tab (name in bold + number, keyboard filtering) replacing the native <code>&lt;datalist&gt;</code></li>
+    <li><strong>Session backup</strong> — contact book now included in the <code>.jwab</code> file and restored automatically (backward compatible)</li>
+    <li>Fix: <code>package-lock.json</code> removed from repo, reverted to <code>npm install</code> — fixes installation failures after <code>sharp</code> update</li>
+  </ul>
+
+  <h3>v0.7 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li>Contact book: named aliases (<code>Name=Number</code>) for <code>send_message</code> recipients</li>
     <li>Test tab: autocomplete datalist with contact book suggestions</li>
-    <li>Security: path confinement for media files (CWE-73), npm lockfile committed (F-014/F-016)</li>
+    <li>Security: path confinement for media files (CWE-73)</li>
   </ul>
 
   <h3>v0.6 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
@@ -1025,7 +1072,7 @@ Dad=33607080910
   <h2 id="apropos">About</h2>
 
   <ul>
-    <li><strong>Plugin:</strong> JeeWhatsApp v0.7 — AGPL v3 license — Author: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin:</strong> JeeWhatsApp v0.8 — AGPL v3 license — Author: <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend:</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — open-source, MIT license</li>
     <li><strong>Jeedom</strong> is a registered trademark of Jeedom SAS. This plugin is an independent community development, not affiliated with Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> is a registered trademark of Meta Platforms, Inc. This plugin is not affiliated with Meta.</li>

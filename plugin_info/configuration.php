@@ -130,6 +130,26 @@ $webhook_token = config::byKey('webhook_token', 'jeewhatsapp', '');
       </div>
     </div>
 
+    <!-- ── Envoi de fichiers ────────────────────────────────────────────────── -->
+    <legend style="margin-top:20px;">
+      <i class="fas fa-folder-open"></i> {{Envoi de fichiers}}
+    </legend>
+    <div class="form-group">
+      <label class="col-lg-4 control-label">{{Répertoires supplémentaires autorisés}}</label>
+      <div class="col-lg-7">
+        <textarea class="configKey form-control" data-l1key="extra_media_dirs"
+                  rows="4" style="font-family:monospace;font-size:0.9em;"
+                  placeholder="/mnt/nas/photos&#10;/home/pi/rapports"></textarea>
+        <span class="help-block">
+          <small>
+            {{Un chemin absolu par ligne. S'ajoutent aux emplacements autorisés par défaut (data/, tmp/, cache/ de Jeedom et /tmp). Exemple : /mnt/nas/photos}}
+            <br><strong>{{Attention :}}</strong> {{n'ajoutez que des répertoires que vous contrôlez — tout fichier lisible dans ces dossiers pourra être envoyé via WhatsApp.}}
+            <br>{{Redémarrez le démon après modification.}}
+          </small>
+        </span>
+      </div>
+    </div>
+
   </fieldset>
 </form>
 

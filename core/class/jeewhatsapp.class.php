@@ -376,7 +376,7 @@ class jeewhatsapp extends eqLogic {
       $dedupKey = 'jeewhatsapp::dedup::' . $sig;
       $last     = cache::byKey($dedupKey)->getValue(0);
       if ($last > 0 && (time() - (int) $last) < $dedupWindow) {
-        log::add('jeewhatsapp', 'warning',
+        log::add('jeewhatsapp', 'info',
           'jeewhatsapp.class.php::sendMessage() l.' . __LINE__
           . ' — Doublon ignoré (même message + destinataire en moins de ' . $dedupWindow . ' s) — anti-duplication');
         return ['deduplicated' => true];
@@ -2032,6 +2032,11 @@ class jeewhatsapp extends eqLogic {
       }
     }
     return json_encode(array_merge(['action' => $_action], $clone));
+  }
+
+  // Vide le flux live (buffer mémoire daemon + fichier events.json) (#31)
+  public function clearLiveEvents() {
+    return $this->sendToDaemon('clearEvents', ['instance_id' => $this->getId()]);
   }
 
   private function sendToDaemon($_action, $_params = []) {

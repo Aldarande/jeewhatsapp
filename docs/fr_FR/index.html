@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.7</div>
+    <div class="version">Plugin Jeedom — v0.8</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -284,7 +284,8 @@
     <li><a href="#installation">Installation</a></li>
 
     <li class="section-title">Utilisation</li>
-    <li><a href="#configuration">Configuration</a></li>
+    <li><a href="#configuration">Configuration équipement</a></li>
+    <li><a href="#parametres-plugin">Paramètres du plugin</a></li>
     <li><a href="#contacts">Carnet de contacts</a></li>
     <li><a href="#groupe-canal">Lier le groupe</a></li>
     <li><a href="#qrcode">Connexion QR code</a></li>
@@ -519,6 +520,39 @@
 
   <p>Sauvegardez. Les commandes sont créées automatiquement.</p>
 
+  <!-- ── Paramètres du plugin ─────────────────────────────────────────── -->
+  <h2 id="parametres-plugin">Paramètres du plugin</h2>
+
+  <p>Accessibles via <strong>Plugins → Gestion des plugins → JeeWhatsApp → Configuration</strong>.</p>
+
+  <table>
+    <thead><tr><th>Paramètre</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Port du daemon</strong></td><td>Port HTTP local du daemon Baileys (défaut : <code>55148</code>). À modifier uniquement si ce port est déjà utilisé.</td></tr>
+      <tr><td><strong>Token webhook</strong></td><td>Token d'authentification pour l'API webhook REST (n8n, Node-RED…). Généré depuis cette même page.</td></tr>
+      <tr><td><strong>Répertoires supplémentaires autorisés</strong></td><td>Chemins absolus (un par ligne) ajoutés à la liste blanche d'envoi de fichiers. Voir ci-dessous.</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Répertoires de fichiers autorisés</h3>
+
+  <p>Par défaut, l'envoi de fichiers via <code>send_file</code> est limité aux répertoires
+  <code>data/</code>, <code>tmp/</code> et <code>cache/</code> de Jeedom ainsi que <code>/tmp</code>.
+  Si vos scénarios génèrent des fichiers ailleurs (NAS monté, export d'un autre plugin…),
+  ajoutez ces chemins dans le champ <strong>Répertoires supplémentaires autorisés</strong> :</p>
+
+  <pre><code>/mnt/nas/photos
+/home/pi/rapports
+/var/lib/homeassistant/exports</code></pre>
+
+  <div class="callout warning">
+    <strong>⚠️ Sécurité</strong>
+    N'ajoutez que des répertoires que vous contrôlez. Tout fichier lisible dans ces dossiers
+    pourra être envoyé via WhatsApp par un scénario. Les chemins non absolus ou contenant
+    <code>..</code> sont automatiquement rejetés. Un <strong>redémarrage du daemon</strong>
+    est requis après modification.
+  </div>
+
   <!-- ── Carnet de contacts ───────────────────────────────────────────── -->
   <h2 id="contacts">Carnet de contacts</h2>
 
@@ -543,9 +577,10 @@ Message  : Bonne nuit !
 Titre    : Didier          ← à la place de 33612345678</code></pre>
 
   <div class="callout tip">
-    <strong>💡 Datalist dans l'onglet Test</strong>
-    Le champ <strong>Destinataire</strong> de l'onglet Test propose automatiquement les contacts
-    définis dans le carnet sous forme de suggestions. Commencez à taper le nom pour les voir apparaître.
+    <strong>💡 Autocomplete dans l'onglet Test</strong>
+    Le champ <strong>Destinataire</strong> de l'onglet Test propose une liste déroulante stylisée
+    au fur et à mesure de la saisie : <strong>nom en gras</strong> + numéro entre parenthèses.
+    Filtrage par nom ou par numéro. Cliquer sur une entrée remplit le champ avec le numéro.
   </div>
 
   <!-- ── Groupe canal ──────────────────────────────────────────────────── -->
@@ -966,16 +1001,23 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.7 <span class="badge">latest</span></h3>
+  <h3>v0.8 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Répertoires médias supplémentaires</strong> — configurables dans les paramètres du plugin (un chemin absolu par ligne) ; s'ajoutent à la liste blanche <code>data/</code>, <code>tmp/</code>, <code>cache/</code></li>
+    <li><strong>Autocomplete contacts</strong> — liste déroulante stylisée dans l'onglet Test (nom en gras + numéro, filtrage au clavier) en remplacement du <code>&lt;datalist&gt;</code> natif</li>
+    <li><strong>Backup de session</strong> — le carnet de contacts est désormais inclus dans le fichier <code>.jwab</code> et restauré automatiquement (rétrocompatible avec les archives antérieures)</li>
+    <li>Correction : <code>package-lock.json</code> retiré du dépôt, retour à <code>npm install</code> — résout les échecs d'installation après mise à jour de <code>sharp</code></li>
+  </ul>
+
+  <h3>v0.7 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Carnet de contacts</strong> — alias <code>Nom=Numéro</code> utilisables comme destinataire dans <code>send_message</code> et les scénarios</li>
     <li>UI Live : bouton ↓ (scroll vers le bas), démarrage automatique à l'ouverture de l'onglet</li>
     <li>UI Stats : pré-chargement automatique à l'ouverture de l'équipement, anti-clignotement</li>
     <li>Sécurité : confinement des chemins de fichiers médias (<code>assertMediaPathAllowed</code>)</li>
-    <li>Sécurité : <code>package-lock.json</code> versionné, <code>npm ci</code> pour builds reproductibles</li>
   </ul>
 
-  <h3>v0.6 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
+  <h3>v0.6 <span class="badge" style="background:#888;">stable</span></h3>
   <ul>
     <li>Audit de sécurité complet — score 100/100</li>
     <li>Renforcement de l'authentification du callback (vérification IP locale, headers)</li>
@@ -1023,7 +1065,7 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <h2 id="apropos">À propos</h2>
 
   <ul>
-    <li><strong>Plugin :</strong> JeeWhatsApp v0.7 — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
+    <li><strong>Plugin :</strong> JeeWhatsApp v0.8 — Licence AGPL v3 — Auteur : <a href="https://github.com/Aldarande" target="_blank">Aldarande</a></li>
     <li><strong>Backend :</strong> <a href="https://github.com/WhiskeySockets/Baileys" target="_blank">Baileys</a> — open-source, licence MIT</li>
     <li><strong>Jeedom</strong> est une marque déposée de Jeedom SAS. Ce plugin est un développement communautaire indépendant, non affilié à Jeedom SAS.</li>
     <li><strong>WhatsApp</strong> est une marque déposée de Meta Platforms, Inc. Ce plugin n'est pas affilié à Meta.</li>
