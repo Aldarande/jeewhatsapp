@@ -146,6 +146,21 @@ class jeewhatsapp extends eqLogic {
     cache::set('jeewhatsapp::daemon_secret', $daemon_secret, 86400 * 7);
 
     // SECURITY (F-001 + F-004): API key + daemon secret passés via env, jamais en CLI
+    // Répertoires médias supplémentaires (SECURITY F-014) — validation côté PHP avant passage au daemon
+    $extraDirsRaw = config::byKey('extra_media_dirs', 'jeewhatsapp', '');
+    $extraDirs = [];
+    foreach (explode("\n", $extraDirsRaw) as $line) {
+      $dir = trim($line);
+      if ($dir === '' || $dir[0] === '#') { continue; }
+      if ($dir[0] !== '/' || strpos($dir, '..') !== false) {
+        log::add(__CLASS__, 'warning',
+          'jeewhatsapp.class.php::deamon_start() l.' . __LINE__
+          . ' — Répertoire supplémentaire ignoré (chemin non absolu ou traversal) : ' . $dir);
+        continue;
+      }
+      $extraDirs[] = $dir;
+    }
+
     $cmd  = 'JEEDOM_APIKEY=' . escapeshellarg($api_key) . ' ';
     $cmd .= 'JEEDOM_DAEMON_SECRET=' . escapeshellarg($daemon_secret) . ' ';
     $cmd .= 'node ' . escapeshellarg(dirname(__FILE__) . '/../../resources/jeewhatsappd/jeewhatsappd.js');
@@ -154,6 +169,9 @@ class jeewhatsapp extends eqLogic {
     $cmd .= ' --callback '   . escapeshellarg($callback);
     $cmd .= ' --pid-file '   . escapeshellarg($pid_file);
     $cmd .= ' --log-file '   . escapeshellarg($log_file);
+    if (!empty($extraDirs)) {
+      $cmd .= ' --extra-media-dirs ' . escapeshellarg(json_encode($extraDirs));
+    }
     if (log::getLogLevel(__CLASS__) === 'debug') { $cmd .= ' --debug'; }
     $cmd .= ' >> ' . escapeshellarg($log_file) . ' 2>&1 &';
 
@@ -345,6 +363,25 @@ class jeewhatsapp extends eqLogic {
     // Résolution carnet de contacts : "Didier" → "33612345678"
     if ($_phone !== null && $_phone !== '') {
       $_phone = $this->resolvePhone($_phone);
+    }
+
+    // Déduplication anti-doublon (forum #149964). Filet de sécurité indépendant
+    // de la cause (retry scénario, double déclencheur, latence…) : on refuse
+    // d'ré-émettre exactement le même (message + destinataire) dans une fenêtre
+    // courte. Les envois de test (skipPrefix) et distincts ne sont pas bloqués.
+    // Fenêtre désactivable via config eqLogic 'dedup_window' (secondes, 0 = off).
+    $dedupWindow = (int) $this->getConfiguration('dedup_window', 4);
+    if ($dedupWindow > 0 && !$_skipPrefix) {
+      $sig      = md5($this->getId() . '|' . ($_phone ?? '') . '|' . ($_tag ?? '') . '|' . $message);
+      $dedupKey = 'jeewhatsapp::dedup::' . $sig;
+      $last     = cache::byKey($dedupKey)->getValue(0);
+      if ($last > 0 && (time() - (int) $last) < $dedupWindow) {
+        log::add('jeewhatsapp', 'warning',
+          'jeewhatsapp.class.php::sendMessage() l.' . __LINE__
+          . ' — Doublon ignoré (même message + destinataire en moins de ' . $dedupWindow . ' s) — anti-duplication');
+        return ['deduplicated' => true];
+      }
+      cache::set($dedupKey, time(), max($dedupWindow, 10));
     }
 
     $params = [

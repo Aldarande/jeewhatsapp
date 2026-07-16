@@ -90,6 +90,20 @@ try {
   process.exit(1);
 }
 
+// Répertoires médias supplémentaires configurés via les paramètres du plugin (F-014)
+try {
+  const extraDirs = JSON.parse(args['extra-media-dirs'] || '[]');
+  for (const dir of extraDirs) {
+    if (typeof dir === 'string' && path.isAbsolute(dir) && !dir.includes('..')) {
+      MEDIA_ALLOWED_BASES.push(dir);
+    } else {
+      logMsg('warn', 'Répertoire média supplémentaire ignoré (chemin non absolu ou traversal) : ' + dir);
+    }
+  }
+} catch (e) {
+  logMsg('warn', 'Impossible de parser --extra-media-dirs : ' + e.message);
+}
+
 // ---------------------------------------------------------------------------
 // Logger
 // ---------------------------------------------------------------------------
@@ -1186,18 +1200,20 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
       logMsg('info', '[' + id + '] → ' + jid + ' : ' + msgPayload.text.substring(0, 60));
       await applyPresence(sock, jid, presence);
       try {
-        // Garde-fou de 30 s. Si sock.sendMessage n'a pas résolu (ACK lent), on
-        // NE réenfile PAS : Baileys a déjà accepté le message et le livrera. On
-        // renvoie {sent:true, ackTimeout:true} pour ne PAS générer de doublon
-        // (fix forum #149964 — messages dupliqués 4x sur connexion lente).
+        // Garde-fou de 12 s, VOLONTAIREMENT sous le timeout de file_get_contents
+        // côté PHP (15 s). Ainsi le daemon rend toujours la main AVANT que PHP ne
+        // coupe la connexion : PHP ne lèvera jamais « Daemon non joignable » sur
+        // un ACK lent, ce qui évite qu'un scénario Jeedom ne re-déclenche l'envoi.
+        // Si l'ACK n'est pas revenu, Baileys a déjà accepté et livrera le message :
+        // on renvoie {sent:true} SANS réenfiler (pas de doublon — forum #149964).
         const ACK_TIMEOUT = Symbol('ack_timeout');
         const sendTimeout = new Promise((resolve) =>
-          setTimeout(() => resolve(ACK_TIMEOUT), 30000)
+          setTimeout(() => resolve(ACK_TIMEOUT), 12000)
         );
         const sent = await Promise.race([sock.sendMessage(jid, msgPayload, sendOpts), sendTimeout]);
         if (sent === ACK_TIMEOUT) {
           writeEvent(id, 'out', '→ ' + msgPayload.text.substring(0, 120) + ' (ACK lent)');
-          logMsg('warning', '[' + id + '] Envoi lancé mais ACK non reçu sous 30 s — considéré envoyé (pas de réessai pour éviter les doublons) : ' + jid);
+          logMsg('warning', '[' + id + '] Envoi lancé mais ACK non reçu sous 12 s — considéré envoyé (pas de réessai pour éviter les doublons) : ' + jid);
           return { sent: true, ackTimeout: true };
         }
         recordSent(id, sent);
