@@ -272,6 +272,18 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 > Les membres du groupe peuvent ainsi distinguer les alertes Jeedom de leurs propres messages.
 > Le daemon ignore les messages `fromMe` dans le groupe, évitant que Jeedom traite ses propres envois.
 
+> **🛡️ Protection anti-doublon (déduplication)**  
+> Pour éviter qu'un même message soit envoyé plusieurs fois (par exemple si un scénario
+> se déclenche en rafale ou si un déclencheur change d'état plusieurs fois de suite),
+> le plugin intègre un **compteur anti-doublon**. Si une commande tente d'envoyer
+> **exactement le même message vers le même destinataire** dans une **fenêtre de 4 secondes**,
+> les envois en trop sont **ignorés** (un seul message part réellement).
+> - Chaque blocage est journalisé (niveau *info*) : `Doublon ignoré (même message + destinataire…)`.
+> - Deux messages **différents**, ou le même message vers des **destinataires différents**,
+>   ne sont jamais bloqués. Les envois de **test** (onglet Test) ne sont pas concernés.
+> - La durée de la fenêtre est réglable par équipement via la configuration `dedup_window`
+>   (valeur en secondes ; **`0` désactive** complètement la protection). Valeur par défaut : **4 secondes**.
+
 > **📍 Envoyer une localisation (`send_location`)**  
 > Format du champ **Titre** : `lat|long` ou `lat|long|nom` (séparateur `|`).  
 > Exemples :

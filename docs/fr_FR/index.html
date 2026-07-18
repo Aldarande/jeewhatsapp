@@ -444,6 +444,19 @@
     Le daemon ignore ses propres messages (fromMe) pour éviter les boucles.
   </div>
 
+  <div class="callout tip">
+    <strong>🛡️ Protection anti-doublon (déduplication)</strong>
+    Pour éviter qu'un même message soit envoyé plusieurs fois (par exemple si un scénario se
+    déclenche en rafale), le plugin intègre un <strong>compteur anti-doublon</strong>. Si une
+    commande tente d'envoyer <strong>exactement le même message vers le même destinataire</strong>
+    dans une <strong>fenêtre de 4 secondes</strong>, les envois en trop sont <strong>ignorés</strong>
+    (un seul message part réellement) et journalisés en niveau <em>info</em>.
+    Deux messages différents, ou le même message vers des destinataires différents, ne sont jamais
+    bloqués ; les envois de test ne sont pas concernés. La durée est réglable par équipement via la
+    configuration <code>dedup_window</code> (en secondes, <code>0</code> = désactivé, défaut :
+    <strong>4 s</strong>).
+  </div>
+
   <!-- ── Prérequis ────────────────────────────────────────────────────── -->
   <h2 id="prerequis">Prérequis</h2>
 
