@@ -2602,12 +2602,14 @@ class jeewhatsapp extends eqLogic {
     }
     unset($day);
     if (!$found) {
-      $days[] = ['d' => $today, 's' => 0, 'r' => 0, [$_dir] => 1];
-      // Correction : initialiser correctement
-      $last = &$days[count($days) - 1];
-      $last['s'] = $_dir === 's' ? 1 : 0;
-      $last['r'] = $_dir === 'r' ? 1 : 0;
-      unset($last);
+      // Nouveau jour : initialise s/r selon la direction. (Auparavant une clé
+      // « [$_dir] => 1 » — un array comme offset — provoquait un « Illegal offset
+      // type » fatal en PHP 8 au premier message de chaque journée. Forum #150XXX.)
+      $days[] = [
+        'd' => $today,
+        's' => $_dir === 's' ? 1 : 0,
+        'r' => $_dir === 'r' ? 1 : 0,
+      ];
     }
 
     // Garder les 30 derniers jours (tri par date croissante)

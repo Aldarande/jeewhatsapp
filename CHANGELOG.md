@@ -76,6 +76,16 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Fixed
 
+- **Erreur « Illegal offset type » au premier message de la journée** — signalé sur
+  le forum (scénario DNS down/up) : l'envoi échouait avec cette erreur PHP, de façon
+  « aléatoire » et sur plusieurs scénarios. Cause : dans `appendStats()`, l'initialisation
+  d'un nouveau jour utilisait `['d' => …, 's' => 0, 'r' => 0, [$_dir] => 1]` — un **tableau
+  comme clé de tableau** (`[$_dir]`), fatal en PHP 8. Ce chemin ne s'exécute qu'au **tout
+  premier message d'une journée** (quand la date du jour n'est pas encore dans les
+  statistiques), d'où le déclenchement « une fois par jour » perçu comme aléatoire.
+  La clé fautive (par ailleurs redondante) est supprimée : `s`/`r` sont désormais
+  initialisés proprement selon la direction. Le message part de nouveau.
+
 - **Messages envoyés dupliqués (jusqu'à 4×)** — signalé sur le forum
   ([#149964](https://community.jeedom.com/t/jeewhatsapp-message-envoye-dupliques-4x/149964)),
   non reproductible sur une installation rapide (Docker) : le bug dépendait de la
