@@ -254,6 +254,23 @@ After creating and saving the device, go to the **WhatsApp Connection** tab.
 | Send poll | `send_poll` | message | (v0.3) Sends a poll. **Title** field = question, **Message** = options separated by `\|` (e.g. `Yes\|No\|Maybe`, 2 to 12 options). Votes feed the `poll_*` info commands. |
 | Send to additional group | `send_group` | message | (v0.3) Sends a message to an additional group. **Title** field = group tag (see "Additional groups" config), **Message** = text. |
 
+> **🧮 Jeedom tags and expressions in the message**  
+> The **Message** field (of the `send_message`, `send_group`, `reply`, `send_template`
+> commands and the **Test** tab) accepts both Jeedom **tags** and **expressions**:  
+> — **Tags**: `#[Object][Device][Command]#` or `#1234#` → replaced with the current value.  
+> — **Expressions**: Jeedom scenario functions (`max()`, `min()`, `round()`, `abs()`,
+>   arithmetic…) are **evaluated before sending**, exactly like the Jeedom **Expression tester**.  
+>
+> Example: `The max temperature is round(max(#[Living][Temp]#, #[Bedroom][Temp]#))°C`
+> → sent as `The max temperature is 23°C`.  
+>
+> Free text without a recognized function is left **untouched**. On an evaluation error the raw
+> message is sent without blocking.  
+>
+> *(From a command placed inside a **scenario**, resolution is already handled by the scenario
+> engine; this extra evaluation covers the non-scenario cases: Test tab, templates, direct
+> command execution.)*
+
 > **💡 "Title" field of the Send message command**  
 > Jeedom displays two fields for `message`-type commands: **Title** and **Message**.  
 > In JeeWhatsApp, the **Title** field is an **optional override**:  

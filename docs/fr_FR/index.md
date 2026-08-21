@@ -256,6 +256,24 @@ Après avoir créé et sauvegardé l'équipement, rendez-vous sur l'onglet **Con
 | Envoyer un sondage | `send_poll` | message | (v0.3) Envoie un sondage. Champ **Titre** = question, **Message** = options séparées par `\|` (ex: `Oui\|Non\|Peut-être`, 2 à 12 options). Les votes alimentent les commandes info `poll_*`. |
 | Envoyer dans un groupe additionnel | `send_group` | message | (v0.3) Envoie un message dans un groupe additionnel. Champ **Titre** = tag du groupe (cf config « Groupes additionnels »), **Message** = texte. |
 
+> **🧮 Tags et expressions Jeedom dans le message**  
+> Le champ **Message** (des commandes `send_message`, `send_group`, `reply`, `send_template`
+> et l'onglet **Test**) accepte à la fois les **tags** Jeedom et les **expressions** :  
+> — **Tags** : `#[Objet][Équipement][Commande]#` ou `#1234#` → remplacés par la valeur courante.  
+> — **Expressions** : les fonctions de scénario Jeedom (`max()`, `min()`, `round()`, `abs()`,
+>   `moyenne()`, calculs arithmétiques…) sont **évaluées avant l'envoi**, exactement comme le
+>   **Testeur d'expression** de Jeedom.  
+>
+> Exemple : `La température max est de round(max(#[Salon][Temp]#, #[Chambre][Temp]#))°C`
+> → envoyé comme `La température max est de 23°C`.  
+>
+> Le texte libre qui ne contient pas de fonction reconnue est laissé **tel quel** (aucun risque
+> d'altération). En cas d'erreur d'évaluation, le message brut est envoyé sans blocage.  
+>
+> *(Depuis une commande placée dans un **scénario**, la résolution est de toute façon assurée par
+> le moteur de scénario ; cette évaluation supplémentaire couvre les cas hors scénario : onglet
+> Test, templates, exécution directe de la commande.)*
+
 > **💡 Champ "Titre" de la commande Envoyer un message**  
 > Jeedom affiche deux champs pour les commandes de type `message` : **Titre** et **Message**.  
 > Dans JeeWhatsApp, le champ **Titre** est un **override optionnel** :  
