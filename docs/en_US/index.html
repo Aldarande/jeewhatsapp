@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Jeedom plugin — v0.8</div>
+    <div class="version">Jeedom plugin — v0.9</div>
   </div>
   <ul>
     <li class="section-title">Getting started</li>
@@ -1009,7 +1009,13 @@ Dad=33607080910
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.8 <span class="badge">latest</span></h3>
+  <h3>v0.9 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Jeedom expression evaluation on send</strong> — scenario functions (<code>max()</code>, <code>min()</code>, <code>round()</code>, arithmetic…) in the <em>Message</em> field are now evaluated before sending, exactly like the Jeedom <strong>Expression tester</strong> (<a href="https://community.jeedom.com/t/jeewhatsapp-l-instruction-max-n-est-pas-executee/150221">#forum-150221</a>)</li>
+    <li>Applies to <code>send_message</code>, <code>send_group</code>, <code>reply</code>, <code>send_template</code> and the <strong>Test</strong> tab — free text is left untouched</li>
+  </ul>
+
+  <h3>v0.8 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Additional media directories</strong> — configurable in plugin settings (one absolute path per line), added to the whitelist alongside <code>data/</code>, <code>tmp/</code> and <code>cache/</code></li>
     <li><strong>Contacts autocomplete</strong> — styled dropdown in the Test tab (name in bold + number, keyboard filtering) replacing the native <code>&lt;datalist&gt;</code></li>

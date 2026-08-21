@@ -276,7 +276,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.8 BETA</div>
+    <div class="version">Plugin Jeedom — v0.9 BETA</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -981,7 +981,13 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.8 <span class="badge stable">latest</span></h3>
+  <h3>v0.9 <span class="badge stable">latest</span></h3>
+  <ul>
+    <li><strong>Évaluation des expressions Jeedom à l'envoi</strong> — les fonctions de scénario (<code>max()</code>, <code>min()</code>, <code>round()</code>, calculs…) présentes dans le champ <em>Message</em> sont désormais évaluées avant l'envoi, exactement comme le <strong>Testeur d'expression</strong> Jeedom (<a href="https://community.jeedom.com/t/jeewhatsapp-l-instruction-max-n-est-pas-executee/150221">#forum-150221</a>)</li>
+    <li>Concerne <code>send_message</code>, <code>send_group</code>, <code>reply</code>, <code>send_template</code> et l'onglet <strong>Test</strong> — le texte libre reste inchangé</li>
+  </ul>
+
+  <h3>v0.8 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Répertoires médias supplémentaires</strong> — configurables dans les paramètres du plugin (un chemin absolu par ligne)</li>
     <li><strong>Autocomplete contacts</strong> — liste déroulante stylisée dans l'onglet Test (nom en gras + numéro, filtrage au clavier)</li>
