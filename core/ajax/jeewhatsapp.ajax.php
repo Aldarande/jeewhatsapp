@@ -25,13 +25,9 @@ try {
       $phone   = trim(init('phone', ''));
       $mention = trim(init('mention', ''));
       $message = trim(init('message', 'Test JeeWhatsApp 🚀'));
-      // Résout les tags Jeedom saisis dans le champ test (#[Objet][Éq][Cmd]# ou #id#)
-      // pour reproduire fidèlement ce qu'un scénario enverrait.
-      try {
-        $message = cmd::cmdToValue(jeedom::fromHumanReadable($message));
-      } catch (Exception $e) {
-        log::add('jeewhatsapp', 'warning', 'jeewhatsapp.ajax.php::testSend l.' . __LINE__ . ' — résolution des tags impossible : ' . $e->getMessage());
-      }
+      // Résout les tags Jeedom (#[Objet][Éq][Cmd]# ou #id#) ET évalue les
+      // expressions (max, min, round…) — reproduit le testeur d'expression.
+      $message = jeewhatsapp::resolveExpression($message);
       // phone vide = envoyer dans le groupe canal — skipPrefix=true pour les tests
       $eqLogic->sendMessage($message, $phone !== '' ? $phone : null, $mention !== '' ? $mention : null, true);
       ajax::success();

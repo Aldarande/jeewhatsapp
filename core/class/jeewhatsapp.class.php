@@ -350,6 +350,30 @@ class jeewhatsapp extends eqLogic {
   }
 
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Résolution des tags + évaluation des expressions Jeedom (max, min, round…)
+  // Reproduit fidèlement le « Testeur d'expression » de Jeedom :
+  //   1. fromHumanReadable : #[Objet][Éq][Cmd]# → #1234#
+  //   2. scenarioExpression::setTags : #1234# → valeur ET évalue les fonctions
+  //      Jeedom en ligne (max(21,23) → 23), sans toucher au texte libre ni aux
+  //      appels de fonction inconnus (substitution uniquement des fonctions
+  //      reconnues via method_exists). En cas d'erreur, le texte est renvoyé
+  //      tel quel (comme le fait jeedom::evaluateExpression).
+  // -------------------------------------------------------------------------
+  public static function resolveExpression($_text) {
+    $text = (string) $_text;
+    if ($text === '') { return $text; }
+    try {
+      return scenarioExpression::setTags(jeedom::fromHumanReadable($text));
+    } catch (Exception $e) {
+      log::add('jeewhatsapp', 'warning',
+        'jeewhatsapp.class.php::resolveExpression() l.' . __LINE__
+        . ' — évaluation de l\'expression impossible : ' . $e->getMessage());
+      return $text;
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Envoi d'un message via le daemon
   // $_phone = null  → groupe canal configuré
   // $_phone = '...' → destinataire direct (override)
@@ -2840,7 +2864,9 @@ class jeewhatsappCmd extends cmd {
     switch ($this->getLogicalId()) {
 
       case 'send_message':
-        $message = $_options['message'] ?? '';
+        // Évalue les expressions Jeedom (max, min, round…) restées littérales
+        // lors d'une exécution directe hors moteur de scénario.
+        $message = jeewhatsapp::resolveExpression($_options['message'] ?? '');
         // Le champ "Titre" = override optionnel (numéro direct ou JID)
         // Vide = envoyer dans le groupe canal
         $phone = (isset($_options['title']) && trim($_options['title']) !== '')
@@ -2852,7 +2878,7 @@ class jeewhatsappCmd extends cmd {
       case 'send_group':
         // title = tag du groupe additionnel ; message = texte
         $tag = (isset($_options['title'])) ? trim($_options['title']) : '';
-        $message = $_options['message'] ?? '';
+        $message = jeewhatsapp::resolveExpression($_options['message'] ?? '');
         if ($tag === '') {
           throw new Exception(__('Tag du groupe (champ Titre) obligatoire', __FILE__));
         }
@@ -2860,7 +2886,7 @@ class jeewhatsappCmd extends cmd {
         break;
 
       case 'reply':
-        $message = $_options['message'] ?? '';
+        $message = jeewhatsapp::resolveExpression($_options['message'] ?? '');
         // Réponse "quoted" au dernier message reçu dans le groupe canal
         $eqLogic->replyToLast($message);
         break;
@@ -2999,19 +3025,11 @@ class jeewhatsappCmd extends cmd {
         if ($text === null) {
           throw new Exception(__('Template introuvable : ', __FILE__) . $key);
         }
-        // Résolution des tags Jeedom dans le texte du template.
-        // Contrairement à send_message (dont le moteur de scénario résout déjà
-        // $_options['message'] avant execute()), le texte du template est chargé
-        // depuis la configuration APRÈS cette résolution — il faut donc le faire ici :
-        //   1. fromHumanReadable : #[Objet][Équipement][Commande]# → #1234#
-        //   2. cmdToValue        : #1234# → valeur courante de la commande
-        try {
-          $text = cmd::cmdToValue(jeedom::fromHumanReadable($text));
-        } catch (Exception $e) {
-          log::add('jeewhatsapp', 'warning',
-            'jeewhatsapp.class.php::execute(send_template) l.' . __LINE__
-            . ' — résolution des tags impossible : ' . $e->getMessage());
-        }
+        // Résolution des tags Jeedom + évaluation des expressions (max, min…).
+        // Le texte du template est chargé depuis la configuration APRÈS la
+        // résolution faite par le moteur de scénario — il faut donc l'évaluer ici,
+        // comme le fait le testeur d'expression Jeedom (cf resolveExpression).
+        $text = jeewhatsapp::resolveExpression($text);
         $eqLogic->sendMessage($text, $phone);
         break;
     }
