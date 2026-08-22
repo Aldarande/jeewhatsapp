@@ -364,7 +364,13 @@ class jeewhatsapp extends eqLogic {
     $text = (string) $_text;
     if ($text === '') { return $text; }
     try {
-      return scenarioExpression::setTags(jeedom::fromHumanReadable($text));
+      // fromHumanReadable : #[Objet][Éq][Cmd]# → #1234#
+      // setTags exécute les fonctions AVANT de résoudre les tags : max()/min()…
+      // reçoivent donc la référence brute #1234# et peuvent lire l'historique
+      // (ex. max(#1234#, today) → maximum du jour via getStatistique).
+      // NB : setTags prend son 1er argument par référence → variable obligatoire.
+      $expr = jeedom::fromHumanReadable($text);
+      return scenarioExpression::setTags($expr);
     } catch (Exception $e) {
       log::add('jeewhatsapp', 'warning',
         'jeewhatsapp.class.php::resolveExpression() l.' . __LINE__
