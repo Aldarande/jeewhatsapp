@@ -260,7 +260,7 @@ class jeewhatsapp extends eqLogic {
     // v0.4 #21 — Reconnaissance utilisateur : résout un profil Jeedom à partir du
     // numéro/JID expéditeur via le mapping configuré (user_mapping). Fallback sur le
     // nom WhatsApp puis sur le numéro brut si aucune correspondance.
-    $resolvedProfile = $this->resolveSenderProfile($_data['sender'] ?? '');
+    $resolvedProfile = $this->resolveSenderProfile($_data['sender'] ?? '', $_data['sender_pn'] ?? '');
     $profileForInteract = $resolvedProfile
       ?? ($_data['sender_name'] ?? null)
       ?? ($_data['sender'] ?? '');
@@ -295,7 +295,7 @@ class jeewhatsapp extends eqLogic {
     // déclencher des interactions. Refus silencieux (log debug) sinon.
     // Format : 1 numéro par ligne ou séparés par virgule. Tous les non-chiffres
     // sont supprimés avant comparaison (06 12 34 56 78 == 33612345678 après normalisation FR).
-    if (!self::isSenderAllowed($this, $sender)) {
+    if (!self::isSenderAllowed($this, $sender, $_data['sender_pn'] ?? '')) {
       log::add('jeewhatsapp', 'debug',
         'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__
         . ' — Interaction refusée (sender ' . $sender . ' hors whitelist)');
@@ -1843,16 +1843,22 @@ class jeewhatsapp extends eqLogic {
   //   stockage et côté sender pour matcher peu importe le format saisi
   // -------------------------------------------------------------------------
 
-  public static function isSenderAllowed($_eqLogic, $_sender) {
+  public static function isSenderAllowed($_eqLogic, $_sender, $_altSender = '') {
     $raw = trim((string) $_eqLogic->getConfiguration('interaction_whitelist', ''));
     if ($raw === '') { return true; } // pas de whitelist = tout passe
-    $normalized = self::normalizePhone($_sender);
-    if ($normalized === '') { return false; }
+    // #2 — WhatsApp peut envoyer un LID anonyme (sender) au lieu du numéro (sender_pn).
+    // On autorise si l'une OU l'autre des identités figure dans la liste blanche.
+    $candidates = [];
+    foreach ([$_sender, $_altSender] as $s) {
+      $n = self::normalizePhone($s);
+      if ($n !== '') { $candidates[$n] = true; }
+    }
+    if (empty($candidates)) { return false; }
     // Sépare par virgule OU saut de ligne (textarea ou csv)
     $entries = preg_split('/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY);
     foreach ($entries as $entry) {
       $n = self::normalizePhone($entry);
-      if ($n !== '' && $n === $normalized) { return true; }
+      if ($n !== '' && isset($candidates[$n])) { return true; }
     }
     return false;
   }
@@ -1881,11 +1887,15 @@ class jeewhatsapp extends eqLogic {
 
   // Résout le profil Jeedom associé à un expéditeur via `user_mapping`.
   // Retourne le profil mappé, ou null si aucun mapping ne correspond.
-  public function resolveSenderProfile($_sender) {
+  public function resolveSenderProfile($_sender, $_altSender = '') {
     $map = self::parseUserMapping($this->getConfiguration('user_mapping', ''));
     if (empty($map)) { return null; }
-    $n = self::normalizePhone($_sender);
-    return ($n !== '' && isset($map[$n])) ? $map[$n] : null;
+    // #2 — essaie le LID (sender) puis le numéro réel (sender_pn) si fourni.
+    foreach ([$_sender, $_altSender] as $s) {
+      $n = self::normalizePhone($s);
+      if ($n !== '' && isset($map[$n])) { return $map[$n]; }
+    }
+    return null;
   }
 
   // Normalise un numéro WhatsApp : ne garde que les chiffres, convertit 0[67]XXXXXXXX → 336/337XXXXXXXX

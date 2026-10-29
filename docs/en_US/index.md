@@ -351,6 +351,13 @@ Jeedom interactions. Other group members are **silently ignored** (debug log).
 
 All formats are normalized to international format before comparison.
 
+> **📇 LID identifier**: following WhatsApp changes, a group sender may be delivered as an
+> anonymous **LID** (`<digits>@lid`) rather than a phone number. If you are blocked even though
+> your number is whitelisted, add **your LID too** (the plugin prints it under
+> *Analysis → Logs → jeewhatsapp*: `Expéditeur LID …`). The whitelist and the user mapping accept
+> either the **number** or the **LID**. When WhatsApp provides the real number, the plugin uses it
+> automatically for the comparison.
+
 > **🛡️ Security**: the whitelist protects against a malicious member who joins the group and tries
 > to send Jeedom commands. Combined with the keyword filter, it provides a double layer of protection.
 

@@ -366,6 +366,13 @@ des interactions Jeedom. Les autres membres du groupe sont **silencieusement ign
 
 Tous les formats sont normalisés au format international avant comparaison.
 
+> **📇 Identifiant LID** : depuis les évolutions de WhatsApp, l'expéditeur d'un groupe peut
+> être transmis sous forme de **LID anonyme** (`<chiffres>@lid`) et non de numéro. Si vous êtes
+> bloqué alors que votre numéro est en liste blanche, ajoutez **aussi votre LID** (le plugin
+> l'affiche dans *Analyse → Logs → jeewhatsapp* : `Expéditeur LID …`). La liste blanche et le
+> mapping utilisateur acceptent indifféremment le **numéro** et le **LID**. Quand WhatsApp
+> fournit le numéro réel, le plugin l'utilise automatiquement pour la comparaison.
+
 > **🛡️ Sécurité** : la whitelist protège contre un membre malveillant qui s'inviterait au groupe et tenterait
 > d'envoyer des commandes Jeedom. Combinée au filtre mot-clé, elle offre une double couche de protection.
 

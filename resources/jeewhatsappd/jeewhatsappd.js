@@ -795,6 +795,20 @@ async function connectInstance(instance) {
       // Dans un groupe, msg.key.participant = JID de l'expéditeur
       const participantJid = msg.key.participant || remoteJid;
       const sender         = participantJid.replace('@s.whatsapp.net', '').replace('@g.us', '');
+      // #2 — WhatsApp peut fournir un LID anonyme (<chiffres>@lid) au lieu du numéro.
+      // Baileys expose parfois le numéro réel via un champ alternatif (selon la version).
+      // On le transmet comme sender_pn pour que la liste blanche puisse matcher le numéro,
+      // et on journalise le LID pour que l'utilisateur puisse le copier en liste blanche.
+      let senderPn = '';
+      const pnJid = msg.key.participantPn || msg.key.senderPn || msg.key.participantAlt || '';
+      if (pnJid && /@s\.whatsapp\.net$/.test(String(pnJid))) {
+        senderPn = String(pnJid).replace('@s.whatsapp.net', '');
+      }
+      if (/@lid$/.test(participantJid)) {
+        logMsg('info', '[' + id + '] Expéditeur LID ' + participantJid
+          + (senderPn ? ' (numéro ' + senderPn + ')'
+                      : ' — WhatsApp ne fournit pas le numéro ; ajoutez ce LID (ou ses chiffres) à la liste blanche'));
+      }
       const senderName     = msg.pushName || sender;
       const ts             = new Date().toISOString().replace('T', ' ').substring(0, 19);
 
@@ -833,6 +847,7 @@ async function connectInstance(instance) {
             caption,
             sender,
             sender_name: senderName,
+            sender_pn: senderPn,
             received_at: ts,
             group_tag:   groupTag,
             group_name:  groupName,
@@ -857,6 +872,7 @@ async function connectInstance(instance) {
           reaction:    emoji,
           sender,
           sender_name: senderName,
+          sender_pn: senderPn,
           received_at: ts,
           group_tag:   groupTag,
           group_name:  groupName,
@@ -879,6 +895,7 @@ async function connectInstance(instance) {
         message:     text,
         sender,
         sender_name: senderName,
+        sender_pn: senderPn,
         received_at: ts,
         group_tag:   groupTag,
         group_name:  groupName,
