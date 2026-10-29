@@ -137,6 +137,13 @@ process.on('unhandledRejection', (reason) => {
   logMsg('warning', 'Rejet non géré (daemon maintenu) : ' + String(reason));
 });
 
+// #5 — Empêche le crash du daemon sur une exception synchrone non capturée (ex: erreur de
+// déchiffrement Signal « Bad MAC » / « MessageCounterError » remontée hors de nos try/catch).
+// Le daemon doit survivre à un message corrompu ; Baileys resynchronise ensuite.
+process.on('uncaughtException', (err) => {
+  logMsg('warning', 'Exception non capturée (daemon maintenu) : ' + String(err && err.stack ? err.stack : err));
+});
+
 function shutdown() {
   logMsg('info', 'Arrêt du daemon JeeWhatsApp');
   running = false;
@@ -721,6 +728,7 @@ async function connectInstance(instance) {
     if (type !== 'notify') { return; }
 
     for (const msg of messages) {
+     try {
       const remoteJid = msg.key.remoteJid || '';
 
       // ── Votes de sondage (v0.3 #9) ────────────────────────────────────────
@@ -805,9 +813,9 @@ async function connectInstance(instance) {
         senderPn = String(pnJid).replace('@s.whatsapp.net', '');
       }
       if (/@lid$/.test(participantJid)) {
-        logMsg('info', '[' + id + '] Expéditeur LID ' + participantJid
-          + (senderPn ? ' (numéro ' + senderPn + ')'
-                      : ' — WhatsApp ne fournit pas le numéro ; ajoutez ce LID (ou ses chiffres) à la liste blanche'));
+        logMsg('info', '[' + id + '] Expéditeur '
+          + (senderPn ? senderPn + ' (LID ' + participantJid + ')'
+                      : '(numéro inconnu) — LID ' + participantJid + ' ; ajoutez ce LID à la liste blanche'));
       }
       const senderName     = msg.pushName || sender;
       const ts             = new Date().toISOString().replace('T', ' ').substring(0, 19);
@@ -900,6 +908,17 @@ async function connectInstance(instance) {
         group_tag:   groupTag,
         group_name:  groupName,
       });
+     } catch (e) {
+      // #5 — Bad MAC / MessageCounterError : échec de déchiffrement Signal sur un message
+      // isolé (clé de session désynchronisée). On ignore CE message sans abandonner le lot
+      // ni crasher ; Baileys se resynchronise au message suivant.
+      const emsg = String(e && e.message ? e.message : e);
+      if (/Bad ?MAC|MessageCounterError|Key used already|never filled|decrypt/i.test(emsg)) {
+        debug('[' + id + '] Message ignoré (déchiffrement : ' + emsg + ')');
+      } else {
+        logMsg('warning', '[' + id + '] Erreur traitement message : ' + emsg);
+      }
+     }
     }
   });
 

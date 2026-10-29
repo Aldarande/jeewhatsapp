@@ -305,7 +305,7 @@ class jeewhatsapp extends eqLogic {
     // Réponse à une question « Demander » (ask) posée par un scénario sur une commande
     // d'envoi de cet équipement : la réponse est rendue au scénario et ne passe pas
     // par les interactions.
-    if (self::handleAskReply($this, $message)) {
+    if (self::handleAskReply($this, $message, $_data['group_tag'] ?? '')) {
       return;
     }
 
@@ -382,9 +382,13 @@ class jeewhatsapp extends eqLogic {
   // réponse libre si le scénario accepte '*' (le core retire '*' et laisse '').
   // Retourne true si le message a été consommé comme réponse.
   // -------------------------------------------------------------------------
-  public static function handleAskReply($_eqLogic, $_message) {
+  public static function handleAskReply($_eqLogic, $_message, $_chatTag = '') {
     $reponse = trim((string) $_message);
     if ($reponse === '') { return false; }
+    // Point 2 — la question « Demander » est toujours envoyée dans le groupe canal par
+    // défaut (phone forcé à null en mode ask) : on n'accepte la réponse que depuis ce même
+    // chat (group_tag vide). Un message venant d'un groupe additionnel n'est pas une réponse.
+    if (trim((string) $_chatTag) !== '') { return false; }
     foreach ($_eqLogic->getCmd('action') as $cmd) {
       if ($cmd->getCache('ask::variable', 'none') === 'none') { continue; }
       $fin = $cmd->getCache('ask::endtime', null);
@@ -395,10 +399,9 @@ class jeewhatsapp extends eqLogic {
       foreach ($choix as $c) {
         if ($c !== '' && mb_strtolower(trim($c)) === mb_strtolower($reponse)) { $trouve = $c; break; }
       }
-      if ($trouve === null && !$libre) {
-        $_eqLogic->sendMessage(__('Réponse non reconnue. Choix possibles : ', __FILE__) . implode(' / ', array_filter($choix, 'strlen')));
-        return true;
-      }
+      // Point 1 — réponse hors choix et scénario sans réponse libre : on NE consomme PAS
+      // le message, il est laissé aux interactions Jeedom (pas de « Réponse non reconnue »).
+      if ($trouve === null && !$libre) { continue; }
       if ($trouve === null) {
         $cmd->setCache('ask::answer', array_merge($choix, array('*')));
         $trouve = $reponse;
