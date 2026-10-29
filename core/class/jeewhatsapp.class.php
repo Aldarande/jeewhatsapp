@@ -286,6 +286,13 @@ class jeewhatsapp extends eqLogic {
       return;
     }
 
+    // Réponse à une question « Demander » (ask) posée par un scénario sur une commande
+    // d'envoi de cet équipement : la réponse est rendue au scénario et ne passe pas
+    // par les interactions.
+    if (self::handleAskReply($this, $message)) {
+      return;
+    }
+
     // Filtre par mot-clé : si configuré, le message doit commencer par le keyword
     // (insensible à la casse, espace de séparation toléré). Le keyword est retiré
     // du message avant transmission à interactQuery pour permettre des phrases naturelles.
@@ -347,6 +354,44 @@ class jeewhatsapp extends eqLogic {
     } catch (Exception $e) {
       log::add('jeewhatsapp', 'error', 'jeewhatsapp.class.php::updateFromMessage() l.' . __LINE__ . ' — Erreur envoi réponse interaction : ' . $e->getMessage());
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Réponse à une question « Demander » (ask) d'un scénario
+  // Le bloc « Demander » appelle send_message avec answer/variable/timeout ; le core
+  // met en cache ask::variable / ask::answer / ask::endtime sur la commande et attend.
+  // Si un message reçu correspond à une question en attente sur une commande action de
+  // cet équipement, il est rendu au scénario via askResponse() (pas d'interaction).
+  // Comparaison insensible à la casse/espaces ; hors choix → renvoi des choix ;
+  // réponse libre si le scénario accepte '*' (le core retire '*' et laisse '').
+  // Retourne true si le message a été consommé comme réponse.
+  // -------------------------------------------------------------------------
+  public static function handleAskReply($_eqLogic, $_message) {
+    $reponse = trim((string) $_message);
+    if ($reponse === '') { return false; }
+    foreach ($_eqLogic->getCmd('action') as $cmd) {
+      if ($cmd->getCache('ask::variable', 'none') === 'none') { continue; }
+      $fin = $cmd->getCache('ask::endtime', null);
+      if ($fin === null || $fin < time()) { continue; }
+      $choix = (array) $cmd->getCache('ask::answer', array());
+      $libre = in_array('', $choix, true) || in_array('*', $choix, true);
+      $trouve = null;
+      foreach ($choix as $c) {
+        if ($c !== '' && mb_strtolower(trim($c)) === mb_strtolower($reponse)) { $trouve = $c; break; }
+      }
+      if ($trouve === null && !$libre) {
+        $_eqLogic->sendMessage(__('Réponse non reconnue. Choix possibles : ', __FILE__) . implode(' / ', array_filter($choix, 'strlen')));
+        return true;
+      }
+      if ($trouve === null) {
+        $cmd->setCache('ask::answer', array_merge($choix, array('*')));
+        $trouve = $reponse;
+      }
+      $ok = $cmd->askResponse($trouve);
+      log::add('jeewhatsapp', 'info', 'jeewhatsapp.class.php::handleAskReply() — Réponse « ' . $trouve . ' » à la question de la commande #' . $cmd->getId() . ($ok ? '' : ' refusée par Jeedom'));
+      return $ok;
+    }
+    return false;
   }
 
   // -------------------------------------------------------------------------
@@ -2878,6 +2923,14 @@ class jeewhatsappCmd extends cmd {
         $phone = (isset($_options['title']) && trim($_options['title']) !== '')
           ? trim($_options['title'])
           : null;
+        if (isset($_options['answer']) && is_array($_options['answer'])) {
+          // Question « Demander » d'un scénario : le titre est la question, pas un numéro
+          $phone = null;
+          $choix = array_values(array_filter(array_map('trim', $_options['answer']), 'strlen'));
+          if (count($choix) > 0) {
+            $message .= "\n(Répondez : " . implode(' / ', $choix) . ')';
+          }
+        }
         $eqLogic->sendMessage($message, $phone);
         break;
 

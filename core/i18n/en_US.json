@@ -202,6 +202,7 @@
   "Restaurer la session depuis un fichier": "Restore session from a file",
   "Retirer du groupe": "Remove from group",
   "Répond automatiquement aux messages reçus dans le groupe via le moteur d'interactions Jeedom": "Automatically replies to messages received in the group via the Jeedom interaction engine",
+  "Réponse non reconnue. Choix possibles : ": "Unrecognized answer. Possible choices: ",
   "Réponse succès": "Success response",
   "Réponses vocales (TTS)": "Voice replies (TTS)",
   "Rétrograder": "Demote",
