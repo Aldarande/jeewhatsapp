@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Jeedom plugin — v0.9.1</div>
+    <div class="version">Jeedom plugin — v0.9.2</div>
   </div>
   <ul>
     <li class="section-title">Getting started</li>
@@ -1009,7 +1009,14 @@ Dad=33607080910
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.9.1 <span class="badge">latest</span></h3>
+  <h3>v0.9.2 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Scenario "Ask" questions</strong> — the Ask block now receives its answer over WhatsApp (case-insensitive choices, free-form answers)</li>
+    <li><strong>Session fix</strong> — no more session loss on daemon double-start (lock + port mutex + <code>creds.json.bak</code>)</li>
+    <li><strong>LID whitelist</strong> — accepts the WhatsApp LID identifier in addition to the number</li>
+  </ul>
+
+  <h3>v0.9.1 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Jeedom expression evaluation on send</strong> — scenario functions (<code>max()</code>, <code>min()</code>, <code>round()</code>, arithmetic…) in the <em>Message</em> field are now evaluated before sending, exactly like the Jeedom <strong>Expression tester</strong> (<a href="https://community.jeedom.com/t/jeewhatsapp-l-instruction-max-n-est-pas-executee/150221">#forum-150221</a>)</li>
     <li>Applies to <code>send_message</code>, <code>send_group</code>, <code>reply</code>, <code>send_template</code> and the <strong>Test</strong> tab — free text is left untouched</li>

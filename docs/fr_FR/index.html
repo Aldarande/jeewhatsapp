@@ -274,7 +274,7 @@
 <nav>
   <div class="logo">
     <h1>JeeWhatsApp</h1>
-    <div class="version">Plugin Jeedom — v0.9.1</div>
+    <div class="version">Plugin Jeedom — v0.9.2</div>
   </div>
   <ul>
     <li class="section-title">Démarrage</li>
@@ -1014,7 +1014,14 @@ rapport=☀️ Salon : #[Salon][Température][Valeur]#°C — Porte : #[Entrée]
   <!-- ── Changelog ─────────────────────────────────────────────────────── -->
   <h2 id="changelog">Changelog</h2>
 
-  <h3>v0.9.1 <span class="badge">latest</span></h3>
+  <h3>v0.9.2 <span class="badge">latest</span></h3>
+  <ul>
+    <li><strong>Questions « Demander » des scénarios</strong> — réponse via WhatsApp (choix insensibles à la casse, réponse libre)</li>
+    <li><strong>Correctif session</strong> — plus de perte de session au double démarrage du daemon (verrou + mutex de port + <code>creds.json.bak</code>)</li>
+    <li><strong>Liste blanche LID</strong> — accepte l'identifiant LID WhatsApp en plus du numéro</li>
+  </ul>
+
+  <h3>v0.9.1 <span class="badge" style="background:#1a7f4b;">stable</span></h3>
   <ul>
     <li><strong>Évaluation des expressions Jeedom à l'envoi</strong> — les fonctions de scénario (<code>max()</code>, <code>min()</code>, <code>round()</code>, calculs…) présentes dans le champ <em>Message</em> sont désormais évaluées avant l'envoi, exactement comme le <strong>Testeur d'expression</strong> Jeedom (<a href="https://community.jeedom.com/t/jeewhatsapp-l-instruction-max-n-est-pas-executee/150221">#forum-150221</a>)</li>
     <li>Concerne <code>send_message</code>, <code>send_group</code>, <code>reply</code>, <code>send_template</code> et l'onglet <strong>Test</strong> — le texte libre reste inchangé</li>
