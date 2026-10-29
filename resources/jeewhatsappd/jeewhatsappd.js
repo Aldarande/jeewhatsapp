@@ -217,6 +217,45 @@ function statusFilePath(id)           { return path.join(authDir(id), 'status.tx
 function groupJidFilePath(id)         { return path.join(authDir(id), 'group_jid.txt'); }
 function connectedSinceFilePath(id)   { return path.join(authDir(id), 'connected_since.txt'); }
 
+// ---------------------------------------------------------------------------
+// Protection des credentials (#3) — un double démarrage du daemon pouvait tronquer
+// auth/{id}/creds.json à 0 octet (deux processus écrivant le même fichier), faisant
+// perdre la session WhatsApp. On conserve une sauvegarde creds.json.bak valide et on
+// la restaure si le fichier principal est absent/vide/illisible au démarrage.
+// ---------------------------------------------------------------------------
+function credsPath(id)       { return path.join(authDir(id), 'creds.json'); }
+function credsBackupPath(id) { return path.join(authDir(id), 'creds.json.bak'); }
+
+function restoreCredsIfCorrupt(id) {
+  const main = credsPath(id);
+  let mainOk = false;
+  try {
+    const raw = fs.readFileSync(main, 'utf8');
+    if (raw.trim() !== '') { JSON.parse(raw); mainOk = true; }
+  } catch (_) { mainOk = false; }
+  if (mainOk) { return; }
+  try {
+    const rawBak = fs.readFileSync(credsBackupPath(id), 'utf8');
+    if (rawBak.trim() !== '') {
+      JSON.parse(rawBak);                 // ne restaure que si la sauvegarde est valide
+      fs.writeFileSync(main, rawBak, { mode: 0o600 });
+      logMsg('warn', '[' + id + '] creds.json absent/corrompu — restauré depuis creds.json.bak');
+    }
+  } catch (_) { /* pas de sauvegarde exploitable */ }
+}
+
+function backupCreds(id) {
+  try {
+    const raw = fs.readFileSync(credsPath(id), 'utf8');
+    if (raw.trim() === '') { return; }
+    JSON.parse(raw);                      // ne sauvegarde que du JSON valide
+    const bak = credsBackupPath(id);
+    const tmp = bak + '.tmp';
+    fs.writeFileSync(tmp, raw, { mode: 0o600 });
+    fs.renameSync(tmp, bak);              // écriture atomique de la sauvegarde
+  } catch (_) { /* best effort */ }
+}
+
 function writeStatus(id, status) {
   try { fs.writeFileSync(statusFilePath(id), status); } catch (_) {}
 }
@@ -558,6 +597,7 @@ async function connectInstance(instance) {
     }
   }
 
+  restoreCredsIfCorrupt(id);
   const { state, saveCreds } = await useMultiFileAuthState(authDir(id));
   const { version }          = await fetchLatestBaileysVersion();
 
@@ -581,7 +621,10 @@ async function connectInstance(instance) {
   });
 
   sockets[id] = sock;
-  sock.ev.on('creds.update', saveCreds);
+  sock.ev.on('creds.update', async () => {
+    await saveCreds();
+    backupCreds(id);   // sauvegarde valide après chaque mise à jour des credentials
+  });
 
   // ── Événements de connexion ────────────────────────────────────────────
   sock.ev.on('connection.update', async (update) => {
@@ -1028,8 +1071,20 @@ http.createServer(async (req, res) => {
       res.end(JSON.stringify({ error: e.message }));
     }
   });
+}).on('error', (err) => {
+  // #3 — Si le port est déjà pris, un autre daemon tourne déjà : on s'arrête AVANT
+  // d'ouvrir auth/<id>, évitant l'écriture concurrente qui tronquait creds.json.
+  if (err && err.code === 'EADDRINUSE') {
+    logMsg('error', 'Port ' + PORT + ' déjà utilisé — un autre daemon JeeWhatsApp est actif. Arrêt immédiat pour préserver les credentials.');
+  } else {
+    logMsg('error', 'Erreur du serveur HTTP : ' + (err && err.message ? err.message : err));
+  }
+  process.exit(1);
 }).listen(PORT, '127.0.0.1', () => {
   logMsg('info', 'Daemon démarré — port ' + PORT + ', ' + instances.length + ' instance(s)');
+  // Connexion des instances UNIQUEMENT après l'obtention exclusive du port (mutex) :
+  // garantit qu'un seul processus touche auth/<id> à la fois.
+  startInstances();
 });
 
 // ---------------------------------------------------------------------------
@@ -1804,11 +1859,13 @@ async function handleAction({ action, instance_id, phone, message, mention, medi
 }
 
 // ---------------------------------------------------------------------------
-// Démarrage de toutes les instances
+// Démarrage de toutes les instances — appelé une fois le port lié (cf listen)
 // ---------------------------------------------------------------------------
 
-for (const instance of instances) {
-  connectInstance(instance).catch(e => {
-    logMsg('error', '[' + instance.id + '] Connexion initiale : ' + e.message);
-  });
+function startInstances() {
+  for (const instance of instances) {
+    connectInstance(instance).catch(e => {
+      logMsg('error', '[' + instance.id + '] Connexion initiale : ' + e.message);
+    });
+  }
 }

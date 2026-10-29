@@ -108,6 +108,17 @@ class jeewhatsapp extends eqLogic {
   }
 
   public static function deamon_start($_automatic = false) {
+    // #3 — Verrou anti-double-démarrage : une relance manuelle et la relance automatique
+    // de Jeedom quasi simultanées lançaient deux daemons écrivant le même
+    // auth/<id>/creds.json (tronqué à 0 octet → session WhatsApp perdue). flock sérialise
+    // les démarrages concurrents ; combiné au mutex de port côté daemon (EADDRINUSE).
+    $lockFp = fopen(jeedom::getTmpFolder(__CLASS__) . '/daemon.start.lock', 'c');
+    if ($lockFp === false || !flock($lockFp, LOCK_EX | LOCK_NB)) {
+      if (is_resource($lockFp)) { fclose($lockFp); }
+      log::add(__CLASS__, 'info', 'Démarrage daemon déjà en cours — appel ignoré (#3)');
+      return;
+    }
+    try {
     self::deamon_stop();
     $daemon_info = self::deamon_info();
     if ($daemon_info['launchable'] !== 'ok') {
@@ -186,6 +197,11 @@ class jeewhatsapp extends eqLogic {
     }
     if (self::deamon_info()['state'] !== 'ok') {
       throw new Exception(__('Impossible de démarrer le daemon après ', __FILE__) . $timeout . __(' secondes', __FILE__));
+    }
+    } finally {
+      // Libère le verrou de démarrage dans tous les cas (succès ou exception).
+      flock($lockFp, LOCK_UN);
+      fclose($lockFp);
     }
   }
 
