@@ -151,10 +151,15 @@ class jeewhatsapp extends eqLogic {
     $log_file = log::getPathToLog(__CLASS__);
 
     // SECURITY (F-004, CWE-306): secret partagé pour authentifier les requêtes PHP→daemon
-    // Régénéré à chaque démarrage du daemon, stocké en cache Jeedom (TTL 7j > usage normal)
+    // Régénéré à chaque démarrage du daemon. Stocké SANS expiration (durée 0) : un TTL de
+    // 7 j faisait expirer le secret en cache alors que le daemon gardait l'ancien en variable
+    // d'environnement → toutes les requêtes PHP→daemon refusées (X-Daemon-Secret manquant)
+    // jusqu'à la relance manuelle. Une copie persistante en config permet de reconstituer le
+    // cache s'il est vidé (purge, redémarrage) sans relancer le daemon.
     // Le daemon le lit via env var JEEDOM_DAEMON_SECRET, le PHP le passe en header X-Daemon-Secret
     $daemon_secret = bin2hex(random_bytes(32));
-    cache::set('jeewhatsapp::daemon_secret', $daemon_secret, 86400 * 7);
+    cache::set('jeewhatsapp::daemon_secret', $daemon_secret, 0);
+    config::save('daemonSecret', $daemon_secret, __CLASS__);
 
     // SECURITY (F-001 + F-004): API key + daemon secret passés via env, jamais en CLI
     // Répertoires médias supplémentaires (SECURITY F-014) — validation côté PHP avant passage au daemon
@@ -2156,10 +2161,22 @@ class jeewhatsapp extends eqLogic {
     // Le daemon refuse 401 sans header valide → empêche un process local malveillant
     // d'envoyer des messages WhatsApp via le HTTP daemon bindé sur 127.0.0.1.
     $secret = cache::byKey('jeewhatsapp::daemon_secret')->getValue('');
-    $headers = "Content-Type: application/json\r\n";
-    if ($secret !== '') {
-      $headers .= "X-Daemon-Secret: " . $secret . "\r\n";
+    if ($secret === '') {
+      // Cache vidé (purge/expiration/redémarrage) : on reprend la copie persistante
+      // enregistrée au démarrage du daemon et on réamorce le cache (sans expiration).
+      $secret = config::byKey('daemonSecret', __CLASS__, '');
+      if ($secret !== '') {
+        cache::set('jeewhatsapp::daemon_secret', $secret, 0);
+      }
     }
+    if ($secret === '') {
+      log::add('jeewhatsapp', 'error',
+        'jeewhatsapp.class.php::sendToDaemon() l.' . __LINE__
+        . ' — secret du daemon introuvable : relancez le démon');
+      throw new Exception(__('Secret du daemon introuvable — relancez le démon', __FILE__));
+    }
+    $headers = "Content-Type: application/json\r\n"
+             . "X-Daemon-Secret: " . $secret . "\r\n";
     // ignore_errors permet de lire le corps même sur HTTP 4xx/5xx (erreurs renvoyées par le daemon)
     $opts = ['http' => [
       'method'        => 'POST',

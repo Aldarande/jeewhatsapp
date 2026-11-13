@@ -76,7 +76,20 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Fixed
 
-- **Erreur « Illegal offset type » au premier message de la journée** — signalé sur
+- **Plus aucun message envoyé 7 jours après le démarrage du démon** — **Symptôme** :
+  7 jours après chaque démarrage du démon, plus aucun message ne part ; le log du démon
+  affiche en boucle « Daemon HTTP : requête refusée (X-Daemon-Secret manquant ou invalide) »
+  alors que `deamon_info()` reste « ok ». Une relance manuelle réparait pour 7 jours.
+  **Cause** : `deamon_start()` stockait le secret partagé PHP→démon en cache Jeedom avec un
+  TTL de 7 jours (`cache::set(..., 86400 * 7)`). À l'expiration, `sendToDaemon()` lisait un
+  secret vide et n'envoyait plus l'en-tête `X-Daemon-Secret`, que le démon (gardant l'ancien
+  secret en variable d'environnement) refusait. **Correctif** : le secret est désormais stocké
+  **sans expiration** (durée `0`) et doublé d'une **copie persistante** en configuration
+  (`config::save('daemonSecret', …)`). `sendToDaemon()` reconstitue le cache depuis cette copie
+  s'il est vide, envoie **toujours** l'en-tête, et lève une erreur explicite (« relancez le
+  démon ») si le secret est réellement introuvable.
+
+
   le forum (scénario DNS down/up) : l'envoi échouait avec cette erreur PHP, de façon
   « aléatoire » et sur plusieurs scénarios. Cause : dans `appendStats()`, l'initialisation
   d'un nouveau jour utilisait `['d' => …, 's' => 0, 'r' => 0, [$_dir] => 1]` — un **tableau
