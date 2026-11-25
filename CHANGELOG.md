@@ -9,6 +9,15 @@ et ce projet adhère à [Semantic Versioning 2.0.0](https://semver.org/).
 
 ### Added
 
+- **Case « Aucun préfixe »** — nouvelle option de configuration de l'équipement
+  permettant de retirer complètement le préfixe des messages Jeedom (y compris la
+  🏠 par défaut), demandée sur le forum. Jusqu'ici, vider le champ « Préfixe Jeedom »
+  remettait la maison par défaut : il n'existait aucun moyen d'avoir zéro préfixe.
+  Cochée, aucun préfixe n'est ajouté (prioritaire sur le champ texte) ; décochée, le
+  comportement actuel est conservé. Centralisé dans un helper `interactionPrefix()`
+  couvrant tous les chemins d'envoi (message, réponse, groupe, note vocale) et le
+  préfixe transmis au démon.
+
 - **File d'envoi persistante avec retry (outbox)** — fiabilise les envois quand
   WhatsApp est déconnecté (ex. scénario d'alarme pendant une coupure réseau).
   Auparavant le message était perdu silencieusement.

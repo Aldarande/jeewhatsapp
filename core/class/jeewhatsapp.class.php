@@ -132,7 +132,7 @@ class jeewhatsapp extends eqLogic {
       if (!$eqLogic->getIsEnable()) { continue; }
       $instances[] = [
         'id'         => $eqLogic->getId(),
-        'prefix'     => $eqLogic->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 "),
+        'prefix'     => $eqLogic->interactionPrefix(),
         'group_name' => $eqLogic->getConfiguration('group_name', 'jeewhatsapp'),
         // v0.3 #16 — groupes canaux additionnels (tag=NomDuGroupe, 1 par ligne)
         'groups'     => self::parseExtraGroups($eqLogic->getConfiguration('extra_groups', '')),
@@ -455,8 +455,16 @@ class jeewhatsapp extends eqLogic {
   // $_skipPrefix    → true pour les tests (pas de préfixe 🏠)
   // -------------------------------------------------------------------------
 
+  // Préfixe effectif ajouté aux messages Jeedom. La case « Aucun préfixe »
+  // (prefix_disabled) retire complètement le préfixe (y compris la 🏠 par défaut) ;
+  // sinon on prend le champ texte (vide = 🏠 par défaut).
+  public function interactionPrefix() {
+    if ($this->getConfiguration('prefix_disabled', 0) == 1) { return ''; }
+    return $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
+  }
+
   public function sendMessage($_message, $_phone = null, $_mention = null, $_skipPrefix = false, $_tag = null) {
-    $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
+    $prefix  = $this->interactionPrefix();
     $message = (!$_skipPrefix && $prefix !== '') ? $prefix . $_message : $_message;
 
     // Résolution carnet de contacts : "Didier" → "33612345678"
@@ -717,7 +725,7 @@ class jeewhatsapp extends eqLogic {
     // Préfixe Jeedom appliqué uniquement si une caption non vide est fournie
     $caption = '';
     if ($_caption !== null && trim($_caption) !== '') {
-      $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
+      $prefix  = $this->interactionPrefix();
       $caption = $prefix !== '' ? $prefix . $_caption : $_caption;
     }
 
@@ -812,7 +820,7 @@ class jeewhatsapp extends eqLogic {
   // -------------------------------------------------------------------------
 
   public function replyToLast($_message) {
-    $prefix  = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
+    $prefix  = $this->interactionPrefix();
     $message = $prefix !== '' ? $prefix . $_message : $_message;
 
     $params = [
@@ -1812,7 +1820,7 @@ class jeewhatsapp extends eqLogic {
       throw new Exception(__('Nouveau texte obligatoire', __FILE__));
     }
     // Réapplique le préfixe Jeedom comme pour un envoi normal
-    $prefix = $this->getConfiguration('interaction_prefix', "\xF0\x9F\x8F\xA0 ");
+    $prefix = $this->interactionPrefix();
     $text   = $prefix !== '' ? $prefix . $text : $text;
     return $this->sendToDaemon('editLast', [
       'instance_id' => $this->getId(),

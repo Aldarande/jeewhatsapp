@@ -389,6 +389,16 @@ sendVarToJS('eqType', 'jeewhatsapp');
 								</div>
 <!-- Préfixe Jeedom -->
 								<div class="form-group">
+									<label class="col-sm-4 control-label">{{Aucun préfixe}}</label>
+									<div class="col-sm-7">
+										<input type="checkbox" class="eqLogicAttr"
+											   data-l1key="configuration" data-l2key="prefix_disabled"/>
+										<span class="help-block">
+											<small>{{Cochez pour n'ajouter aucun préfixe aux messages (retire la 🏠). Prioritaire sur le champ ci-dessous.}}</small>
+										</span>
+									</div>
+								</div>
+								<div class="form-group">
 									<label class="col-sm-4 control-label">{{Préfixe Jeedom}}</label>
 									<div class="col-sm-7">
 										<input type="text" class="eqLogicAttr form-control"
