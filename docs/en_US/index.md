@@ -110,6 +110,18 @@ With two accounts:
 
 > A virtual number (Google Voice, cheap eSIM) is enough — it does not need to be active at all times for WhatsApp.
 
+#### 💡 Community tip — a free 2nd account on a landline
+
+Shared by a user ([forum #152107](https://community.jeedom.com/t/re-presentation-du-plugin-jeewhatsapp/152107)) to get **sound notifications** without a second mobile number or dedicated SIM:
+
+1. Install **WhatsApp Business** (free) on a phone.
+2. Register it with a **landline number** (e.g. `09…`): WhatsApp offers **voice-call** verification (landlines can't receive SMS).
+3. **Pair Jeedom** to that Business account (scan the QR code in the plugin) — this account will post in the channel group.
+4. Add your **personal number** to the channel group: you now receive real notifications (sound + banner).
+5. You can then **uninstall WhatsApp Business**: the account stays paired to Jeedom and keeps working.
+
+> **Free** and no extra SIM. ⚠️ Unofficial: using a WhatsApp account through a third-party client (Baileys) — at your own risk, within WhatsApp's Terms of Service. The plugin **cannot** automate this account creation (Baileys only pairs to an **existing** account, it does not register a new number): steps 1-2 stay manual via the WhatsApp Business app.
+
 ---
 
 ## Prerequisites

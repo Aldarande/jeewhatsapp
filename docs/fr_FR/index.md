@@ -110,6 +110,18 @@ Avec deux comptes :
 
 > Un numéro virtuel (Google Voice, numéro eSIM bas de gamme) suffit — il n'a pas besoin d'être actif en permanence pour WhatsApp.
 
+#### 💡 Astuce communauté — un 2ᵉ compte gratuit sur une ligne fixe
+
+Astuce remontée par un utilisateur ([forum #152107](https://community.jeedom.com/t/re-presentation-du-plugin-jeewhatsapp/152107)) pour obtenir les **notifications sonores** sans second numéro mobile ni SIM dédiée :
+
+1. Installer **WhatsApp Business** (gratuit) sur un téléphone.
+2. L'enregistrer avec un **numéro de ligne fixe** (type `09…`) : WhatsApp propose la vérification par **appel vocal** (la ligne fixe ne reçoit pas de SMS).
+3. **Appairer Jeedom** à ce compte « Business » (scan du QR code dans le plugin) — c'est ce compte qui postera dans le groupe canal.
+4. Ajouter votre **numéro personnel** au groupe canal : vous recevez alors les vraies notifications (son + bannière).
+5. Vous pouvez ensuite **désinstaller WhatsApp Business** : le compte reste appairé à Jeedom et continue de fonctionner.
+
+> **Gratuit** et sans SIM supplémentaire. ⚠️ Non officiel : usage d'un compte WhatsApp via un client tiers (Baileys) — à vos risques, dans le respect des CGU WhatsApp. Le plugin **ne peut pas** automatiser cette création de compte (Baileys n'appaire qu'un compte **existant**, il n'inscrit pas de nouveau numéro) : l'étape 1-2 reste manuelle via l'app WhatsApp Business.
+
 ---
 
 ## Prérequis
